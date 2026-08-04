@@ -47,7 +47,7 @@ export function GlassSurface({
   tint = 'systemChromeMaterial',
   intensity = 80,
   tintColor,
-  tintOpacity = 0.28,
+  tintOpacity = 0.55,
   isInteractive = false,
   colorScheme,
   children,
