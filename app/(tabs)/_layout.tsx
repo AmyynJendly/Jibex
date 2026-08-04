@@ -1,4 +1,4 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { useColors } from '../../constants';
 
@@ -15,26 +15,32 @@ export default function TabsLayout() {
   return (
     <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.accent}>
       <NativeTabs.Trigger name="home">
-        <Label>Home</Label>
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} drawable="ic_home" />
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'house', selected: 'house.fill' }}
+          drawable="ic_home"
+        />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="runsheets">
-        <Label>Runsheets</Label>
-        <Icon
+        <NativeTabs.Trigger.Label>Runsheets</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
           sf={{ default: 'list.bullet.clipboard', selected: 'list.bullet.clipboard.fill' }}
           drawable="ic_runsheets"
         />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="alerts">
-        <Label>Alerts</Label>
-        <Icon sf={{ default: 'bell', selected: 'bell.fill' }} drawable="ic_alerts" />
+        <NativeTabs.Trigger.Label>Alerts</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'bell', selected: 'bell.fill' }}
+          drawable="ic_alerts"
+        />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">
-        <Label>Profile</Label>
-        <Icon
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
           sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }}
           drawable="ic_profile"
         />

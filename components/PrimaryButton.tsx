@@ -61,7 +61,7 @@ export function PrimaryButton({
       <GlassSurface
         style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
         tintColor={colors.accent}
-        tintOpacity={0.75}
+        tintOpacity={0.42}
         glassEffectStyle="regular"
         isInteractive
       />
