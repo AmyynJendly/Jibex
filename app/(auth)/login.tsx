@@ -1,18 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
+import { AnimatedPressable } from '../../components/AnimatedPressable';
 import { FormField } from '../../components/FormField';
 import { GlassSurface } from '../../components/GlassSurface';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useToast } from '../../components/Toast';
 import { Radii, Spacing, Typography, getAccentGlow, useColors } from '../../constants';
 import { saveToken } from '../../lib/token';
 import { login } from '../../services/mock-api';
 
 export default function LoginScreen() {
   const colors = useColors();
+  const { showToast } = useToast();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,11 +44,16 @@ export default function LoginScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <View style={[styles.logo, { backgroundColor: colors.accent }, getAccentGlow(0.35)]}>
+            <Animated.View
+              entering={ZoomIn.springify(320).dampingRatio(1)}
+              style={[styles.logo, { backgroundColor: colors.accent }, getAccentGlow(0.35)]}>
               <Ionicons name="cube-outline" size={30} color="#fff" />
-            </View>
+            </Animated.View>
             <Text style={[Typography.title1, { color: colors.text, marginTop: Spacing.xs }]}>
               Jibex
             </Text>
@@ -96,12 +105,22 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.socialRow}>
-              <GlassSurface style={styles.socialButton}>
-                <Ionicons name="logo-apple" size={27} color={colors.text} />
-              </GlassSurface>
-              <GlassSurface style={styles.socialButton}>
-                <Ionicons name="logo-google" size={24} color={colors.text} />
-              </GlassSurface>
+              <AnimatedPressable
+                scaleTo={0.92}
+                style={styles.socialButton}
+                onPress={() => showToast('Sign in with Apple — coming soon')}>
+                <GlassSurface style={styles.socialFill}>
+                  <Ionicons name="logo-apple" size={27} color={colors.text} />
+                </GlassSurface>
+              </AnimatedPressable>
+              <AnimatedPressable
+                scaleTo={0.92}
+                style={styles.socialButton}
+                onPress={() => showToast('Sign in with Google — coming soon')}>
+                <GlassSurface style={styles.socialFill}>
+                  <Ionicons name="logo-google" size={24} color={colors.text} />
+                </GlassSurface>
+              </AnimatedPressable>
             </View>
           </View>
 
@@ -111,7 +130,7 @@ export default function LoginScreen() {
               <Text style={{ color: colors.accent, fontWeight: '700' }}>Create account</Text>
             </Text>
           </Link>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -125,13 +144,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.xxxl,
+    paddingVertical: Spacing.huge,
   },
   header: {
-    paddingTop: 96,
     alignItems: 'center',
     gap: Spacing.smd,
+    paddingBottom: Spacing.xxl,
   },
   logo: {
     width: 64,
@@ -141,10 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   form: {
-    flex: 1,
-    justifyContent: 'center',
     gap: Spacing.mlg,
-    paddingBottom: 40,
   },
   error: {
     borderRadius: Radii.input,
@@ -175,11 +193,14 @@ const styles = StyleSheet.create({
     height: 66,
     borderRadius: 33,
     overflow: 'hidden',
+  },
+  socialFill: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
   footer: {
     alignItems: 'center',
-    paddingBottom: Spacing.huge,
+    paddingTop: Spacing.lg,
   },
 });

@@ -1,0 +1,206 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
+import { AnimatedPressable } from '../../../components/AnimatedPressable';
+import { GlassIconButton } from '../../../components/GlassIconButton';
+import { PrimaryButton } from '../../../components/PrimaryButton';
+import { Radii, Spacing, Typography, useColors } from '../../../constants';
+import { markDeliveryFailed } from '../../../services/mock-api';
+import type { DeliveryFailureReason } from '../../../types';
+
+const STAGGER_MS = 40;
+
+const REASONS: { value: DeliveryFailureReason; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'customer-not-home', label: 'Customer not home', icon: 'home-outline' },
+  { value: 'refused', label: 'Customer refused delivery', icon: 'close-circle-outline' },
+  { value: 'wrong-address', label: 'Wrong or incomplete address', icon: 'location-outline' },
+  { value: 'business-closed', label: 'Business closed', icon: 'storefront-outline' },
+  { value: 'other', label: 'Other', icon: 'ellipsis-horizontal-circle-outline' },
+];
+
+export default function CantDeliverScreen() {
+  const colors = useColors();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
+  const [note, setNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleConfirm() {
+    if (!reason || submitting) return;
+    setSubmitting(true);
+    const result = await markDeliveryFailed(id, reason, note.trim() || undefined);
+    setSubmitting(false);
+
+    if (result.success) {
+      router.replace('/(tabs)/runsheets');
+    }
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={[styles.screen, { backgroundColor: colors.bg }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.header}>
+        <GlassIconButton onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+        </GlassIconButton>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={[styles.title, { color: colors.text }]}>Can&apos;t Deliver</Text>
+        <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
+          Let dispatch know why this stop couldn&apos;t be completed
+        </Text>
+
+        <View style={styles.reasonList}>
+          {REASONS.map((option, i) => {
+            const selected = reason === option.value;
+            return (
+              <Animated.View
+                key={option.value}
+                entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
+                <AnimatedPressable
+                  onPress={() => setReason(option.value)}
+                  style={[
+                    styles.reasonRow,
+                    {
+                      backgroundColor: colors.bgElevated,
+                      borderColor: selected ? colors.danger : 'transparent',
+                    },
+                  ]}>
+                  <View style={[styles.reasonIcon, { backgroundColor: colors.dangerSoft }]}>
+                    <Ionicons name={option.icon} size={16} color={colors.danger} />
+                  </View>
+                  <Text style={[Typography.body, styles.reasonLabel, { color: colors.text }]}>
+                    {option.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.radio,
+                      {
+                        borderColor: selected ? colors.danger : colors.separator,
+                        backgroundColor: selected ? colors.danger : 'transparent',
+                      },
+                    ]}>
+                    {selected && <Ionicons name="checkmark" size={12} color="#fff" />}
+                  </View>
+                </AnimatedPressable>
+              </Animated.View>
+            );
+          })}
+        </View>
+
+        <View style={styles.noteBlock}>
+          <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>
+            Note (optional)
+          </Text>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            placeholder="Anything dispatch should know…"
+            placeholderTextColor={colors.textTertiary}
+            multiline
+            style={[
+              styles.noteInput,
+              { backgroundColor: colors.bgElevated, borderColor: colors.separator, color: colors.text },
+            ]}
+          />
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <PrimaryButton
+          label="Confirm"
+          height={56}
+          loading={submitting}
+          disabled={!reason}
+          onPress={handleConfirm}
+        />
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  header: {
+    paddingTop: 58,
+    paddingHorizontal: Spacing.xxl,
+    paddingBottom: Spacing.xxs,
+  },
+  content: {
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.xxl,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -0.02 * 30,
+    paddingTop: Spacing.lg,
+  },
+  subtitle: {
+    marginTop: -Spacing.lg,
+  },
+  reasonList: {
+    gap: Spacing.smd,
+  },
+  reasonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderRadius: Radii.xxl,
+    borderWidth: 1.5,
+    padding: Spacing.lg,
+  },
+  reasonIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reasonLabel: {
+    flex: 1,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteBlock: {
+    gap: Spacing.xs,
+  },
+  noteLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    paddingLeft: Spacing.xxs,
+  },
+  noteInput: {
+    minHeight: 90,
+    borderRadius: Radii.input,
+    borderWidth: 1,
+    padding: Spacing.lg,
+    fontSize: 16,
+    fontWeight: '500',
+    textAlignVertical: 'top',
+  },
+  footer: {
+    paddingHorizontal: Spacing.xxl,
+    paddingBottom: 30,
+    paddingTop: Spacing.md,
+  },
+});

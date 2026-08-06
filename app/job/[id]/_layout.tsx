@@ -1,11 +1,14 @@
 import { Stack } from 'expo-router';
 
+/** Every screen in this flow builds its own glass/custom header, matching the design. */
 export default function JobStackLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ title: 'Job Detail' }} />
-      <Stack.Screen name="otp" options={{ title: 'Confirm Delivery' }} />
-      <Stack.Screen name="cash-collected" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="otp" />
+      <Stack.Screen name="cant-deliver" />
+      <Stack.Screen name="photo-proof" />
+      <Stack.Screen name="cash-collected" />
     </Stack>
   );
 }

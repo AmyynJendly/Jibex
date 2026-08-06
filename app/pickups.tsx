@@ -1,15 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
 import { getPickups } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
+
+const STAGGER_MS = 40;
 
 function pluralize(count: number, noun: string) {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
@@ -25,16 +31,8 @@ export default function PickupsScreen() {
     getPickups().then(setPickups);
   }, []);
 
-  if (!pickups) {
-    return (
-      <SafeAreaView style={[styles.loadingScreen, { backgroundColor: colors.bg }]}>
-        <Text style={[Typography.body, { color: colors.textSecondary }]}>Loading…</Text>
-      </SafeAreaView>
-    );
-  }
-
-  const scheduled = pickups.filter((p) => p.status === 'scheduled');
-  const completed = pickups.filter((p) => p.status === 'completed');
+  const scheduled = pickups?.filter((p) => p.status === 'scheduled') ?? [];
+  const completed = pickups?.filter((p) => p.status === 'completed') ?? [];
   const nextPickup = segment === 'scheduled' ? scheduled[0] : undefined;
   const restPickups = segment === 'scheduled' ? scheduled.slice(1) : completed;
 
@@ -58,65 +56,87 @@ export default function PickupsScreen() {
           onChange={setSegment}
         />
 
-        {nextPickup && (
-          <View
-            style={[
-              styles.nextCard,
-              { backgroundColor: colors.bgElevated, borderColor: colors.accent },
-              getCardShadow(scheme),
-            ]}>
-            <View style={styles.nextCardTopRow}>
-              <Text style={[styles.nextCardLabel, { color: colors.accent }]}>Next Pickup</Text>
-              <Text
-                style={[styles.timeChip, { color: colors.text, backgroundColor: colors.separator }]}>
-                {nextPickup.timeWindow}
-              </Text>
-            </View>
-            <Text style={[Typography.title3, { color: colors.text }]}>
-              {nextPickup.businessName}
-            </Text>
-            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              {nextPickup.address}
-            </Text>
-            <View style={styles.nextCardBottomRow}>
-              <Text style={[styles.packageCount, { color: colors.textTertiary }]}>
-                {pluralize(nextPickup.packageCount, 'package')}
-              </Text>
-              <PrimaryButton
-                label="Start Pickup"
-                onPress={() => router.push('/scanner')}
-                height={38}
-                style={styles.startButton}
-                labelStyle={styles.startButtonLabel}
-              />
-            </View>
+        {!pickups ? (
+          <View style={styles.skeletonGroup}>
+            <SkeletonBlock height={140} radius={Radii.card} />
+            <SkeletonRow />
+            <SkeletonRow />
           </View>
-        )}
-
-        {restPickups.length === 0 && !nextPickup ? (
-          <Text style={[Typography.body, styles.empty, { color: colors.textSecondary }]}>
-            No {segment} pickups.
-          </Text>
         ) : (
-          restPickups.map((pickup) => (
-            <Pressable
-              key={pickup.id}
-              onPress={() => router.push('/scanner')}
-              style={[styles.row, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
-              <View style={[styles.rowIcon, { backgroundColor: colors.separator }]}>
-                <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />
-              </View>
-              <View style={styles.rowText}>
-                <Text style={[Typography.title3, styles.rowTitle, { color: colors.text }]}>
-                  {pickup.businessName}
+          <>
+            {nextPickup && (
+              <Animated.View
+                entering={FadeInUp.springify(220).dampingRatio(1)}
+                style={[
+                  styles.nextCard,
+                  { backgroundColor: colors.bgElevated, borderColor: colors.accent },
+                  getCardShadow(scheme),
+                ]}>
+                <View style={styles.nextCardTopRow}>
+                  <Text style={[styles.nextCardLabel, { color: colors.accent }]}>Next Pickup</Text>
+                  <Text
+                    style={[
+                      styles.timeChip,
+                      { color: colors.text, backgroundColor: colors.separator },
+                    ]}>
+                    {nextPickup.timeWindow}
+                  </Text>
+                </View>
+                <Text style={[Typography.title3, { color: colors.text }]}>
+                  {nextPickup.businessName}
                 </Text>
                 <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-                  {pickup.timeWindow} · {pluralize(pickup.packageCount, 'package')}
+                  {nextPickup.address}
                 </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-            </Pressable>
-          ))
+                <View style={styles.nextCardBottomRow}>
+                  <Text style={[styles.packageCount, { color: colors.textTertiary }]}>
+                    {pluralize(nextPickup.packageCount, 'package')}
+                  </Text>
+                  <PrimaryButton
+                    label="Start Pickup"
+                    onPress={() => router.push('/scanner')}
+                    height={38}
+                    style={styles.startButton}
+                    labelStyle={styles.startButtonLabel}
+                  />
+                </View>
+              </Animated.View>
+            )}
+
+            {restPickups.length === 0 && !nextPickup ? (
+              <EmptyState
+                icon={segment === 'scheduled' ? 'cube-outline' : 'checkmark-done-outline'}
+                title={`No ${segment} pickups`}
+              />
+            ) : (
+              restPickups.map((pickup, i) => (
+                <Animated.View
+                  key={pickup.id}
+                  entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
+                  <AnimatedPressable
+                    onPress={() => router.push('/scanner')}
+                    style={[
+                      styles.row,
+                      { backgroundColor: colors.bgElevated },
+                      getCardShadow(scheme),
+                    ]}>
+                    <View style={[styles.rowIcon, { backgroundColor: colors.separator }]}>
+                      <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />
+                    </View>
+                    <View style={styles.rowText}>
+                      <Text style={[Typography.title3, styles.rowTitle, { color: colors.text }]}>
+                        {pickup.businessName}
+                      </Text>
+                      <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+                        {pickup.timeWindow} · {pluralize(pickup.packageCount, 'package')}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                  </AnimatedPressable>
+                </Animated.View>
+              ))
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -124,11 +144,6 @@ export default function PickupsScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingScreen: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   screen: {
     flex: 1,
   },
@@ -146,6 +161,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
     paddingBottom: 30,
+    gap: Spacing.mlg,
+  },
+  skeletonGroup: {
     gap: Spacing.mlg,
   },
   nextCard: {
@@ -188,10 +206,6 @@ const styles = StyleSheet.create({
   },
   startButtonLabel: {
     fontSize: 13,
-  },
-  empty: {
-    textAlign: 'center',
-    paddingTop: Spacing.xxl,
   },
   row: {
     flexDirection: 'row',

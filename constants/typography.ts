@@ -16,7 +16,8 @@ type TextStyleName =
   | 'caption1'
   | 'caption2'
   | 'input'
-  | 'cardTitle';
+  | 'cardTitle'
+  | 'pageTitle';
 
 export const Typography: Record<TextStyleName, TextStyle> = {
   largeTitle: { fontFamily, fontSize: 34, fontWeight: '800', letterSpacing: -0.02 * 34 },
@@ -34,6 +35,8 @@ export const Typography: Record<TextStyleName, TextStyle> = {
   input: { fontFamily, fontSize: 17, fontWeight: '500' },
   /** Section headers inside content cards ("Today's Deliveries") — 16/700. */
   cardTitle: { fontFamily, fontSize: 16, fontWeight: '700' },
+  /** Tab-root screen titles ("Runsheets", "Notifications", "Profile") — 32/800. */
+  pageTitle: { fontFamily, fontSize: 32, fontWeight: '800', letterSpacing: -0.02 * 32 },
 };
 
 /** Uppercase section labels ("TODAY", "ACCOUNT"): footnote + tracking + uppercase. */

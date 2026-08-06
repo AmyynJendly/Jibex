@@ -16,7 +16,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIDesignRequiresCompatibility": false
+        "UIDesignRequiresCompatibility": false,
+        "LSApplicationQueriesSchemes": ["comgooglemaps"]
       },
       "icon": "./assets/icon.png"
     },
@@ -35,7 +36,14 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Jibex uses your camera to scan package barcodes and capture delivery photos."
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

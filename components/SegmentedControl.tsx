@@ -34,7 +34,7 @@ export function SegmentedControl<T extends string>({
                 <GlassSurface
                   style={[StyleSheet.absoluteFill, { borderRadius: 10 }]}
                   tintColor={colors.accent}
-                  tintOpacity={0.75}
+                  tintOpacity={0.42}
                   glassEffectStyle="regular"
                   isInteractive
                 />

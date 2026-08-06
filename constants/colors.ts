@@ -20,6 +20,12 @@ export interface ColorPalette {
   purpleSoft: string;
   warning: string;
   warningSoft: string;
+  /** iOS systemGray — stop-number badges, secondary status chips. Same in both schemes (matches Apple's own systemGray, not extracted per-theme in the source). */
+  neutral: string;
+  neutralSoft: string;
+  /** Fixed informational blue (`#0A84FF`) — "In Transit"/"Damaged" chips. Distinct from `accent` and non-adaptive, same as the design's literal. */
+  info: string;
+  infoSoft: string;
 }
 
 export const palette: { light: ColorPalette; dark: ColorPalette } = {
@@ -43,6 +49,10 @@ export const palette: { light: ColorPalette; dark: ColorPalette } = {
     purpleSoft: 'rgba(124,111,238,0.12)',
     warning: '#FF9500',
     warningSoft: 'rgba(255,149,0,0.12)',
+    neutral: '#8E8E93',
+    neutralSoft: 'rgba(142,142,147,0.16)',
+    info: '#0A84FF',
+    infoSoft: 'rgba(10,132,255,0.14)',
   },
   dark: {
     bg: '#000000',
@@ -64,6 +74,10 @@ export const palette: { light: ColorPalette; dark: ColorPalette } = {
     purpleSoft: 'rgba(159,145,247,0.20)',
     warning: '#FF9F0A',
     warningSoft: 'rgba(255,159,10,0.20)',
+    neutral: '#8E8E93',
+    neutralSoft: 'rgba(142,142,147,0.16)',
+    info: '#0A84FF',
+    infoSoft: 'rgba(10,132,255,0.14)',
   },
 };
 

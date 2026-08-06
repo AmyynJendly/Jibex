@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,19 +10,30 @@ import {
   View,
   type ColorValue,
 } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
+import { AnimatedPressable } from '../../../components/AnimatedPressable';
+import { CountUpText } from '../../../components/CountUpText';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { GlassSurface } from '../../../components/GlassSurface';
+import { PrimaryButton } from '../../../components/PrimaryButton';
+import { SkeletonBlock } from '../../../components/Skeleton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../../../constants';
+import { registerForPushNotifications } from '../../../lib/push';
 import {
   getDriverStats,
+  getJobDetail,
   getNotifications,
   getReturns,
   getRunsheets,
+  getShiftStatus,
   getTransfers,
   getUser,
+  startShift,
 } from '../../../services/mock-api';
-import type { DriverStats, User } from '../../../types';
+import type { DriverStats, Job, ShiftStatus, User } from '../../../types';
+
+const STAGGER_MS = 40;
 
 interface HomeData {
   user: User;
@@ -32,6 +42,8 @@ interface HomeData {
   activeTransfers: number;
   pendingReturns: number;
   hasUnreadNotifications: boolean;
+  shiftStatus: ShiftStatus;
+  timeSensitiveStops: Job[];
 }
 
 function getGreeting() {
@@ -41,21 +53,38 @@ function getGreeting() {
   return 'Good Evening';
 }
 
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+const percentFormatter = (n: number) => `${Math.round(n)}%`;
+const integerFormatter = (n: number) => String(Math.round(n));
+const currencyFormatter = (n: number) => `${n.toFixed(2)} DT`;
+
 export default function HomeScreen() {
   const colors = useColors();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [data, setData] = useState<HomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [shiftBusy, setShiftBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const [user, stats, runsheets, transfers, returns, notifications] = await Promise.all([
-      getUser(),
-      getDriverStats(),
-      getRunsheets(),
-      getTransfers(),
-      getReturns(),
-      getNotifications(),
-    ]);
+    const [user, stats, runsheets, transfers, returns, notifications, shiftStatus] =
+      await Promise.all([
+        getUser(),
+        getDriverStats(),
+        getRunsheets(),
+        getTransfers(),
+        getReturns(),
+        getNotifications(),
+        getShiftStatus(),
+      ]);
+
+    const stopIds = runsheets.flatMap((r) => r.stopIds);
+    const jobs = await Promise.all(stopIds.map((id) => getJobDetail(id)));
+    const timeSensitiveStops = jobs.filter(
+      (j) => j.deliverBy && j.status !== 'delivered' && j.status !== 'failed'
+    );
 
     setData({
       user,
@@ -64,12 +93,16 @@ export default function HomeScreen() {
       activeTransfers: transfers.filter((t) => t.status === 'in-progress').length,
       pendingReturns: returns.filter((r) => r.status === 'pending-pickup').length,
       hasUnreadNotifications: notifications.some((n) => !n.read),
+      shiftStatus,
+      timeSensitiveStops,
     });
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -77,16 +110,52 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [load]);
 
+  async function handleStartShift() {
+    if (shiftBusy) return;
+    setShiftBusy(true);
+    const status = await startShift();
+    registerForPushNotifications();
+    setShiftBusy(false);
+    setData((prev) => (prev ? { ...prev, shiftStatus: status } : prev));
+  }
+
   if (!data) {
     return (
-      <View style={[styles.loadingScreen, { backgroundColor: colors.bg }]}>
-        <Text style={[Typography.body, { color: colors.textSecondary }]}>Loading…</Text>
-      </View>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={styles.content}>
+        <View style={styles.topRow}>
+          <SkeletonBlock width={40} height={40} radius={20} />
+          <SkeletonBlock width={40} height={40} radius={20} />
+        </View>
+        <View style={styles.skeletonGreeting}>
+          <SkeletonBlock width={120} height={14} radius={4} />
+          <SkeletonBlock width={160} height={30} radius={6} />
+        </View>
+        <SkeletonBlock height={64} radius={Radii.card} />
+        <SkeletonBlock height={210} radius={Radii.card} />
+        <SkeletonBlock height={64} radius={Radii.xxl} />
+        <View style={styles.quickActions}>
+          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
+          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
+          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
+          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
+        </View>
+      </ScrollView>
     );
   }
 
-  const { user, stats, runsheetStops, activeTransfers, pendingReturns, hasUnreadNotifications } =
-    data;
+  const {
+    user,
+    stats,
+    runsheetStops,
+    activeTransfers,
+    pendingReturns,
+    hasUnreadNotifications,
+    shiftStatus,
+    timeSensitiveStops,
+  } = data;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];
 
@@ -183,6 +252,58 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {shiftStatus.isActive ? (
+        <View style={[styles.shiftPill, { backgroundColor: colors.successSoft }]}>
+          <View style={styles.shiftPillLeft}>
+            <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
+            <Text style={[styles.shiftPillText, { color: colors.text }]}>
+              On Shift · Since {shiftStatus.startedAt ? formatTime(shiftStatus.startedAt) : '—'}
+            </Text>
+          </View>
+          <Text
+            onPress={() => router.push('/shift-summary')}
+            style={[styles.endShiftLink, { color: colors.danger }]}>
+            End Shift
+          </Text>
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.shiftCard,
+            { backgroundColor: colors.bgElevated, borderColor: colors.accent },
+            getCardShadow(scheme),
+          ]}>
+          <View style={styles.shiftCardText}>
+            <Text style={[Typography.cardTitle, { color: colors.text }]}>Ready to start?</Text>
+            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+              Begin tracking today&apos;s deliveries
+            </Text>
+          </View>
+          <PrimaryButton
+            label="Start Shift"
+            height={40}
+            loading={shiftBusy}
+            onPress={handleStartShift}
+            style={styles.shiftButton}
+            labelStyle={styles.shiftButtonLabel}
+          />
+        </View>
+      )}
+
+      {timeSensitiveStops.length > 0 && (
+        <AnimatedPressable
+          scaleTo={0.98}
+          onPress={() => router.push('/runsheets')}
+          style={[styles.timeSensitiveBanner, { backgroundColor: colors.warningSoft }]}>
+          <Ionicons name="alarm-outline" size={18} color={colors.warning} />
+          <Text style={[styles.timeSensitiveText, { color: colors.text }]}>
+            {timeSensitiveStops.length} time-sensitive{' '}
+            {timeSensitiveStops.length === 1 ? 'stop' : 'stops'} left today
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+        </AnimatedPressable>
+      )}
+
       <View
         style={[
           styles.card,
@@ -191,9 +312,11 @@ export default function HomeScreen() {
         ]}>
         <View style={styles.cardTopRow}>
           <Text style={[Typography.cardTitle, { color: colors.text }]}>Today&apos;s Deliveries</Text>
-          <Text style={[Typography.title2, { color: colors.accent }]}>
-            {stats.completionPercent}%
-          </Text>
+          <CountUpText
+            value={stats.completionPercent}
+            formatter={percentFormatter}
+            style={[Typography.title2, { color: colors.accent }]}
+          />
         </View>
         <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
           {stats.delivered} of {totalStops} completed
@@ -220,7 +343,11 @@ export default function HomeScreen() {
             <View key={stat.label} style={styles.statItemRow}>
               {i > 0 && <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />}
               <View style={styles.statItem}>
-                <Text style={[Typography.title2, { color: stat.color }]}>{stat.value}</Text>
+                <CountUpText
+                  value={stat.value}
+                  formatter={integerFormatter}
+                  style={[Typography.title2, { color: stat.color }]}
+                />
                 <Text style={[Typography.caption2, { color: colors.textSecondary }]}>
                   {stat.label}
                 </Text>
@@ -236,33 +363,37 @@ export default function HomeScreen() {
         </View>
         <Text style={[styles.cashLabel, { color: colors.text }]}>Cash Collected</Text>
         <View style={{ flex: 1 }} />
-        <Text style={[styles.cashAmount, { color: colors.text }]}>
-          {stats.cashCollectedTotal.toFixed(2)} DT
-        </Text>
+        <CountUpText
+          value={stats.cashCollectedTotal}
+          formatter={currencyFormatter}
+          style={[styles.cashAmount, { color: colors.text }]}
+        />
       </View>
 
       <View style={styles.quickActions}>
-        {quickActions.map((action) => (
-          <Pressable
+        {quickActions.map((action, i) => (
+          <Animated.View
             key={action.key}
-            onPress={() => router.push(action.href)}
+            entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
             style={styles.quickActionWrapper}>
-            <GlassSurface style={styles.quickAction}>
-              <Ionicons name={action.icon} size={20} color={action.color} />
-              <View style={styles.quickActionLabelRow}>
-                <Text style={[Typography.caption2, { color: colors.textSecondary }]}>
-                  {action.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.quickActionBadge,
-                    { color: action.color, backgroundColor: action.soft },
-                  ]}>
-                  {action.count}
-                </Text>
-              </View>
-            </GlassSurface>
-          </Pressable>
+            <AnimatedPressable onPress={() => router.push(action.href)}>
+              <GlassSurface style={styles.quickAction}>
+                <Ionicons name={action.icon} size={20} color={action.color} />
+                <View style={styles.quickActionLabelRow}>
+                  <Text style={[Typography.caption2, { color: colors.textSecondary }]}>
+                    {action.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.quickActionBadge,
+                      { color: action.color, backgroundColor: action.soft },
+                    ]}>
+                    {action.count}
+                  </Text>
+                </View>
+              </GlassSurface>
+            </AnimatedPressable>
+          </Animated.View>
         ))}
       </View>
     </ScrollView>
@@ -270,14 +401,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingScreen: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: {
     paddingHorizontal: Spacing.xxl,
-    paddingTop: 58,
+    // `contentInsetAdjustmentBehavior="automatic"` below already pushes content
+    // past the status bar/notch — this is just breathing room on top of that,
+    // not a second safe-area offset.
+    paddingTop: Spacing.md,
     paddingBottom: 130,
     gap: Spacing.lg,
   },
@@ -285,6 +414,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: Spacing.sm,
+  },
+  skeletonGreeting: {
+    gap: Spacing.sm,
+    marginTop: -6,
   },
   badgeDot: {
     position: 'absolute',
@@ -313,6 +446,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginTop: Spacing.sm,
+  },
+  shiftCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: Radii.card,
+    borderWidth: 1.5,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  shiftCardText: {
+    flex: 1,
+    gap: 2,
+  },
+  shiftButton: {
+    paddingHorizontal: Spacing.xl,
+  },
+  shiftButtonLabel: {
+    fontSize: 14,
+  },
+  shiftPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: Radii.xxl,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  shiftPillLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  shiftPillText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  endShiftLink: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  timeSensitiveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderRadius: Radii.xxl,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  timeSensitiveText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
   },
   card: {
     paddingVertical: Spacing.xxl,

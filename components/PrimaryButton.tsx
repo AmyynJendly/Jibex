@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   type StyleProp,
@@ -10,6 +9,7 @@ import {
 } from 'react-native';
 
 import { Typography, getAccentGlow, useColors } from '../constants';
+import { AnimatedPressable } from './AnimatedPressable';
 import { GlassSurface } from './GlassSurface';
 
 interface PrimaryButtonProps {
@@ -49,9 +49,10 @@ export function PrimaryButton({
   const radius = height / 2;
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={isDisabled}
+      scaleTo={0.97}
       style={[
         styles.button,
         { height, borderRadius: radius, opacity: disabled && !loading ? 0.5 : 1 },
@@ -61,7 +62,7 @@ export function PrimaryButton({
       <GlassSurface
         style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
         tintColor={colors.accent}
-        tintOpacity={0.75}
+        tintOpacity={0.42}
         glassEffectStyle="regular"
         isInteractive
       />
@@ -75,7 +76,7 @@ export function PrimaryButton({
       ) : (
         <Text style={[Typography.headline, styles.label, labelStyle]}>{label}</Text>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

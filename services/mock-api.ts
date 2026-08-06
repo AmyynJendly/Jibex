@@ -1,12 +1,21 @@
+import { addDays, toDateKey } from '../lib/date';
 import type {
+  Availability,
+  DayAvailability,
+  DeliveryFailureReason,
   DriverStats,
+  GeoPoint,
   Job,
   Notification,
+  PayoutInfo,
   Pickup,
   Return,
   Runsheet,
+  ShiftStatus,
+  ShiftSummary,
   Transfer,
   User,
+  Vehicle,
 } from '../types';
 
 /**
@@ -51,6 +60,50 @@ function minutesAgo(minutes: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Route geometry — nearest-neighbor ordering over real (approximate) Sousse/
+// Sfax/Monastir/Tunis coordinates. A real backend would run a proper routing
+// engine (Mapbox/Google Directions); this is the same shape of answer
+// (an ordered stop list) computed with a simple greedy heuristic instead.
+// ---------------------------------------------------------------------------
+
+/** Driver's approximate start point — Sousse/Sahloul depot. */
+const DEPOT: GeoPoint = { lat: 35.848, lng: 10.5975 };
+
+function haversineMiles(a: GeoPoint, b: GeoPoint): number {
+  const R = 3958.8;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/** Greedy nearest-neighbor — good enough for a same-day local route, not a true TSP solve. */
+function nearestNeighborOrder(jobs: Job[], start: GeoPoint): Job[] {
+  const remaining = [...jobs];
+  const ordered: Job[] = [];
+  let current = start;
+
+  while (remaining.length > 0) {
+    let nearestIndex = 0;
+    let nearestDist = Infinity;
+    remaining.forEach((job, i) => {
+      const d = haversineMiles(current, job.location);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearestIndex = i;
+      }
+    });
+    const [next] = remaining.splice(nearestIndex, 1);
+    ordered.push(next);
+    current = next.location;
+  }
+
+  return ordered;
+}
+
+// ---------------------------------------------------------------------------
 // Mock data
 // ---------------------------------------------------------------------------
 
@@ -71,6 +124,8 @@ const mockJobs: Job[] = [
     packageInfo: { count: 1, weightLbs: 2.4, fragile: true, note: 'Leave with concierge if not home' },
     status: 'in-transit',
     cashToCollect: 42.0,
+    location: { lat: 35.8465, lng: 10.6015 },
+    deliverBy: todayAt(14, 0),
   },
   {
     id: 'JBX-48214',
@@ -79,6 +134,7 @@ const mockJobs: Job[] = [
     packageInfo: { count: 2, weightLbs: 5.1, fragile: false },
     status: 'pending',
     cashToCollect: 28.5,
+    location: { lat: 34.7398, lng: 10.76 },
   },
   {
     id: 'JBX-48215',
@@ -87,6 +143,7 @@ const mockJobs: Job[] = [
     packageInfo: { count: 1, weightLbs: 1.2, fragile: false },
     status: 'pending',
     cashToCollect: 65.0,
+    location: { lat: 35.7643, lng: 10.8113 },
   },
   {
     id: 'JBX-48216',
@@ -95,6 +152,8 @@ const mockJobs: Job[] = [
     packageInfo: { count: 3, weightLbs: 8.0, fragile: false },
     status: 'pending',
     cashToCollect: 15.0,
+    location: { lat: 34.735, lng: 10.765 },
+    deliverBy: todayAt(15, 0),
   },
   {
     id: 'JBX-48217',
@@ -103,6 +162,7 @@ const mockJobs: Job[] = [
     packageInfo: { count: 1, weightLbs: 0.8, fragile: true, note: 'Ring twice' },
     status: 'failed',
     cashToCollect: 22.0,
+    location: { lat: 35.77, lng: 10.82 },
   },
   {
     id: 'JBX-48218',
@@ -111,6 +171,7 @@ const mockJobs: Job[] = [
     packageInfo: { count: 4, weightLbs: 12.5, fragile: false },
     status: 'failed',
     cashToCollect: 0,
+    location: { lat: 34.72, lng: 10.69 },
   },
   {
     id: 'JBX-48219',
@@ -120,6 +181,7 @@ const mockJobs: Job[] = [
     status: 'delivered',
     cashToCollect: 55.0,
     cashCollected: 55.0,
+    location: { lat: 35.8256, lng: 10.6084 },
   },
   {
     id: 'JBX-48220',
@@ -129,6 +191,7 @@ const mockJobs: Job[] = [
     status: 'delivered',
     cashToCollect: 30.0,
     cashCollected: 30.0,
+    location: { lat: 36.7992, lng: 10.1817 },
   },
 ];
 
@@ -379,17 +442,52 @@ let mockDriverStats: DriverStats = {
   onPaceFinishTime: '5:30 PM',
 };
 
-const mockUser: User = {
+let mockUser: User = {
   id: 'u1',
   name: 'Marcus Alden',
   // Digits only — a real backend normalizes phone input the same way before
   // comparing, and this keeps the value fully typeable on a phone-pad keyboard.
   username: '21620456789',
+  email: 'marcus.alden@jibex.com',
   avatarInitials: 'MA',
 };
 
 /** Dev-only mock credentials — irrelevant once login() calls a real API. */
 const mockPassword = 'password123';
+
+let mockShiftStatus: ShiftStatus = { isActive: false, startedAt: null };
+
+/** Mon-Thu AM+PM, Fri AM+PM+Eve, Sat AM only, Sun off — same shape as the driver's old weekly pattern, seeded onto real upcoming dates. */
+function defaultDayAvailability(weekday: number): DayAvailability {
+  if (weekday === 0) return { morning: false, afternoon: false, evening: false }; // Sunday
+  if (weekday === 6) return { morning: true, afternoon: false, evening: false }; // Saturday
+  if (weekday === 5) return { morning: true, afternoon: true, evening: true }; // Friday
+  return { morning: true, afternoon: true, evening: false }; // Mon-Thu
+}
+
+function seedAvailability(days: number): Availability {
+  const availability: Availability = {};
+  for (let i = 0; i < days; i++) {
+    const date = addDays(new Date(), i);
+    availability[toDateKey(date)] = defaultDayAvailability(date.getDay());
+  }
+  return availability;
+}
+
+let mockAvailability: Availability = seedAvailability(21);
+
+let mockVehicle: Vehicle = {
+  type: 'motorcycle',
+  plate: 'TU-2847-KL',
+  model: 'Yamaha NMAX 155',
+  color: 'Matte Black',
+};
+
+let mockPayoutInfo: PayoutInfo = {
+  bankName: 'Banque de Tunisie',
+  accountHolder: 'Marcus Alden',
+  iban: 'TN59 1000 6035 0000 0123 4567',
+};
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -422,6 +520,41 @@ export async function login(username: string, password: string): Promise<LoginRe
   };
 }
 
+export interface RegisterParams {
+  name: string;
+  phone: string;
+  email: string;
+  vehiclePlate: string;
+  password: string;
+}
+
+function initialsFor(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .slice(0, 2)
+    .join('');
+}
+
+export async function register(params: RegisterParams): Promise<LoginResult> {
+  await delay(undefined);
+
+  const user: User = {
+    id: `driver-${Date.now()}`,
+    name: params.name.trim(),
+    username: params.phone.replace(/\D/g, ''),
+    email: params.email.trim(),
+    avatarInitials: initialsFor(params.name),
+  };
+
+  return {
+    success: true,
+    user,
+    token: `mock-token-${user.id}-${Date.now()}`,
+  };
+}
+
 export async function getUser(): Promise<User> {
   return delay({ ...mockUser });
 }
@@ -450,6 +583,19 @@ export async function getNotifications(): Promise<Notification[]> {
   return delay(mockNotifications.map((n) => ({ ...n })));
 }
 
+export async function markNotificationRead(id: string): Promise<void> {
+  const notification = mockNotifications.find((n) => n.id === id);
+  if (notification) notification.read = true;
+  await delay(undefined);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  mockNotifications.forEach((n) => {
+    n.read = true;
+  });
+  await delay(undefined);
+}
+
 export async function getJobDetail(id: string): Promise<Job> {
   await delay(undefined);
 
@@ -458,6 +604,40 @@ export async function getJobDetail(id: string): Promise<Job> {
     throw new Error(`Job ${id} not found`);
   }
   return { ...job, packageInfo: { ...job.packageInfo } };
+}
+
+/**
+ * Reorders a runsheet's stops by nearest-neighbor distance from the depot
+ * instead of handing back whatever order they were assigned in — this is
+ * what keeps the driver from zig-zagging across town. Already-delivered/
+ * failed stops are left at the end since they don't need routing.
+ */
+export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
+  const jobs = stopIds
+    .map((id) => mockJobs.find((j) => j.id === id))
+    .filter((j): j is Job => !!j);
+
+  const outstanding = jobs.filter((j) => j.status === 'pending' || j.status === 'in-transit');
+  const done = jobs.filter((j) => j.status === 'delivered' || j.status === 'failed');
+
+  const ordered = nearestNeighborOrder(outstanding, DEPOT);
+  return delay([...ordered.map((j) => j.id), ...done.map((j) => j.id)]);
+}
+
+/** The nearest not-yet-delivered stop to wherever the driver just finished — recomputed live, not a fixed index. */
+export async function getNextStopId(currentId: string): Promise<string | null> {
+  await delay(undefined);
+
+  const runsheet = mockRunsheets.find((r) => r.stopIds.includes(currentId));
+  const currentJob = mockJobs.find((j) => j.id === currentId);
+  if (!runsheet || !currentJob) return null;
+
+  const remaining = runsheet.stopIds
+    .map((id) => mockJobs.find((j) => j.id === id))
+    .filter((j): j is Job => !!j && j.id !== currentId && j.status !== 'delivered');
+
+  if (remaining.length === 0) return null;
+  return nearestNeighborOrder(remaining, currentJob.location)[0].id;
 }
 
 export async function confirmDeliveryWithOTP(
@@ -491,4 +671,184 @@ export async function confirmDeliveryWithOTP(
   }
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
+}
+
+/** Delivery confirmed by a doorstep photo instead of an OTP — same effect on stats, no code check. */
+export async function confirmDeliveryWithPhoto(
+  id: string,
+  photoUri: string,
+  cashAmount: number
+): Promise<ConfirmDeliveryResult> {
+  await delay(undefined);
+
+  const job = mockJobs.find((j) => j.id === id);
+  if (!job) {
+    return { success: false, error: `Job ${id} not found` };
+  }
+
+  const wasAlreadyDelivered = job.status === 'delivered';
+  job.status = 'delivered';
+  job.cashCollected = cashAmount;
+  job.proofPhotoUri = photoUri;
+
+  if (!wasAlreadyDelivered) {
+    mockDriverStats = {
+      ...mockDriverStats,
+      delivered: mockDriverStats.delivered + 1,
+      pending: Math.max(0, mockDriverStats.pending - 1),
+      cashCollectedTotal: mockDriverStats.cashCollectedTotal + cashAmount,
+    };
+  }
+
+  return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
+}
+
+export interface FailDeliveryResult {
+  success: boolean;
+  job?: Job;
+  error?: string;
+}
+
+export async function markDeliveryFailed(
+  id: string,
+  reason: DeliveryFailureReason,
+  note?: string
+): Promise<FailDeliveryResult> {
+  await delay(undefined);
+
+  const job = mockJobs.find((j) => j.id === id);
+  if (!job) {
+    return { success: false, error: `Job ${id} not found` };
+  }
+
+  const wasAlreadyFailed = job.status === 'failed';
+  job.status = 'failed';
+  job.failureReason = reason;
+  job.failureNote = note;
+
+  if (!wasAlreadyFailed) {
+    mockDriverStats = {
+      ...mockDriverStats,
+      failed: mockDriverStats.failed + 1,
+      pending: Math.max(0, mockDriverStats.pending - 1),
+    };
+  }
+
+  return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
+}
+
+export interface ScanResult {
+  success: boolean;
+  label?: string;
+  error?: string;
+}
+
+/** Validates a scanned/typed barcode against known pickups and jobs. */
+export async function confirmScan(code: string): Promise<ScanResult> {
+  await delay(undefined);
+
+  const trimmed = code.trim().toUpperCase();
+
+  const pickup = mockPickups.find((p) => p.id.toUpperCase() === trimmed);
+  if (pickup) {
+    pickup.status = 'completed';
+    return { success: true, label: pickup.businessName };
+  }
+
+  const job = mockJobs.find((j) => j.id.toUpperCase() === trimmed);
+  if (job) {
+    return { success: true, label: job.customerName };
+  }
+
+  return { success: false, error: 'Code not recognized. Try again or enter it manually.' };
+}
+
+export async function getShiftStatus(): Promise<ShiftStatus> {
+  return delay({ ...mockShiftStatus });
+}
+
+export async function startShift(): Promise<ShiftStatus> {
+  mockShiftStatus = { isActive: true, startedAt: new Date().toISOString() };
+  return delay({ ...mockShiftStatus });
+}
+
+export async function endShift(): Promise<ShiftSummary> {
+  await delay(undefined);
+
+  const startedAt = mockShiftStatus.startedAt ?? new Date().toISOString();
+  const endedAt = new Date().toISOString();
+  const durationMinutes = Math.max(
+    1,
+    Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60_000)
+  );
+
+  const summary: ShiftSummary = {
+    startedAt,
+    endedAt,
+    durationMinutes,
+    delivered: mockDriverStats.delivered,
+    failed: mockDriverStats.failed,
+    distanceMiles:
+      Math.round((mockDriverStats.delivered * 2.3 + mockDriverStats.failed * 1.1) * 10) / 10,
+    cashCollected: mockDriverStats.cashCollectedTotal,
+  };
+
+  mockShiftStatus = { isActive: false, startedAt: null };
+  return summary;
+}
+
+/** Driver hands off the day's cash (deposit, office drop-off, etc.) — zeroes the running total. */
+export async function confirmCashHandoff(): Promise<void> {
+  await delay(undefined);
+  mockDriverStats = { ...mockDriverStats, cashCollectedTotal: 0 };
+}
+
+export async function getAvailability(): Promise<Availability> {
+  return delay(JSON.parse(JSON.stringify(mockAvailability)));
+}
+
+export async function setAvailability(availability: Availability): Promise<void> {
+  mockAvailability = JSON.parse(JSON.stringify(availability));
+  await delay(undefined);
+}
+
+/** A real backend would associate this token with the driver's account for server-sent push. */
+export async function registerPushToken(token: string): Promise<void> {
+  void token;
+  await delay(undefined);
+}
+
+export interface UpdateUserParams {
+  name: string;
+  phone: string;
+  email: string;
+}
+
+export async function updateUser(params: UpdateUserParams): Promise<User> {
+  mockUser = {
+    ...mockUser,
+    name: params.name,
+    username: params.phone.replace(/\D/g, ''),
+    email: params.email,
+    avatarInitials: initialsFor(params.name),
+  };
+  return delay({ ...mockUser });
+}
+
+export async function getVehicle(): Promise<Vehicle> {
+  return delay({ ...mockVehicle });
+}
+
+export async function updateVehicle(vehicle: Vehicle): Promise<void> {
+  mockVehicle = { ...vehicle };
+  await delay(undefined);
+}
+
+export async function getPayoutInfo(): Promise<PayoutInfo> {
+  return delay({ ...mockPayoutInfo });
+}
+
+export async function updatePayoutInfo(payout: PayoutInfo): Promise<void> {
+  mockPayoutInfo = { ...payout };
+  await delay(undefined);
 }

@@ -1,49 +1,201 @@
-import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Link, router } from 'expo-router';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Radii, Spacing, Typography, useColors } from '../../constants';
+import { FormField } from '../../components/FormField';
+import { GlassIconButton } from '../../components/GlassIconButton';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { Spacing, Typography, useColors } from '../../constants';
+import { saveToken } from '../../lib/token';
+import { register } from '../../services/mock-api';
 
 export default function RegisterScreen() {
   const colors = useColors();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [vehiclePlate, setVehiclePlate] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const allFieldsFilled =
+    name.trim() && phone.trim() && email.trim() && vehiclePlate.trim() && password && confirmPassword;
+
+  async function handleContinue() {
+    if (loading || !allFieldsFilled) return;
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+    const result = await register({
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      vehiclePlate: vehiclePlate.trim(),
+      password,
+    });
+    setLoading(false);
+
+    if (!result.success || !result.token) {
+      setError(result.error ?? 'Something went wrong. Please try again.');
+      return;
+    }
+
+    await saveToken(result.token);
+    router.replace('/(tabs)/home');
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={['bottom']}>
-      <View style={styles.content}>
-        <Text style={[Typography.title1, { color: colors.text }]}>Create account</Text>
-        <Text style={[Typography.callout, { color: colors.textSecondary, marginTop: Spacing.xxs }]}>
-          Step 1 of 2 — full driver signup lands with the mock data service.
-        </Text>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.header}>
+          <GlassIconButton onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          </GlassIconButton>
+          <View style={styles.progressBlock}>
+            <Text style={[styles.stepLabel, { color: colors.textSecondary }]}>Step 1 of 2</Text>
+            <View style={[styles.progressTrack, { backgroundColor: colors.separator }]}>
+              <View style={[styles.progressFill, { backgroundColor: colors.accent }]} />
+            </View>
+          </View>
+        </View>
 
-        <View style={{ flex: 1 }} />
+        <Text style={[styles.title, { color: colors.text }]}>Create account</Text>
 
-        <Text
-          onPress={() => router.replace('/(tabs)/home')}
-          style={[
-            Typography.headline,
-            styles.primaryButton,
-            { backgroundColor: colors.accent, borderRadius: Radii.pill, color: '#fff' },
-          ]}>
-          Continue
-        </Text>
-      </View>
+        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+          <FormField
+            label="Full Name"
+            placeholder="Marcus Alden"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            textContentType="name"
+          />
+          <FormField
+            label="Phone Number"
+            placeholder="+216 XX XXX XXX"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            textContentType="telephoneNumber"
+          />
+          <FormField
+            label="Email"
+            placeholder="marcus.alden@jibex.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+          />
+          <FormField
+            label="Vehicle Plate Number"
+            placeholder="TU-2847-KL"
+            value={vehiclePlate}
+            onChangeText={setVehiclePlate}
+            autoCapitalize="characters"
+          />
+          <FormField
+            label="Password"
+            placeholder="••••••••••"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            textContentType="newPassword"
+          />
+          <FormField
+            label="Retype Password"
+            placeholder="••••••••••"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            textContentType="newPassword"
+          />
+
+          {error ? (
+            <Text
+              style={[
+                Typography.footnote,
+                styles.error,
+                { color: colors.danger, backgroundColor: colors.dangerSoft },
+              ]}>
+              {error}
+            </Text>
+          ) : null}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <PrimaryButton
+            label="Continue"
+            onPress={handleContinue}
+            loading={loading}
+            disabled={!allFieldsFilled}
+          />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
+  screen: { flex: 1 },
+  flex: { flex: 1 },
+  header: {
+    paddingTop: 58,
     paddingHorizontal: Spacing.xxl,
-    paddingTop: Spacing.xxl,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: Spacing.xxs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
   },
-  primaryButton: {
-    textAlign: 'center',
-    paddingVertical: Spacing.lg,
+  progressBlock: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  stepLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
     overflow: 'hidden',
+  },
+  progressFill: {
+    width: '50%',
+    height: '100%',
+    borderRadius: 2,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -0.02 * 30,
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.mlg,
+    paddingBottom: Spacing.lg,
+  },
+  form: {
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  error: {
+    borderRadius: 16,
+    paddingVertical: Spacing.smd,
+    paddingHorizontal: Spacing.lg,
+    textAlign: 'center',
+  },
+  footer: {
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.mlg,
   },
 });

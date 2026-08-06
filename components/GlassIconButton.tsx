@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
+import { AnimatedPressable } from './AnimatedPressable';
 import { GlassSurface } from './GlassSurface';
 
 interface GlassIconButtonProps {
@@ -21,21 +22,24 @@ export function GlassIconButton({
   forceDark = false,
 }: GlassIconButtonProps) {
   return (
-    <Pressable onPress={onPress}>
+    <AnimatedPressable
+      onPress={onPress}
+      scaleTo={0.9}
+      style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}>
       <GlassSurface
-        style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }, style]}
+        style={[styles.fill, { borderRadius: size / 2 }, style]}
         tint={forceDark ? 'dark' : undefined}
         colorScheme={forceDark ? 'dark' : undefined}>
         {children}
       </GlassSurface>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
-  circle: {
+  fill: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
 });
