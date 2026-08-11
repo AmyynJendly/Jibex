@@ -1,4 +1,5 @@
-export type TransferStatus = 'in-progress' | 'completed';
+/** Matches the real backend's uppercase enum strings. */
+export type TransferStatus = 'IN_PROGRESS' | 'COMPLETED';
 
 export interface Transfer {
   id: string;

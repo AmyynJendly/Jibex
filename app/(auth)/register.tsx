@@ -3,6 +3,7 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { FormField } from '../../components/FormField';
 import { GlassIconButton } from '../../components/GlassIconButton';
@@ -13,6 +14,7 @@ import { register } from '../../services/mock-api';
 
 export default function RegisterScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -29,7 +31,7 @@ export default function RegisterScreen() {
     if (loading || !allFieldsFilled) return;
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.register.errors.passwordMismatch'));
       return;
     }
 
@@ -45,7 +47,7 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (!result.success || !result.token) {
-      setError(result.error ?? 'Something went wrong. Please try again.');
+      setError(t(result.error ?? 'common.genericError'));
       return;
     }
 
@@ -63,58 +65,60 @@ export default function RegisterScreen() {
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
           </GlassIconButton>
           <View style={styles.progressBlock}>
-            <Text style={[styles.stepLabel, { color: colors.textSecondary }]}>Step 1 of 2</Text>
+            <Text style={[styles.stepLabel, { color: colors.textSecondary }]}>
+              {t('auth.register.stepLabel')}
+            </Text>
             <View style={[styles.progressTrack, { backgroundColor: colors.separator }]}>
               <View style={[styles.progressFill, { backgroundColor: colors.accent }]} />
             </View>
           </View>
         </View>
 
-        <Text style={[styles.title, { color: colors.text }]}>Create account</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('auth.register.title')}</Text>
 
         <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
           <FormField
-            label="Full Name"
-            placeholder="Marcus Alden"
+            label={t('auth.register.fullNameLabel')}
+            placeholder={t('auth.register.fullNamePlaceholder')}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
             textContentType="name"
           />
           <FormField
-            label="Phone Number"
-            placeholder="+216 XX XXX XXX"
+            label={t('auth.register.phoneLabel')}
+            placeholder={t('auth.register.phonePlaceholder')}
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
             textContentType="telephoneNumber"
           />
           <FormField
-            label="Email"
-            placeholder="marcus.alden@jibex.com"
+            label={t('auth.register.emailLabel')}
+            placeholder={t('auth.register.emailPlaceholder')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             textContentType="emailAddress"
           />
           <FormField
-            label="Vehicle Plate Number"
-            placeholder="TU-2847-KL"
+            label={t('auth.register.plateLabel')}
+            placeholder={t('auth.register.platePlaceholder')}
             value={vehiclePlate}
             onChangeText={setVehiclePlate}
             autoCapitalize="characters"
           />
           <FormField
-            label="Password"
-            placeholder="••••••••••"
+            label={t('auth.register.passwordLabel')}
+            placeholder={t('auth.register.passwordPlaceholder')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             textContentType="newPassword"
           />
           <FormField
-            label="Retype Password"
-            placeholder="••••••••••"
+            label={t('auth.register.retypePasswordLabel')}
+            placeholder={t('auth.register.passwordPlaceholder')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
@@ -135,7 +139,7 @@ export default function RegisterScreen() {
 
         <View style={styles.footer}>
           <PrimaryButton
-            label="Continue"
+            label={t('auth.register.continue')}
             onPress={handleContinue}
             loading={loading}
             disabled={!allFieldsFilled}

@@ -1,4 +1,5 @@
-export type JobStatus = 'pending' | 'in-transit' | 'delivered' | 'failed';
+/** Matches the real backend's uppercase enum strings — resolve to a display label via `enumLabel()`, never render raw. */
+export type JobStatus = 'PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED';
 
 export interface PackageInfo {
   count: number;
@@ -7,13 +8,15 @@ export interface PackageInfo {
   note?: string;
 }
 
-/** Why a delivery attempt failed — drives the Can't Deliver reason picker. */
+/** Why a delivery attempt failed — drives the Can't Deliver reason picker. Matches the real backend's uppercase enum strings. */
 export type DeliveryFailureReason =
-  | 'customer-not-home'
-  | 'refused'
-  | 'wrong-address'
-  | 'business-closed'
-  | 'other';
+  | 'CUSTOMER_ABSENT'
+  | 'REFUSED'
+  | 'INCORRECT_ADDRESS'
+  | 'INCOMPLETE_ADDRESS'
+  | 'PHONE_UNREACHABLE'
+  | 'NO_ANSWER'
+  | 'OTHER';
 
 export interface GeoPoint {
   lat: number;

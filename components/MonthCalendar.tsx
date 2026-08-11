@@ -1,12 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Radii, Spacing, useColors } from '../constants';
-import { addMonths, fromDateKey, isSameMonth, toDateKey } from '../lib/date';
+import { addMonths, fromDateKey, isSameMonth, localeTag, toDateKey } from '../lib/date';
 import { AnimatedPressable } from './AnimatedPressable';
 import { GlassIconButton } from './GlassIconButton';
 
-const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+/** Narrow weekday initials for a Monday-start week, in the given locale (e.g. "M T W T F S S" / "L M M J V S D"). 2024-01-01 is a real Monday, used purely as a reference date to format from. */
+function weekdayLabels(locale: string): string[] {
+  const mondayReference = new Date(2024, 0, 1);
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: 'narrow' });
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(mondayReference);
+    d.setDate(mondayReference.getDate() + i);
+    return formatter.format(d);
+  });
+}
 
 export type DayMark = 'full' | 'partial';
 
@@ -39,6 +49,8 @@ export function MonthCalendar({
   maxMonth,
 }: MonthCalendarProps) {
   const colors = useColors();
+  const { i18n } = useTranslation();
+  const locale = localeTag(i18n.language);
 
   const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -63,7 +75,7 @@ export function MonthCalendar({
           <Ionicons name="chevron-back" size={16} color={colors.text} />
         </GlassIconButton>
         <Text style={[styles.monthLabel, { color: colors.text }]}>
-          {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+          {month.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
         </Text>
         <GlassIconButton
           size={36}
@@ -74,7 +86,7 @@ export function MonthCalendar({
       </View>
 
       <View style={styles.weekdayRow}>
-        {WEEKDAY_LABELS.map((label, i) => (
+        {weekdayLabels(locale).map((label, i) => (
           <Text key={i} style={[styles.weekdayLabel, { color: colors.textTertiary }]}>
             {label}
           </Text>

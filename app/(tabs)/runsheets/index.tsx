@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { EmptyState } from '../../../components/EmptyState';
@@ -17,6 +18,8 @@ import {
   useColors,
   type ColorPalette,
 } from '../../../constants';
+import { formatCurrency } from '../../../lib/currency';
+import { enumLabel } from '../../../lib/enumLabel';
 import { getJobDetail, getRunsheets, optimizeRouteOrder } from '../../../services/mock-api';
 import type { Job, JobStatus } from '../../../types';
 
@@ -24,22 +27,15 @@ type Segment = 'all' | 'pending' | 'delivered';
 
 const STAGGER_MS = 40;
 
-const STATUS_LABEL: Record<JobStatus, string> = {
-  pending: 'Pending',
-  'in-transit': 'In Transit',
-  delivered: 'Delivered',
-  failed: 'Failed',
-};
-
 function statusColors(status: JobStatus, colors: ColorPalette) {
   switch (status) {
-    case 'delivered':
+    case 'DELIVERED':
       return { color: colors.success, background: colors.successSoft };
-    case 'failed':
+    case 'FAILED':
       return { color: colors.danger, background: colors.dangerSoft };
-    case 'in-transit':
+    case 'IN_TRANSIT':
       return { color: '#fff', background: colors.info };
-    case 'pending':
+    case 'PENDING':
     default:
       return { color: colors.neutral, background: colors.neutralSoft };
   }
@@ -47,6 +43,7 @@ function statusColors(status: JobStatus, colors: ColorPalette) {
 
 export default function RunsheetsScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [stops, setStops] = useState<Job[] | null>(null);
   const [segment, setSegment] = useState<Segment>('all');
@@ -66,12 +63,12 @@ export default function RunsheetsScreen() {
     }, [load])
   );
 
-  const pending = stops?.filter((s) => s.status !== 'delivered') ?? [];
-  const delivered = stops?.filter((s) => s.status === 'delivered') ?? [];
+  const pending = stops?.filter((s) => s.status !== 'DELIVERED') ?? [];
+  const delivered = stops?.filter((s) => s.status === 'DELIVERED') ?? [];
 
   const nextStop =
     stops && segment === 'all'
-      ? (stops.find((s) => s.status === 'in-transit') ?? stops.find((s) => s.status === 'pending'))
+      ? (stops.find((s) => s.status === 'IN_TRANSIT') ?? stops.find((s) => s.status === 'PENDING'))
       : undefined;
 
   const bucket = segment === 'all' ? stops : segment === 'pending' ? pending : delivered;
@@ -79,10 +76,10 @@ export default function RunsheetsScreen() {
 
   const emptyState =
     segment === 'all'
-      ? { icon: 'file-tray-outline' as const, title: 'No stops yet' }
+      ? { icon: 'file-tray-outline' as const, title: t('runsheets.empty.all') }
       : segment === 'pending'
-        ? { icon: 'time-outline' as const, title: 'No pending stops' }
-        : { icon: 'checkmark-done-outline' as const, title: 'No delivered stops' };
+        ? { icon: 'time-outline' as const, title: t('runsheets.empty.pending') }
+        : { icon: 'checkmark-done-outline' as const, title: t('runsheets.empty.delivered') };
 
   return (
     <ScrollView
@@ -90,7 +87,9 @@ export default function RunsheetsScreen() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={[Typography.pageTitle, { color: colors.text }]}>Runsheets</Text>
+        <Text style={[Typography.pageTitle, { color: colors.text }]}>
+          {t('runsheets.headerTitle')}
+        </Text>
         <GlassIconButton onPress={() => router.push('/runsheet-schedule')}>
           <Ionicons name="calendar-outline" size={20} color={colors.text} />
         </GlassIconButton>
@@ -100,16 +99,16 @@ export default function RunsheetsScreen() {
         <View style={styles.optimizedRow}>
           <Ionicons name="navigate-outline" size={13} color={colors.accent} />
           <Text style={[styles.optimizedText, { color: colors.textSecondary }]}>
-            Route optimized for shortest distance
+            {t('runsheets.optimizedRoute')}
           </Text>
         </View>
       )}
 
       <SegmentedControl
         segments={[
-          { value: 'all', label: 'All' },
-          { value: 'pending', label: 'Pending' },
-          { value: 'delivered', label: 'Delivered' },
+          { value: 'all', label: t('runsheets.segments.all') },
+          { value: 'pending', label: t('runsheets.segments.pending') },
+          { value: 'delivered', label: t('runsheets.segments.delivered') },
         ]}
         value={segment}
         onChange={setSegment}
@@ -137,13 +136,15 @@ export default function RunsheetsScreen() {
                       getCardShadow(scheme),
                     ]}>
                     <View style={styles.nextCardTopRow}>
-                      <Text style={[styles.nextCardLabel, { color: colors.accent }]}>Next Stop</Text>
+                      <Text style={[styles.nextCardLabel, { color: colors.accent }]}>
+                        {t('runsheets.nextStop')}
+                      </Text>
                       <Text
                         style={[
                           styles.nextCardStatusChip,
                           { color: sc.color, backgroundColor: sc.background },
                         ]}>
-                        {STATUS_LABEL[nextStop.status]}
+                        {enumLabel(t, 'jobStatus', nextStop.status)}
                       </Text>
                     </View>
                     <Text style={[Typography.title3, { color: colors.text }]}>
@@ -153,7 +154,7 @@ export default function RunsheetsScreen() {
                       {nextStop.address}
                     </Text>
                     <Text style={[styles.codChip, { backgroundColor: colors.accent }]}>
-                      COD {nextStop.cashToCollect.toFixed(2)} DT
+                      {t('runsheets.codChip', { amount: formatCurrency(nextStop.cashToCollect) })}
                     </Text>
                   </AnimatedPressable>
                 </Animated.View>
@@ -165,7 +166,7 @@ export default function RunsheetsScreen() {
           ) : (
             listed.map((stop, i) => {
               const sc = statusColors(stop.status, colors);
-              const isDelivered = stop.status === 'delivered';
+              const isDelivered = stop.status === 'DELIVERED';
               return (
                 <Animated.View
                   key={stop.id}
@@ -199,7 +200,7 @@ export default function RunsheetsScreen() {
                         styles.rowStatusChip,
                         { color: sc.color, backgroundColor: sc.background },
                       ]}>
-                      {STATUS_LABEL[stop.status]}
+                      {enumLabel(t, 'jobStatus', stop.status)}
                     </Text>
                     {!isDelivered && (
                       <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />

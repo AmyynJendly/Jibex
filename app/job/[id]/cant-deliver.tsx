@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
@@ -21,16 +22,20 @@ import type { DeliveryFailureReason } from '../../../types';
 
 const STAGGER_MS = 40;
 
-const REASONS: { value: DeliveryFailureReason; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'customer-not-home', label: 'Customer not home', icon: 'home-outline' },
-  { value: 'refused', label: 'Customer refused delivery', icon: 'close-circle-outline' },
-  { value: 'wrong-address', label: 'Wrong or incomplete address', icon: 'location-outline' },
-  { value: 'business-closed', label: 'Business closed', icon: 'storefront-outline' },
-  { value: 'other', label: 'Other', icon: 'ellipsis-horizontal-circle-outline' },
+/** The real 7 failure reasons — icon per reason, label resolved from `enums.failureReason` (Part A/B). */
+const REASONS: { value: DeliveryFailureReason; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'CUSTOMER_ABSENT', icon: 'home-outline' },
+  { value: 'REFUSED', icon: 'close-circle-outline' },
+  { value: 'INCORRECT_ADDRESS', icon: 'location-outline' },
+  { value: 'INCOMPLETE_ADDRESS', icon: 'map-outline' },
+  { value: 'PHONE_UNREACHABLE', icon: 'call-outline' },
+  { value: 'NO_ANSWER', icon: 'volume-mute-outline' },
+  { value: 'OTHER', icon: 'ellipsis-horizontal-circle-outline' },
 ];
 
 export default function CantDeliverScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
   const [note, setNote] = useState('');
@@ -58,9 +63,9 @@ export default function CantDeliverScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: colors.text }]}>Can&apos;t Deliver</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('cantDeliver.title')}</Text>
         <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
-          Let dispatch know why this stop couldn&apos;t be completed
+          {t('cantDeliver.subtitle')}
         </Text>
 
         <View style={styles.reasonList}>
@@ -83,7 +88,7 @@ export default function CantDeliverScreen() {
                     <Ionicons name={option.icon} size={16} color={colors.danger} />
                   </View>
                   <Text style={[Typography.body, styles.reasonLabel, { color: colors.text }]}>
-                    {option.label}
+                    {t(`enums.failureReason.${option.value}`)}
                   </Text>
                   <View
                     style={[
@@ -103,12 +108,12 @@ export default function CantDeliverScreen() {
 
         <View style={styles.noteBlock}>
           <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>
-            Note (optional)
+            {t('cantDeliver.noteLabel')}
           </Text>
           <TextInput
             value={note}
             onChangeText={setNote}
-            placeholder="Anything dispatch should know…"
+            placeholder={t('cantDeliver.notePlaceholder')}
             placeholderTextColor={colors.textTertiary}
             multiline
             style={[
@@ -121,7 +126,7 @@ export default function CantDeliverScreen() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Confirm"
+          label={t('cantDeliver.confirm')}
           height={56}
           loading={submitting}
           disabled={!reason}

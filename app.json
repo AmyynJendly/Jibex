@@ -17,7 +17,9 @@
       "supportsTablet": true,
       "infoPlist": {
         "UIDesignRequiresCompatibility": false,
-        "LSApplicationQueriesSchemes": ["comgooglemaps"]
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps"
+        ]
       },
       "icon": "./assets/icon.png"
     },
@@ -43,7 +45,8 @@
           "cameraPermission": "Jibex uses your camera to scan package barcodes and capture delivery photos."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true

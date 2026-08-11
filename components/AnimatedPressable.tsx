@@ -27,17 +27,27 @@ interface AnimatedPressableProps extends PressableProps {
 
 /**
  * Drop-in `Pressable` with iOS-native press feedback (spring scale-down +
- * slight opacity dim on press-in, spring back on release) — also supports
- * reanimated's `entering`/`exiting`/`layout` props since it's built on
- * `Animated.createAnimatedComponent`, so the same instance can carry a
- * list-entrance animation.
+ * a slight downward dip + opacity dim on press-in, spring back on release)
+ * — also supports reanimated's `entering`/`exiting`/`layout` props since
+ * it's built on `Animated.createAnimatedComponent`, so the same instance can
+ * carry a list-entrance animation.
+ *
+ * Deliberately 2D-only (scale/translateY, no `perspective`/`rotateX`) — a 3D
+ * transform here previously broke native `BlurView`/`GlassView` backdrop
+ * sampling on iOS (rendered solid black) for every button built on
+ * `GlassSurface`, which is most of them. Don't reintroduce a 3D matrix
+ * transform on this component without confirming it's safe on a real
+ * glass-surfaced button, not just a plain one.
  */
 export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, AnimatedPressableProps>(
   ({ scaleTo = 0.96, style, onPressIn, onPressOut, ...props }, ref) => {
     const pressed = useSharedValue(0);
 
     const animatedStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: 1 - pressed.value * (1 - scaleTo) }],
+      transform: [
+        { scale: 1 - pressed.value * (1 - scaleTo) },
+        { translateY: pressed.value * 1.5 },
+      ],
       opacity: 1 - pressed.value * 0.12,
     }));
 

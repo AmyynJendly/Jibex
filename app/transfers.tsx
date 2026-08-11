@@ -4,29 +4,31 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonRow } from '../components/Skeleton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
+import { localeTag } from '../lib/date';
 import { getTransfers } from '../services/mock-api';
 import type { Transfer } from '../types';
 
 const STAGGER_MS = 40;
 
-function pluralize(count: number, noun: string) {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`;
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-}
-
 export default function TransfersScreen() {
   const colors = useColors();
+  const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [transfers, setTransfers] = useState<Transfer[] | null>(null);
+
+  function formatTime(iso: string) {
+    return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
 
   useEffect(() => {
     getTransfers().then(setTransfers);
@@ -38,7 +40,7 @@ export default function TransfersScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Transfers</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('transfers.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -51,10 +53,10 @@ export default function TransfersScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           {transfers.length === 0 && (
-            <EmptyState icon="swap-horizontal-outline" title="No transfers in progress" />
+            <EmptyState icon="swap-horizontal-outline" title={t('transfers.empty')} />
           )}
           {transfers.map((transfer, i) => {
-            const completed = transfer.status === 'completed';
+            const completed = transfer.status === 'COMPLETED';
             const statusColor = completed ? colors.success : colors.accent;
             const statusSoft = completed ? colors.successSoft : colors.accentSoft;
             return (
@@ -78,12 +80,15 @@ export default function TransfersScreen() {
                     <View style={{ flex: 1 }} />
                     <Text
                       style={[styles.statusChip, { color: statusColor, backgroundColor: statusSoft }]}>
-                      {completed ? 'Completed' : 'Awaiting Handoff'}
+                      {completed ? t('transfers.status.completed') : t('transfers.status.awaitingHandoff')}
                     </Text>
                   </View>
                   <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-                    {pluralize(transfer.itemCount, 'package')} · {transfer.location} ·{' '}
-                    {formatTime(transfer.scheduledAt)}
+                    {t('transfers.detailLine', {
+                      count: t('common.package', { count: transfer.itemCount }),
+                      location: transfer.location,
+                      time: formatTime(transfer.scheduledAt),
+                    })}
                   </Text>
                 </View>
               </Animated.View>
@@ -91,7 +96,7 @@ export default function TransfersScreen() {
           })}
 
           <PrimaryButton
-            label="Initiate Transfer"
+            label={t('transfers.initiateTransfer')}
             onPress={() => router.push('/scanner')}
             height={54}
             style={styles.initiateButton}

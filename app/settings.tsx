@@ -3,13 +3,19 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
+import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { Radii, Spacing, Typography, getCardShadow, sectionLabelStyle, useColors } from '../constants';
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../lib/i18n';
+import { useLanguage } from '../lib/i18n/LanguageProvider';
 
 export default function SettingsScreen() {
   const colors = useColors();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
   const [pushEnabled, setPushEnabled] = useState(true);
 
   return (
@@ -18,14 +24,43 @@ export default function SettingsScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Settings</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('settings.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View>
           <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-            Notifications
+            {t('settings.sectionLanguage')}
+          </Text>
+          <View
+            style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+            {SUPPORTED_LANGUAGES.map((code: SupportedLanguage, i) => {
+              const selected = language === code;
+              return (
+                <AnimatedPressable
+                  key={code}
+                  onPress={() => setLanguage(code)}
+                  style={[
+                    styles.row,
+                    i < SUPPORTED_LANGUAGES.length - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: colors.separator,
+                    },
+                  ]}>
+                  <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                    {t(`settings.languages.${code}`)}
+                  </Text>
+                  {selected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                </AnimatedPressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View>
+          <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
+            {t('settings.sectionNotifications')}
           </Text>
           <View
             style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
@@ -34,7 +69,7 @@ export default function SettingsScreen() {
                 <Ionicons name="notifications-outline" size={15} color={colors.accent} />
               </View>
               <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                New assignment alerts
+                {t('settings.newAssignmentAlerts')}
               </Text>
               <Switch
                 value={pushEnabled}
@@ -47,7 +82,7 @@ export default function SettingsScreen() {
 
         <View>
           <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-            Appearance
+            {t('settings.sectionAppearance')}
           </Text>
           <View
             style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
@@ -55,9 +90,11 @@ export default function SettingsScreen() {
               <View style={[styles.rowIcon, { backgroundColor: colors.purpleSoft }]}>
                 <Ionicons name="contrast-outline" size={15} color={colors.purple} />
               </View>
-              <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>Theme</Text>
+              <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                {t('settings.theme')}
+              </Text>
               <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-                Matches System
+                {t('settings.themeMatchesSystem')}
               </Text>
             </View>
           </View>
@@ -65,7 +102,7 @@ export default function SettingsScreen() {
 
         <View>
           <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-            About
+            {t('settings.sectionAbout')}
           </Text>
           <View
             style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
@@ -74,7 +111,7 @@ export default function SettingsScreen() {
                 <Ionicons name="information-circle-outline" size={15} color={colors.textSecondary} />
               </View>
               <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                App Version
+                {t('settings.appVersion')}
               </Text>
               <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
                 {Constants.expoConfig?.version ?? '1.0.0'}

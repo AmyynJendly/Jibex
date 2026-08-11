@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { EmptyState } from '../components/EmptyState';
@@ -17,24 +18,21 @@ import type { Pickup, PickupStatus } from '../types';
 
 const STAGGER_MS = 40;
 
-function pluralize(count: number, noun: string) {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`;
-}
-
 export default function PickupsScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [pickups, setPickups] = useState<Pickup[] | null>(null);
-  const [segment, setSegment] = useState<PickupStatus>('scheduled');
+  const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
 
   useEffect(() => {
     getPickups().then(setPickups);
   }, []);
 
-  const scheduled = pickups?.filter((p) => p.status === 'scheduled') ?? [];
-  const completed = pickups?.filter((p) => p.status === 'completed') ?? [];
-  const nextPickup = segment === 'scheduled' ? scheduled[0] : undefined;
-  const restPickups = segment === 'scheduled' ? scheduled.slice(1) : completed;
+  const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
+  const completed = pickups?.filter((p) => p.status === 'COMPLETED') ?? [];
+  const nextPickup = segment === 'SCHEDULED' ? scheduled[0] : undefined;
+  const restPickups = segment === 'SCHEDULED' ? scheduled.slice(1) : completed;
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -42,15 +40,15 @@ export default function PickupsScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Pickups</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('pickups.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <SegmentedControl
           segments={[
-            { value: 'scheduled', label: 'Scheduled' },
-            { value: 'completed', label: 'Completed' },
+            { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
+            { value: 'COMPLETED', label: t('pickups.segments.completed') },
           ]}
           value={segment}
           onChange={setSegment}
@@ -73,7 +71,9 @@ export default function PickupsScreen() {
                   getCardShadow(scheme),
                 ]}>
                 <View style={styles.nextCardTopRow}>
-                  <Text style={[styles.nextCardLabel, { color: colors.accent }]}>Next Pickup</Text>
+                  <Text style={[styles.nextCardLabel, { color: colors.accent }]}>
+                    {t('pickups.nextPickup')}
+                  </Text>
                   <Text
                     style={[
                       styles.timeChip,
@@ -90,10 +90,10 @@ export default function PickupsScreen() {
                 </Text>
                 <View style={styles.nextCardBottomRow}>
                   <Text style={[styles.packageCount, { color: colors.textTertiary }]}>
-                    {pluralize(nextPickup.packageCount, 'package')}
+                    {t('common.package', { count: nextPickup.packageCount })}
                   </Text>
                   <PrimaryButton
-                    label="Start Pickup"
+                    label={t('pickups.startPickup')}
                     onPress={() => router.push('/scanner')}
                     height={38}
                     style={styles.startButton}
@@ -105,8 +105,8 @@ export default function PickupsScreen() {
 
             {restPickups.length === 0 && !nextPickup ? (
               <EmptyState
-                icon={segment === 'scheduled' ? 'cube-outline' : 'checkmark-done-outline'}
-                title={`No ${segment} pickups`}
+                icon={segment === 'SCHEDULED' ? 'cube-outline' : 'checkmark-done-outline'}
+                title={segment === 'SCHEDULED' ? t('pickups.empty.scheduled') : t('pickups.empty.completed')}
               />
             ) : (
               restPickups.map((pickup, i) => (
@@ -128,7 +128,7 @@ export default function PickupsScreen() {
                         {pickup.businessName}
                       </Text>
                       <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-                        {pickup.timeWindow} · {pluralize(pickup.packageCount, 'package')}
+                        {pickup.timeWindow} · {t('common.package', { count: pickup.packageCount })}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />

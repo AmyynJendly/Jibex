@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Spacing, Typography, useColors } from '../constants';
+import { AmbientGlow } from './AmbientGlow';
 
 interface EmptyStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -41,9 +42,14 @@ export function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
 
   return (
     <Animated.View entering={FadeIn.duration(250)} style={styles.container}>
-      <Animated.View style={[styles.iconCircle, { backgroundColor: colors.separator }, floatStyle]}>
-        <Ionicons name={icon} size={26} color={colors.textTertiary} />
-      </Animated.View>
+      <View style={styles.iconStage}>
+        <View style={styles.glowLayer}>
+          <AmbientGlow width={140} height={140} />
+        </View>
+        <Animated.View style={[styles.iconCircle, { backgroundColor: colors.separator }, floatStyle]}>
+          <Ionicons name={icon} size={26} color={colors.textTertiary} />
+        </Animated.View>
+      </View>
       <Text style={[Typography.callout, styles.title, { color: colors.textSecondary }]}>
         {title}
       </Text>
@@ -62,6 +68,18 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.huge,
     paddingBottom: Spacing.huge,
     gap: Spacing.md,
+  },
+  iconStage: {
+    width: 140,
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: -Spacing.xxl,
+  },
+  glowLayer: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
   },
   iconCircle: {
     width: 56,

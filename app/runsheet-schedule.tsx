@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MonthCalendar } from '../components/MonthCalendar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
-import { fromDateKey, toDateKey } from '../lib/date';
+import { fromDateKey, localeTag, toDateKey } from '../lib/date';
 
 const today = new Date();
 const todayKey = toDateKey(today);
@@ -16,13 +17,14 @@ const todayKey = toDateKey(today);
 export default function RunsheetScheduleScreen() {
   const colors = useColors();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { t, i18n } = useTranslation();
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDateKey, setSelectedDateKey] = useState(todayKey);
 
   const isToday = selectedDateKey === todayKey;
   const selectedLabel = isToday
-    ? 'Today'
-    : fromDateKey(selectedDateKey).toLocaleDateString(undefined, {
+    ? t('runsheetSchedule.today')
+    : fromDateKey(selectedDateKey).toLocaleDateString(localeTag(i18n.language), {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
@@ -34,7 +36,9 @@ export default function RunsheetScheduleScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Schedule</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>
+          {t('runsheetSchedule.headerTitle')}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -53,12 +57,14 @@ export default function RunsheetScheduleScreen() {
           <View
             style={[styles.resultCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
             <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-            <Text style={[styles.resultTitle, { color: colors.text }]}>Viewing today&apos;s runsheet</Text>
+            <Text style={[styles.resultTitle, { color: colors.text }]}>
+              {t('runsheetSchedule.viewingToday')}
+            </Text>
             <Text style={[Typography.footnote, styles.resultBody, { color: colors.textSecondary }]}>
-              Go back to see today&apos;s stops, in optimized route order.
+              {t('runsheetSchedule.viewingTodayBody')}
             </Text>
             <PrimaryButton
-              label="Back to Runsheet"
+              label={t('runsheetSchedule.backToRunsheet')}
               height={46}
               onPress={() => router.back()}
               style={styles.resultButton}
@@ -67,8 +73,8 @@ export default function RunsheetScheduleScreen() {
         ) : (
           <EmptyState
             icon="calendar-outline"
-            title={`No runsheet loaded for ${selectedLabel}`}
-            subtitle="Other days will show up here once Jibex is connected to your dispatch system."
+            title={t('runsheetSchedule.emptyTitle', { date: selectedLabel })}
+            subtitle={t('runsheetSchedule.emptyBody')}
           />
         )}
       </ScrollView>

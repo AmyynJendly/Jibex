@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
@@ -14,6 +15,7 @@ import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../..
 import type { Job } from '../../../types';
 
 export default function PhotoProofScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [job, setJob] = useState<Job | null>(null);
@@ -61,7 +63,7 @@ export default function PhotoProofScreen() {
         <GlassIconButton forceDark onPress={() => router.back()}>
           <Ionicons name="close" size={20} color="#fff" />
         </GlassIconButton>
-        <Text style={[Typography.headline, styles.title]}>Photo Proof</Text>
+        <Text style={[Typography.headline, styles.title]}>{t('photoProof.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -74,29 +76,29 @@ export default function PhotoProofScreen() {
       ) : (
         <View style={styles.permissionBlock}>
           <Ionicons name="camera-outline" size={28} color="#fff" />
-          <Text style={styles.permissionBody}>
-            Camera access is needed to capture delivery proof.
-          </Text>
-          <PrimaryButton label="Enable Camera" onPress={requestPermission} style={styles.permissionButton} />
+          <Text style={styles.permissionBody}>{t('photoProof.permissionBody')}</Text>
+          <PrimaryButton
+            label={t('photoProof.enableCamera')}
+            onPress={requestPermission}
+            style={styles.permissionButton}
+          />
         </View>
       )}
 
       <View style={styles.footer}>
         <Text style={styles.hint}>
-          {photoUri
-            ? 'Package left at the door? Confirm to complete this delivery.'
-            : 'Take a clear photo of the package at the delivery location.'}
+          {photoUri ? t('photoProof.hintConfirm') : t('photoProof.hintCapture')}
         </Text>
         {photoUri ? (
           <>
             <PrimaryButton
-              label="Confirm Delivery"
+              label={t('photoProof.confirmDelivery')}
               height={56}
               loading={submitting}
               onPress={handleConfirm}
             />
             <Text onPress={() => setPhotoUri(null)} style={styles.retake}>
-              Retake Photo
+              {t('photoProof.retake')}
             </Text>
           </>
         ) : (

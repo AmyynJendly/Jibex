@@ -2,42 +2,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
 
-const FAQS = [
-  {
-    question: 'When do I get paid?',
-    answer:
-      'Cash you collect on delivery is yours to hand off at shift end — see Shift Summary. Your weekly base pay and bonuses are deposited to the bank account on file every Friday.',
-  },
-  {
-    question: 'What if a customer refuses a package?',
-    answer:
-      'Open the stop, tap "Can\'t Deliver", and choose "Customer refused delivery". Dispatch is notified automatically and the item is flagged for return.',
-  },
-  {
-    question: 'How does route order work?',
-    answer:
-      'Runsheets are automatically ordered by shortest total driving distance from your depot, recalculated every time you complete or fail a stop — you don\'t need to plan the order yourself.',
-  },
-  {
-    question: 'My scanner won\'t read a barcode',
-    answer:
-      'Make sure camera access is enabled and the barcode is well-lit. If it still won\'t scan, use "Enter Code Manually" on the scanner screen instead.',
-  },
-  {
-    question: 'How do I change which days I work?',
-    answer: 'Go to Profile → Availability and mark the dates and time blocks you\'re free.',
-  },
-];
+interface Faq {
+  question: string;
+  answer: string;
+}
 
 export default function HelpCenterScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const faqs = t('helpCenter.faqs', { returnObjects: true }) as Faq[];
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -45,7 +26,7 @@ export default function HelpCenterScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Help Center</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('helpCenter.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -58,18 +39,18 @@ export default function HelpCenterScreen() {
             <Ionicons name="chatbubbles-outline" size={20} color="#fff" />
           </View>
           <View style={styles.contactText}>
-            <Text style={styles.contactTitle}>Contact Support</Text>
+            <Text style={styles.contactTitle}>{t('helpCenter.contactSupport')}</Text>
             <Text style={styles.contactSubtitle}>support@jibex.app</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
         </AnimatedPressable>
 
         <Text style={[Typography.footnote, styles.sectionLabel, { color: colors.textTertiary }]}>
-          FREQUENTLY ASKED
+          {t('helpCenter.faqSectionLabel').toUpperCase()}
         </Text>
 
         <View style={styles.faqList}>
-          {FAQS.map((faq, i) => {
+          {faqs.map((faq, i) => {
             const open = openIndex === i;
             return (
               <AnimatedPressable

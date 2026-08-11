@@ -1,3 +1,8 @@
+/** Maps the app's language code to a locale tag for `toLocaleDateString`/`toLocaleTimeString` — using `i18n.language` here instead of `undefined` (device locale) so displayed dates/times follow the driver's chosen in-app language even if it differs from the device's own locale. */
+export function localeTag(language: string): string {
+  return language === 'fr' ? 'fr-FR' : 'en-US';
+}
+
 /** Local calendar date key (`YYYY-MM-DD`) — deliberately not `toISOString()`, which converts to UTC and can roll the date over near midnight. */
 export function toDateKey(date: Date): string {
   const y = date.getFullYear();
@@ -10,6 +15,11 @@ export function toDateKey(date: Date): string {
 export function fromDateKey(key: string): Date {
   const [y, m, d] = key.split('-').map(Number);
   return new Date(y, m - 1, d);
+}
+
+/** Compact local date (`YYYYMMDD`) — used in real backend ID formats (e.g. "RS-20260715-0001"). */
+export function toCompactDateKey(date: Date): string {
+  return toDateKey(date).replace(/-/g, '');
 }
 
 export function isSameMonth(a: Date, b: Date): boolean {

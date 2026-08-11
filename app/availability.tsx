@@ -3,21 +3,16 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { type DayMark, MonthCalendar } from '../components/MonthCalendar';
 import { SkeletonBlock } from '../components/Skeleton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
-import { addMonths, fromDateKey, isSameMonth, toDateKey } from '../lib/date';
+import { addMonths, fromDateKey, isSameMonth, localeTag, toDateKey } from '../lib/date';
 import { getAvailability, setAvailability } from '../services/mock-api';
 import { AVAILABILITY_BLOCKS, type Availability, type AvailabilityBlock } from '../types';
-
-const BLOCK_LABEL: Record<AvailabilityBlock, string> = {
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
-};
 
 const EMPTY_DAY = { morning: false, afternoon: false, evening: false };
 
@@ -27,6 +22,7 @@ const maxMonth = addMonths(today, 2);
 
 export default function AvailabilityScreen() {
   const colors = useColors();
+  const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [availability, setAvailabilityState] = useState<Availability | null>(null);
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
@@ -68,7 +64,7 @@ export default function AvailabilityScreen() {
   }, [availability, month]);
 
   const selectedDay = availability?.[selectedDateKey] ?? EMPTY_DAY;
-  const selectedLabel = fromDateKey(selectedDateKey).toLocaleDateString(undefined, {
+  const selectedLabel = fromDateKey(selectedDateKey).toLocaleDateString(localeTag(i18n.language), {
     weekday: 'long',
     month: 'long',
     day: 'numeric',

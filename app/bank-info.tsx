@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { FormField } from '../components/FormField';
 import { GlassIconButton } from '../components/GlassIconButton';
@@ -13,6 +14,7 @@ import { getPayoutInfo, updatePayoutInfo } from '../services/mock-api';
 
 export default function BankInfoScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [loaded, setLoaded] = useState(false);
   const [bankName, setBankName] = useState('');
@@ -38,7 +40,7 @@ export default function BankInfoScreen() {
       iban: iban.trim(),
     });
     setSaving(false);
-    showToast('Bank info saved');
+    showToast(t('bankInfo.savedToast'));
     router.back();
   }
 
@@ -50,7 +52,7 @@ export default function BankInfoScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Bank & Payout Info</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('bankInfo.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -65,26 +67,34 @@ export default function BankInfoScreen() {
           <>
             <View style={[styles.noteRow, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="shield-checkmark-outline" size={16} color={colors.accent} />
-              <Text style={[styles.noteText, { color: colors.text }]}>
-                Used only to deposit your cash-collection payouts.
-              </Text>
+              <Text style={[styles.noteText, { color: colors.text }]}>{t('bankInfo.note')}</Text>
             </View>
 
-            <FormField label="Bank Name" value={bankName} onChangeText={setBankName} autoCapitalize="words" />
             <FormField
-              label="Account Holder"
+              label={t('bankInfo.bankNameLabel')}
+              value={bankName}
+              onChangeText={setBankName}
+              autoCapitalize="words"
+            />
+            <FormField
+              label={t('bankInfo.accountHolderLabel')}
               value={accountHolder}
               onChangeText={setAccountHolder}
               autoCapitalize="words"
             />
-            <FormField label="IBAN" value={iban} onChangeText={setIban} autoCapitalize="characters" />
+            <FormField
+              label={t('bankInfo.ibanLabel')}
+              value={iban}
+              onChangeText={setIban}
+              autoCapitalize="characters"
+            />
           </>
         )}
       </ScrollView>
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Save Changes"
+          label={t('bankInfo.saveChanges')}
           height={54}
           loading={saving}
           disabled={!loaded}

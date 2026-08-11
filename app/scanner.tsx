@@ -11,6 +11,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
@@ -40,6 +41,7 @@ const SWEEP_RANGE = 95;
 const BARCODE_TYPES = ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a'] as const;
 
 export default function ScannerScreen() {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [permission, requestPermission] = useCameraPermissions();
   const [torchOn, setTorchOn] = useState(false);
@@ -80,11 +82,11 @@ export default function ScannerScreen() {
 
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast(`Confirmed — ${result.label}`);
+      showToast(t('scanner.confirmedToast', { label: result.label }));
       setTimeout(() => router.back(), 700);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast(result.error ?? 'Code not recognized');
+      showToast(t(result.error ?? 'scanner.errors.notRecognized'));
       setTimeout(() => {
         scanLockedRef.current = false;
       }, 1200);
@@ -118,7 +120,7 @@ export default function ScannerScreen() {
         <GlassIconButton forceDark onPress={() => router.back()}>
           <Ionicons name="close" size={20} color="#fff" />
         </GlassIconButton>
-        <Text style={[Typography.headline, styles.title]}>Scan Package</Text>
+        <Text style={[Typography.headline, styles.title]}>{t('scanner.title')}</Text>
         <GlassIconButton forceDark onPress={() => setTorchOn((v) => !v)}>
           <Ionicons
             name={torchOn ? 'flashlight' : 'flashlight-outline'}
@@ -133,11 +135,13 @@ export default function ScannerScreen() {
           <View style={styles.permissionIcon}>
             <Ionicons name="camera-outline" size={28} color="#fff" />
           </View>
-          <Text style={styles.permissionTitle}>Camera access needed</Text>
-          <Text style={styles.permissionBody}>
-            Jibex uses the camera to scan package barcodes and confirm pickups.
-          </Text>
-          <PrimaryButton label="Enable Camera" onPress={requestPermission} style={styles.permissionButton} />
+          <Text style={styles.permissionTitle}>{t('scanner.permissionTitle')}</Text>
+          <Text style={styles.permissionBody}>{t('scanner.permissionBody')}</Text>
+          <PrimaryButton
+            label={t('scanner.enableCamera')}
+            onPress={requestPermission}
+            style={styles.permissionButton}
+          />
         </View>
       ) : (
         <View style={styles.viewfinder}>
@@ -157,7 +161,7 @@ export default function ScannerScreen() {
             <TextInput
               value={manualCode}
               onChangeText={setManualCode}
-              placeholder="e.g. PU-48301"
+              placeholder={t('scanner.manualPlaceholder')}
               placeholderTextColor="rgba(255,255,255,0.4)"
               autoCapitalize="characters"
               autoFocus
@@ -175,12 +179,12 @@ export default function ScannerScreen() {
         ) : (
           <GlassSurface tint="dark" colorScheme="dark" style={styles.hintPill}>
             <Text style={[Typography.callout, styles.hintText]}>
-              {submitting ? 'Checking code…' : 'Align barcode within frame to confirm pickup'}
+              {submitting ? t('scanner.hintChecking') : t('scanner.hintAlign')}
             </Text>
           </GlassSurface>
         )}
         <Text onPress={() => setManualEntry((v) => !v)} style={[Typography.headline, styles.manual]}>
-          {manualEntry ? 'Use Camera Instead' : 'Enter Code Manually'}
+          {manualEntry ? t('scanner.useCamera') : t('scanner.enterManually')}
         </Text>
       </View>
     </KeyboardAvoidingView>

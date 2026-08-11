@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { EmptyState } from '../../../components/EmptyState';
@@ -16,6 +17,7 @@ import {
   useColors,
   type ColorPalette,
 } from '../../../constants';
+import { localeTag } from '../../../lib/date';
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -27,19 +29,19 @@ const STAGGER_MS = 40;
 
 function typeStyle(type: NotificationType, colors: ColorPalette) {
   switch (type) {
-    case 'pickup':
+    case 'PICKUP':
       return { icon: 'cube-outline' as const, color: colors.purple, soft: colors.purpleSoft };
-    case 'delivery':
+    case 'DELIVERY':
       return { icon: 'location-outline' as const, color: colors.accent, soft: colors.accentSoft };
-    case 'cash':
+    case 'CASH':
       return { icon: 'card-outline' as const, color: colors.success, soft: colors.successSoft };
-    case 'transfer':
+    case 'TRANSFER':
       return {
         icon: 'swap-horizontal-outline' as const,
         color: colors.warning,
         soft: colors.warningSoft,
       };
-    case 'return':
+    case 'RETURN':
       return { icon: 'arrow-undo-outline' as const, color: colors.danger, soft: colors.dangerSoft };
   }
 }
@@ -54,21 +56,22 @@ function isYesterday(iso: string) {
   return new Date(iso).toDateString() === yesterday.toDateString();
 }
 
-function formatTime(iso: string) {
-  const date = new Date(iso);
-  if (isToday(iso)) {
-    const minutes = Math.max(1, Math.round((Date.now() - date.getTime()) / 60_000));
-    if (minutes < 60) return `${minutes}m`;
-    return `${Math.round(minutes / 60)}h`;
-  }
-  if (isYesterday(iso)) return 'Yesterday';
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
 export default function AlertsScreen() {
   const colors = useColors();
+  const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
+
+  function formatTime(iso: string) {
+    const date = new Date(iso);
+    if (isToday(iso)) {
+      const minutes = Math.max(1, Math.round((Date.now() - date.getTime()) / 60_000));
+      if (minutes < 60) return `${minutes}m`;
+      return `${Math.round(minutes / 60)}h`;
+    }
+    if (isYesterday(iso)) return t('alerts.yesterday');
+    return date.toLocaleDateString(localeTag(i18n.language), { month: 'short', day: 'numeric' });
+  }
 
   const load = useCallback(async () => {
     setNotifications(await getNotifications());
@@ -138,7 +141,7 @@ export default function AlertsScreen() {
       contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[Typography.pageTitle, { color: colors.text }]}>Notifications</Text>
+          <Text style={[Typography.pageTitle, { color: colors.text }]}>{t('alerts.headerTitle')}</Text>
           {unreadCount > 0 && (
             <View style={[styles.badge, { backgroundColor: colors.danger }]}>
               <Text style={styles.badgeText}>{unreadCount}</Text>
@@ -147,7 +150,7 @@ export default function AlertsScreen() {
         </View>
         {unreadCount > 0 && (
           <Text onPress={handleMarkAllRead} style={[styles.markAllRead, { color: colors.accent }]}>
-            Mark all read
+            {t('alerts.markAllRead')}
           </Text>
         )}
       </View>
@@ -163,7 +166,7 @@ export default function AlertsScreen() {
           {today.length > 0 && (
             <View style={styles.section}>
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-                Today
+                {t('alerts.today')}
               </Text>
               <View style={styles.list}>
                 {today.map((n, i) => renderCard(n, false, i))}
@@ -174,7 +177,7 @@ export default function AlertsScreen() {
           {earlier.length > 0 && (
             <View style={styles.section}>
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-                Earlier
+                {t('alerts.earlier')}
               </Text>
               <View style={styles.list}>
                 {earlier.map((n, i) => renderCard(n, true, today.length + i))}
@@ -183,7 +186,7 @@ export default function AlertsScreen() {
           )}
 
           {notifications.length === 0 && (
-            <EmptyState icon="checkmark-circle-outline" title="You're all caught up" />
+            <EmptyState icon="checkmark-circle-outline" title={t('alerts.empty')} />
           )}
         </>
       )}

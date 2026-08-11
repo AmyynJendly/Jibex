@@ -21,6 +21,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
@@ -71,6 +72,7 @@ function OtpBox({ digit, active, error, colors }: OtpBoxProps) {
 
 export default function OtpScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -109,7 +111,7 @@ export default function OtpScreen() {
     setSubmitting(false);
 
     if (!result.success) {
-      setError(result.error ?? 'Something went wrong. Please try again.');
+      setError(t(result.error ?? 'common.genericError'));
       setOtp('');
       inputRef.current?.focus();
       return;
@@ -136,9 +138,9 @@ export default function OtpScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: colors.text }]}>Confirm Delivery</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('otp.title')}</Text>
         <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
-          Ask the customer for the 4-digit code sent to their phone via SMS
+          {t('otp.subtitle')}
         </Text>
 
         <View style={styles.section}>
@@ -160,7 +162,7 @@ export default function OtpScreen() {
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.phoneButton, { backgroundColor: colors.accentSoft }]}
-                onPress={() => showToast('Calling — coming soon')}>
+                onPress={() => showToast(t('common.callToast'))}>
                 <Ionicons name="call-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
             </View>
@@ -207,14 +209,14 @@ export default function OtpScreen() {
               inputRef.current?.focus();
             }}
             style={[styles.resend, { color: colors.accent }]}>
-            Resend Code
+            {t('otp.resend')}
           </Text>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Verify & Complete"
+          label={t('otp.verify')}
           height={56}
           loading={submitting}
           disabled={otp.length < OTP_LENGTH}
@@ -223,16 +225,16 @@ export default function OtpScreen() {
         <AnimatedPressable
           scaleTo={0.97}
           style={styles.unreachableRow}
-          onPress={() => showToast('Calling — coming soon')}>
+          onPress={() => showToast(t('common.callToast'))}>
           <Ionicons name="call-outline" size={16} color={colors.textSecondary} />
           <Text style={[styles.unreachableText, { color: colors.textSecondary }]}>
-            Customer unreachable? Call
+            {t('otp.unreachable')}
           </Text>
         </AnimatedPressable>
         <Text
           onPress={() => router.push({ pathname: '/job/[id]/photo-proof', params: { id } })}
           style={[styles.photoLink, { color: colors.accent }]}>
-          Take Photo Instead
+          {t('otp.takePhotoInstead')}
         </Text>
       </View>
     </KeyboardAvoidingView>

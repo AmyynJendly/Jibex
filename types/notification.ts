@@ -1,4 +1,5 @@
-export type NotificationType = 'pickup' | 'delivery' | 'cash' | 'return' | 'transfer';
+/** Matches the real backend's uppercase enum strings. */
+export type NotificationType = 'PICKUP' | 'DELIVERY' | 'CASH' | 'RETURN' | 'TRANSFER';
 
 export interface Notification {
   /** e.g. "PU-3-20260712-0002" — {TYPE}-{route}-{YYYYMMDD}-{seq}. */

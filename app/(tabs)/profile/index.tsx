@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
@@ -18,6 +19,7 @@ import {
   sectionLabelStyle,
   useColors,
 } from '../../../constants';
+import { formatCurrency } from '../../../lib/currency';
 import { clearToken } from '../../../lib/token';
 import { getDriverStats, getUser } from '../../../services/mock-api';
 import type { DriverStats, User } from '../../../types';
@@ -43,6 +45,7 @@ interface AccountRow {
 
 export default function ProfileScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -68,7 +71,7 @@ export default function ProfileScreen() {
   const accountRows: AccountRow[] = [
     {
       key: 'personal',
-      label: 'Personal Info',
+      label: t('profile.rows.personalInfo'),
       icon: 'person-outline',
       color: colors.accent,
       soft: colors.accentSoft,
@@ -76,7 +79,7 @@ export default function ProfileScreen() {
     },
     {
       key: 'vehicle',
-      label: 'Vehicle Details',
+      label: t('profile.rows.vehicleDetails'),
       icon: 'car-outline',
       color: colors.purple,
       soft: colors.purpleSoft,
@@ -84,7 +87,7 @@ export default function ProfileScreen() {
     },
     {
       key: 'bank',
-      label: 'Bank & Payout Info',
+      label: t('profile.rows.bankInfo'),
       icon: 'cash-outline',
       color: colors.success,
       soft: colors.successSoft,
@@ -92,7 +95,7 @@ export default function ProfileScreen() {
     },
     {
       key: 'availability',
-      label: 'Availability',
+      label: t('profile.rows.availability'),
       icon: 'calendar-outline',
       color: colors.warning,
       soft: colors.warningSoft,
@@ -106,7 +109,7 @@ export default function ProfileScreen() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={[Typography.pageTitle, { color: colors.text }]}>Profile</Text>
+        <Text style={[Typography.pageTitle, { color: colors.text }]}>{t('profile.headerTitle')}</Text>
         <GlassIconButton size={40} onPress={() => router.push('/settings')}>
           <Ionicons name="settings-outline" size={20} color={colors.text} />
         </GlassIconButton>
@@ -138,7 +141,7 @@ export default function ProfileScreen() {
                   styles.editBadge,
                   { backgroundColor: colors.accent, borderColor: colors.bgElevated },
                 ]}
-                onPress={() => showToast('Edit photo — coming soon')}>
+                onPress={() => showToast(t('profile.editPhotoToast'))}>
                 <Ionicons name="pencil" size={13} color="#fff" />
               </AnimatedPressable>
             </View>
@@ -155,7 +158,9 @@ export default function ProfileScreen() {
                 getCardShadow(scheme),
               ]}>
               <Ionicons name="star" size={14} color="#FF9F0A" />
-              <Text style={[styles.ratingText, { color: colors.text }]}>4.92 Rating</Text>
+              <Text style={[styles.ratingText, { color: colors.text }]}>
+                {t('profile.rating', { rating: '4.92' })}
+              </Text>
             </View>
           </GlassSurface>
 
@@ -167,29 +172,33 @@ export default function ProfileScreen() {
             ]}>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.text }]}>{stats.delivered}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Delivered</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('profile.stats.delivered')}
+              </Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.success }]}>
                 {stats.completionPercent}%
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Completion</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('profile.stats.completion')}
+              </Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statValueSmall, { color: colors.accent }]}>
-                {stats.cashCollectedTotal.toFixed(2)} DT
+                {formatCurrency(stats.cashCollectedTotal)}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                Cash Collected
+                {t('profile.stats.cashCollected')}
               </Text>
             </View>
           </View>
 
           <View>
             <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-              Account
+              {t('profile.sectionAccount')}
             </Text>
             <View
               style={[
@@ -203,7 +212,7 @@ export default function ProfileScreen() {
                   entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
                   <AnimatedPressable
                     onPress={() =>
-                      row.href ? router.push(row.href) : showToast(`${row.label} — coming soon`)
+                      row.href ? router.push(row.href) : showToast(t('common.comingSoon', { feature: row.label }))
                     }
                     style={[
                       styles.row,
@@ -227,7 +236,7 @@ export default function ProfileScreen() {
 
           <View>
             <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-              Support
+              {t('profile.sectionSupport')}
             </Text>
             <View
               style={[
@@ -252,7 +261,7 @@ export default function ProfileScreen() {
                     <Ionicons name="help-circle-outline" size={15} color={colors.warning} />
                   </View>
                   <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                    Help Center
+                    {t('profile.rows.helpCenter')}
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                 </AnimatedPressable>
@@ -272,7 +281,7 @@ export default function ProfileScreen() {
                       styles.logOutLabel,
                       { color: colors.danger },
                     ]}>
-                    Log Out
+                    {t('profile.rows.logOut')}
                   </Text>
                 </AnimatedPressable>
               </Animated.View>

@@ -4,40 +4,32 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { SkeletonRow } from '../components/Skeleton';
 import { Radii, Spacing, Typography, getCardShadow, useColors, type ColorPalette } from '../constants';
+import { enumLabel } from '../lib/enumLabel';
 import { getReturns } from '../services/mock-api';
-import type { Return, ReturnReason, ReturnStatus } from '../types';
+import type { Return, ReturnReason } from '../types';
 
 const STAGGER_MS = 40;
 
-const REASON_LABEL: Record<ReturnReason, string> = {
-  refused: 'Refused',
-  'address-issue': 'Address Issue',
-  damaged: 'Damaged',
-};
-
-const STATUS_LABEL: Record<ReturnStatus, string> = {
-  'pending-pickup': 'Pending Pickup',
-  processed: 'Processed',
-};
-
 function reasonColors(reason: ReturnReason, colors: ColorPalette) {
   switch (reason) {
-    case 'refused':
+    case 'REFUSED':
       return { color: colors.danger, background: colors.dangerSoft };
-    case 'address-issue':
+    case 'ADDRESS_ISSUE':
       return { color: colors.neutral, background: colors.neutralSoft };
-    case 'damaged':
+    case 'DAMAGED':
       return { color: colors.info, background: colors.infoSoft };
   }
 }
 
 export default function ReturnsScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [returns, setReturns] = useState<Return[] | null>(null);
 
@@ -51,7 +43,7 @@ export default function ReturnsScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Returns</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('returns.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -64,11 +56,11 @@ export default function ReturnsScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           {returns.length === 0 && (
-            <EmptyState icon="arrow-undo-outline" title="No pending returns" />
+            <EmptyState icon="arrow-undo-outline" title={t('returns.empty')} />
           )}
           {returns.map((item, i) => {
             const rc = reasonColors(item.reason, colors);
-            const processed = item.status === 'processed';
+            const processed = item.status === 'PROCESSED';
             return (
               <Animated.View
                 key={item.id}
@@ -76,10 +68,10 @@ export default function ReturnsScreen() {
                 style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
                 <View style={styles.cardTopRow}>
                   <Text style={[styles.orderId, { color: colors.text }]}>
-                    Order #{item.relatedJobId}
+                    {t('returns.orderNumber', { id: item.relatedJobId })}
                   </Text>
                   <Text style={[styles.reasonChip, { color: rc.color, backgroundColor: rc.background }]}>
-                    {REASON_LABEL[item.reason]}
+                    {enumLabel(t, 'returnReason', item.reason)}
                   </Text>
                 </View>
                 <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
@@ -90,7 +82,7 @@ export default function ReturnsScreen() {
                     styles.statusLabel,
                     { color: processed ? colors.success : colors.textTertiary },
                   ]}>
-                  {STATUS_LABEL[item.status]}
+                  {enumLabel(t, 'returnStatus', item.status)}
                 </Text>
               </Animated.View>
             );

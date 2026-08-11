@@ -11,6 +11,7 @@ import {
   type ColorValue,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { CountUpText } from '../../../components/CountUpText';
@@ -19,6 +20,8 @@ import { GlassSurface } from '../../../components/GlassSurface';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SkeletonBlock } from '../../../components/Skeleton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../../../constants';
+import { formatCurrency } from '../../../lib/currency';
+import { localeTag } from '../../../lib/date';
 import { registerForPushNotifications } from '../../../lib/push';
 import {
   getDriverStats,
@@ -46,24 +49,27 @@ interface HomeData {
   timeSensitiveStops: Job[];
 }
 
-function getGreeting() {
+function getGreetingKey() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 18) return 'Good Afternoon';
-  return 'Good Evening';
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if (hour < 12) return 'home.greeting.morning';
+  if (hour < 18) return 'home.greeting.afternoon';
+  return 'home.greeting.evening';
 }
 
 const percentFormatter = (n: number) => `${Math.round(n)}%`;
 const integerFormatter = (n: number) => String(Math.round(n));
-const currencyFormatter = (n: number) => `${n.toFixed(2)} DT`;
 
 export default function HomeScreen() {
   const colors = useColors();
+  const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+
+  function formatTime(iso: string) {
+    return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
   const [data, setData] = useState<HomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [shiftBusy, setShiftBusy] = useState(false);
@@ -83,15 +89,15 @@ export default function HomeScreen() {
     const stopIds = runsheets.flatMap((r) => r.stopIds);
     const jobs = await Promise.all(stopIds.map((id) => getJobDetail(id)));
     const timeSensitiveStops = jobs.filter(
-      (j) => j.deliverBy && j.status !== 'delivered' && j.status !== 'failed'
+      (j) => j.deliverBy && j.status !== 'DELIVERED' && j.status !== 'FAILED'
     );
 
     setData({
       user,
       stats,
       runsheetStops: runsheets.reduce((sum, r) => sum + r.stopCount, 0),
-      activeTransfers: transfers.filter((t) => t.status === 'in-progress').length,
-      pendingReturns: returns.filter((r) => r.status === 'pending-pickup').length,
+      activeTransfers: transfers.filter((transfer) => transfer.status === 'IN_PROGRESS').length,
+      pendingReturns: returns.filter((r) => r.status === 'PENDING_PICKUP').length,
       hasUnreadNotifications: notifications.some((n) => !n.read),
       shiftStatus,
       timeSensitiveStops,
@@ -170,7 +176,7 @@ export default function HomeScreen() {
   }[] = [
     {
       key: 'runsheets',
-      label: 'Runsheets',
+      label: t('common.nav.runsheets'),
       icon: 'list-outline',
       color: colors.accent,
       soft: colors.accentSoft,
@@ -179,7 +185,7 @@ export default function HomeScreen() {
     },
     {
       key: 'pickups',
-      label: 'Pickups',
+      label: t('common.nav.pickups'),
       icon: 'cube-outline',
       color: colors.purple,
       soft: colors.purpleSoft,
@@ -188,7 +194,7 @@ export default function HomeScreen() {
     },
     {
       key: 'transfers',
-      label: 'Transfers',
+      label: t('common.nav.transfers'),
       icon: 'swap-horizontal-outline',
       color: colors.warning,
       soft: colors.warningSoft,
@@ -197,7 +203,7 @@ export default function HomeScreen() {
     },
     {
       key: 'returns',
-      label: 'Returns',
+      label: t('common.nav.returns'),
       icon: 'arrow-undo-outline',
       color: colors.danger,
       soft: colors.dangerSoft,
@@ -207,10 +213,10 @@ export default function HomeScreen() {
   ];
 
   const statItems = [
-    { label: 'Delivered', value: stats.delivered, color: colors.success },
-    { label: 'Pending', value: stats.pending, color: colors.warning },
-    { label: 'Failed', value: stats.failed, color: colors.danger },
-    { label: 'Pickups', value: stats.pickupsCount, color: colors.purple },
+    { label: t('home.stats.delivered'), value: stats.delivered, color: colors.success },
+    { label: t('home.stats.pending'), value: stats.pending, color: colors.warning },
+    { label: t('home.stats.failed'), value: stats.failed, color: colors.danger },
+    { label: t('home.stats.pickups'), value: stats.pickupsCount, color: colors.purple },
   ];
 
   return (
@@ -240,7 +246,7 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.greeting}>
-        <Text style={[styles.greetingLabel, { color: colors.accent }]}>{getGreeting()}</Text>
+        <Text style={[styles.greetingLabel, { color: colors.accent }]}>{t(getGreetingKey())}</Text>
         <Text style={[Typography.largeTitle, styles.name, { color: colors.text }]}>
           {firstName}
         </Text>
@@ -257,13 +263,15 @@ export default function HomeScreen() {
           <View style={styles.shiftPillLeft}>
             <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
             <Text style={[styles.shiftPillText, { color: colors.text }]}>
-              On Shift · Since {shiftStatus.startedAt ? formatTime(shiftStatus.startedAt) : '—'}
+              {t('home.shift.onShiftSince', {
+                time: shiftStatus.startedAt ? formatTime(shiftStatus.startedAt) : '—',
+              })}
             </Text>
           </View>
           <Text
             onPress={() => router.push('/shift-summary')}
             style={[styles.endShiftLink, { color: colors.danger }]}>
-            End Shift
+            {t('home.shift.endShift')}
           </Text>
         </View>
       ) : (
@@ -274,13 +282,15 @@ export default function HomeScreen() {
             getCardShadow(scheme),
           ]}>
           <View style={styles.shiftCardText}>
-            <Text style={[Typography.cardTitle, { color: colors.text }]}>Ready to start?</Text>
+            <Text style={[Typography.cardTitle, { color: colors.text }]}>
+              {t('home.shift.readyTitle')}
+            </Text>
             <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              Begin tracking today&apos;s deliveries
+              {t('home.shift.readySubtitle')}
             </Text>
           </View>
           <PrimaryButton
-            label="Start Shift"
+            label={t('home.shift.startShift')}
             height={40}
             loading={shiftBusy}
             onPress={handleStartShift}
@@ -297,8 +307,7 @@ export default function HomeScreen() {
           style={[styles.timeSensitiveBanner, { backgroundColor: colors.warningSoft }]}>
           <Ionicons name="alarm-outline" size={18} color={colors.warning} />
           <Text style={[styles.timeSensitiveText, { color: colors.text }]}>
-            {timeSensitiveStops.length} time-sensitive{' '}
-            {timeSensitiveStops.length === 1 ? 'stop' : 'stops'} left today
+            {t('home.timeSensitive', { count: timeSensitiveStops.length })}
           </Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
         </AnimatedPressable>
@@ -311,7 +320,9 @@ export default function HomeScreen() {
           getCardShadow(scheme),
         ]}>
         <View style={styles.cardTopRow}>
-          <Text style={[Typography.cardTitle, { color: colors.text }]}>Today&apos;s Deliveries</Text>
+          <Text style={[Typography.cardTitle, { color: colors.text }]}>
+            {t('home.deliveriesCardTitle')}
+          </Text>
           <CountUpText
             value={stats.completionPercent}
             formatter={percentFormatter}
@@ -319,7 +330,7 @@ export default function HomeScreen() {
           />
         </View>
         <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-          {stats.delivered} of {totalStops} completed
+          {t('home.completedOfTotal', { delivered: stats.delivered, total: totalStops })}
         </Text>
         <View style={[styles.progressTrack, { backgroundColor: colors.separator }]}>
           <View
@@ -332,7 +343,7 @@ export default function HomeScreen() {
         <View style={styles.paceRow}>
           <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
           <Text style={[Typography.footnote, styles.paceText, { color: colors.textSecondary }]}>
-            On pace to finish by {stats.onPaceFinishTime}
+            {t('home.onPace', { time: stats.onPaceFinishTime })}
           </Text>
         </View>
 
@@ -361,11 +372,11 @@ export default function HomeScreen() {
         <View style={[styles.cashIcon, { backgroundColor: colors.success }]}>
           <Ionicons name="card-outline" size={18} color="#fff" />
         </View>
-        <Text style={[styles.cashLabel, { color: colors.text }]}>Cash Collected</Text>
+        <Text style={[styles.cashLabel, { color: colors.text }]}>{t('home.cashCollected')}</Text>
         <View style={{ flex: 1 }} />
         <CountUpText
           value={stats.cashCollectedTotal}
-          formatter={currencyFormatter}
+          formatter={formatCurrency}
           style={[styles.cashAmount, { color: colors.text }]}
         />
       </View>

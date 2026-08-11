@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { FormField } from '../components/FormField';
 import { GlassIconButton } from '../components/GlassIconButton';
@@ -13,6 +14,7 @@ import { getUser, updateUser } from '../services/mock-api';
 
 export default function PersonalInfoScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState('');
@@ -34,7 +36,7 @@ export default function PersonalInfoScreen() {
     setSaving(true);
     await updateUser({ name: name.trim(), phone: phone.trim(), email: email.trim() });
     setSaving(false);
-    showToast('Personal info saved');
+    showToast(t('personalInfo.savedToast'));
     router.back();
   }
 
@@ -46,7 +48,7 @@ export default function PersonalInfoScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Personal Info</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('personalInfo.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -60,21 +62,21 @@ export default function PersonalInfoScreen() {
         ) : (
           <>
             <FormField
-              label="Full Name"
+              label={t('personalInfo.fullNameLabel')}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
               textContentType="name"
             />
             <FormField
-              label="Phone Number"
+              label={t('personalInfo.phoneLabel')}
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
               textContentType="telephoneNumber"
             />
             <FormField
-              label="Email"
+              label={t('personalInfo.emailLabel')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -86,7 +88,7 @@ export default function PersonalInfoScreen() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Save Changes"
+          label={t('personalInfo.saveChanges')}
           height={54}
           loading={saving}
           disabled={!loaded}

@@ -19,6 +19,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
@@ -32,12 +33,9 @@ import {
   getCardShadow,
   useColors,
 } from '../../../constants';
+import { formatCurrency } from '../../../lib/currency';
 import { getJobDetail, getRunsheets } from '../../../services/mock-api';
 import type { Job } from '../../../types';
-
-function pluralize(count: number, noun: string) {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`;
-}
 
 /** Driver's approximate start point — Sousse/Sahloul depot (mirrors mock-api's DEPOT). */
 const DEPOT = { lat: 35.848, lng: 10.5975 };
@@ -92,6 +90,7 @@ async function openInMaps(job: Job) {
 
 export default function JobDetailScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -125,7 +124,7 @@ export default function JobDetailScreen() {
   if (!job) {
     return (
       <View style={[styles.loadingScreen, { backgroundColor: colors.bg }]}>
-        <Text style={[Typography.body, { color: colors.textSecondary }]}>Loading…</Text>
+        <Text style={[Typography.body, { color: colors.textSecondary }]}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -140,10 +139,10 @@ export default function JobDetailScreen() {
         </GlassIconButton>
         {position && (
           <Text style={[Typography.cardTitle, { color: colors.text }]}>
-            Stop {position.index} of {position.total}
+            {t('jobDetail.stopOf', { index: position.index, total: position.total })}
           </Text>
         )}
-        <GlassIconButton onPress={() => showToast('More options — coming soon')}>
+        <GlassIconButton onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>
@@ -171,12 +170,14 @@ export default function JobDetailScreen() {
             </View>
           </View>
           <Text style={styles.mapBadge}>
-            {distanceMiles.toFixed(1)} mi · ≈{Math.max(1, Math.round((distanceMiles / 22) * 60))}{' '}
-            min away
+            {t('jobDetail.mapBadge', {
+              distance: distanceMiles.toFixed(1),
+              minutes: Math.max(1, Math.round((distanceMiles / 22) * 60)),
+            })}
           </Text>
           <View style={styles.navigateChip}>
             <Ionicons name="navigate" size={13} color="#fff" />
-            <Text style={styles.navigateText}>Navigate</Text>
+            <Text style={styles.navigateText}>{t('jobDetail.navigate')}</Text>
           </View>
         </AnimatedPressable>
 
@@ -188,13 +189,13 @@ export default function JobDetailScreen() {
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.iconButton, { backgroundColor: colors.accentSoft }]}
-                onPress={() => showToast('Calling — coming soon')}>
+                onPress={() => showToast(t('common.callToast'))}>
                 <Ionicons name="call-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.iconButton, { backgroundColor: colors.accentSoft }]}
-                onPress={() => showToast('Messaging — coming soon')}>
+                onPress={() => showToast(t('common.messageToast'))}>
                 <Ionicons name="chatbubble-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
             </View>
@@ -216,8 +217,11 @@ export default function JobDetailScreen() {
               <Ionicons name="cube-outline" size={16} color={colors.textSecondary} />
             </View>
             <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              {pluralize(job.packageInfo.count, 'package')} · {job.packageInfo.weightLbs} lbs
-              {job.packageInfo.fragile ? ' · Fragile' : ''}
+              {t('jobDetail.packageInfo', {
+                count: job.packageInfo.count,
+                weight: job.packageInfo.weightLbs,
+              })}
+              {job.packageInfo.fragile ? ` · ${t('jobDetail.fragile')}` : ''}
             </Text>
           </View>
           {job.packageInfo.note && (
@@ -235,8 +239,10 @@ export default function JobDetailScreen() {
               getAccentGlow(0.28, 24),
             ]}>
             <View>
-              <Text style={styles.codLabel}>Collect on Delivery</Text>
-              <Text style={styles.codAmount}>{job.cashToCollect.toFixed(2)} DT cash</Text>
+              <Text style={styles.codLabel}>{t('jobDetail.codLabel')}</Text>
+              <Text style={styles.codAmount}>
+                {t('jobDetail.codCash', { amount: formatCurrency(job.cashToCollect) })}
+              </Text>
             </View>
             <Ionicons name="cash-outline" size={26} color="#fff" />
           </View>
@@ -245,14 +251,14 @@ export default function JobDetailScreen() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Start Delivery"
+          label={t('jobDetail.startDelivery')}
           height={56}
           onPress={() => router.push({ pathname: '/job/[id]/otp', params: { id } })}
         />
         <Text
           onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}
           style={[styles.cancel, { color: colors.danger }]}>
-          Can&apos;t Deliver
+          {t('jobDetail.cantDeliver')}
         </Text>
       </View>
     </View>

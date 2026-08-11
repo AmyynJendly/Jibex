@@ -3,14 +3,18 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
+import { AmbientGlow } from '../../../components/AmbientGlow';
 import { DrawnCheckmark } from '../../../components/DrawnCheckmark';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { Radii, Spacing, Typography, getCardShadow, useColors } from '../../../constants';
+import { formatCurrency } from '../../../lib/currency';
 import { getNextStopId } from '../../../services/mock-api';
 
 export default function CashCollectedScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { id, cashAmount, previousTotal } = useLocalSearchParams<{
     id: string;
@@ -30,21 +34,26 @@ export default function CashCollectedScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.content}>
-        <Animated.View
-          entering={ZoomIn.springify(280).dampingRatio(1)}
-          style={styles.iconWrap}>
-          <View style={[styles.iconOuter, { backgroundColor: colors.successSoft }]} />
-          <View style={[styles.iconInner, { backgroundColor: colors.success }, checkGlow]}>
-            <DrawnCheckmark size={30} color="#fff" strokeWidth={2.6} />
+        <View style={styles.glowStage}>
+          <View style={styles.glowLayer}>
+            <AmbientGlow width={180} height={180} colors={['#1FAE5C', '#0A5FFF', '#32D74B']} />
           </View>
-        </Animated.View>
+          <Animated.View
+            entering={ZoomIn.springify(280).dampingRatio(1)}
+            style={styles.iconWrap}>
+            <View style={[styles.iconOuter, { backgroundColor: colors.successSoft }]} />
+            <View style={[styles.iconInner, { backgroundColor: colors.success }, checkGlow]}>
+              <DrawnCheckmark size={30} color="#fff" strokeWidth={2.6} />
+            </View>
+          </Animated.View>
+        </View>
 
         <Animated.View
           entering={FadeInUp.delay(120).springify(220).dampingRatio(1)}
           style={styles.textBlock}>
-          <Text style={[styles.title, { color: colors.text }]}>Delivery Confirmed</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('cashCollected.title')}</Text>
           <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
-            Order #{id} completed
+            {t('cashCollected.subtitle', { id })}
           </Text>
         </Animated.View>
 
@@ -57,19 +66,22 @@ export default function CashCollectedScreen() {
           ]}>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              Cash Collected
+              {t('cashCollected.cashCollected')}
             </Text>
             <Text style={[styles.summaryAmount, { color: colors.success }]}>
-              {amount.toFixed(2)} DT
+              {formatCurrency(amount)}
             </Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.separator }]} />
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              Today&apos;s Total
+              {t('cashCollected.todaysTotal')}
             </Text>
             <Text style={[styles.summaryTotal, { color: colors.text }]}>
-              {before.toFixed(2)} DT → {after.toFixed(2)} DT
+              {t('cashCollected.totalChange', {
+                before: formatCurrency(before),
+                after: formatCurrency(after),
+              })}
             </Text>
           </View>
         </Animated.View>
@@ -78,7 +90,7 @@ export default function CashCollectedScreen() {
       <View style={styles.footer}>
         {nextStopId && (
           <PrimaryButton
-            label="Next Stop"
+            label={t('cashCollected.nextStop')}
             height={56}
             onPress={() => router.replace({ pathname: '/job/[id]', params: { id: nextStopId } })}
           />
@@ -86,7 +98,7 @@ export default function CashCollectedScreen() {
         <Text
           onPress={() => router.navigate('/(tabs)/runsheets')}
           style={[styles.backLink, { color: colors.textSecondary }]}>
-          Back to Runsheet
+          {t('cashCollected.backToRunsheet')}
         </Text>
       </View>
     </SafeAreaView>
@@ -108,6 +120,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.xxxl,
     gap: 18,
+  },
+  glowStage: {
+    width: 180,
+    height: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: -Spacing.xxxl,
+  },
+  glowLayer: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
   },
   iconWrap: {
     width: 96,

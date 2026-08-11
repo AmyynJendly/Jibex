@@ -1,4 +1,5 @@
-export type RunsheetStatus = 'in-progress' | 'confirmed' | 'waiting';
+/** Matches the real backend's uppercase enum strings. */
+export type RunsheetStatus = 'IN_PROGRESS' | 'CONFIRMED' | 'WAITING';
 
 export interface Runsheet {
   id: string;

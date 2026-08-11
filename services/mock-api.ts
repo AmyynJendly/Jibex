@@ -1,4 +1,6 @@
-import { addDays, toDateKey } from '../lib/date';
+import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
+import { formatCurrency } from '../lib/currency';
+import { formatPickupId, formatRunsheetId } from '../lib/ids';
 import type {
   Availability,
   DayAvailability,
@@ -107,88 +109,91 @@ function nearestNeighborOrder(jobs: Job[], start: GeoPoint): Job[] {
 // Mock data
 // ---------------------------------------------------------------------------
 
+const today = new Date();
+const yesterday = addDays(today, -1);
+
 /** Not part of the public Job shape — a real API wouldn't hand the driver
  *  app the correct code either; it's only known to confirmDeliveryWithOTP. */
 const otpByJobId: Record<string, string> = {
-  'JBX-48213': '4187',
-  'JBX-48214': '2093',
-  'JBX-48215': '5521',
-  'JBX-48216': '7734',
+  'TRK-5DF3697E': '4187',
+  'TRK-A12BC034': '2093',
+  'TRK-77F1E9AB': '5521',
+  'TRK-3C4D8F21': '7734',
 };
 
 const mockJobs: Job[] = [
   {
-    id: 'JBX-48213',
+    id: 'TRK-5DF3697E',
     customerName: 'Amine Ben Salah',
     address: 'Rue de la Liberté, Sahloul, Sousse',
     packageInfo: { count: 1, weightLbs: 2.4, fragile: true, note: 'Leave with concierge if not home' },
-    status: 'in-transit',
+    status: 'IN_TRANSIT',
     cashToCollect: 42.0,
     location: { lat: 35.8465, lng: 10.6015 },
     deliverBy: todayAt(14, 0),
   },
   {
-    id: 'JBX-48214',
+    id: 'TRK-A12BC034',
     customerName: 'Karim Mejri',
     address: 'Avenue Farhat Hached, Sfax',
     packageInfo: { count: 2, weightLbs: 5.1, fragile: false },
-    status: 'pending',
+    status: 'PENDING',
     cashToCollect: 28.5,
     location: { lat: 34.7398, lng: 10.76 },
   },
   {
-    id: 'JBX-48215',
+    id: 'TRK-77F1E9AB',
     customerName: 'Sarra Gharbi',
     address: 'Rue Ibn Khaldoun, Monastir',
     packageInfo: { count: 1, weightLbs: 1.2, fragile: false },
-    status: 'pending',
+    status: 'PENDING',
     cashToCollect: 65.0,
     location: { lat: 35.7643, lng: 10.8113 },
   },
   {
-    id: 'JBX-48216',
+    id: 'TRK-3C4D8F21',
     customerName: 'Nizar Guesmi',
     address: 'Rue de Marseille, Sfax',
     packageInfo: { count: 3, weightLbs: 8.0, fragile: false },
-    status: 'pending',
+    status: 'PENDING',
     cashToCollect: 15.0,
     location: { lat: 34.735, lng: 10.765 },
     deliverBy: todayAt(15, 0),
   },
   {
-    id: 'JBX-48217',
+    id: 'TRK-9E0A2B6D',
     customerName: 'Rania Cherif',
     address: 'Avenue de la République, Monastir',
     packageInfo: { count: 1, weightLbs: 0.8, fragile: true, note: 'Ring twice' },
-    status: 'failed',
+    status: 'FAILED',
     cashToCollect: 22.0,
     location: { lat: 35.77, lng: 10.82 },
   },
   {
-    id: 'JBX-48218',
+    id: 'TRK-B6F31C08',
     customerName: 'Walid Ammar',
     address: 'Zone Industrielle, Sfax',
     packageInfo: { count: 4, weightLbs: 12.5, fragile: false },
-    status: 'failed',
+    status: 'FAILED',
     cashToCollect: 0,
     location: { lat: 34.72, lng: 10.69 },
   },
   {
-    id: 'JBX-48219',
+    id: 'TRK-1F4A7D93',
     customerName: 'Ines Trabelsi',
     address: 'Boulevard 14 Janvier, Sousse',
     packageInfo: { count: 1, weightLbs: 3.0, fragile: false },
-    status: 'delivered',
+    status: 'DELIVERED',
     cashToCollect: 55.0,
     cashCollected: 55.0,
     location: { lat: 35.8256, lng: 10.6084 },
   },
   {
-    id: 'JBX-48220',
+    id: 'TRK-6C2E9F45',
     customerName: 'Yassine Trabelsi',
     address: 'Avenue Habib Bourguiba, Tunis',
     packageInfo: { count: 1, weightLbs: 1.5, fragile: false },
-    status: 'delivered',
+    status: 'DELIVERED',
     cashToCollect: 30.0,
     cashCollected: 30.0,
     location: { lat: 36.7992, lng: 10.1817 },
@@ -197,85 +202,85 @@ const mockJobs: Job[] = [
 
 const mockRunsheets: Runsheet[] = [
   {
-    id: 'RS-12',
+    id: formatRunsheetId(today, 1),
     routeLabel: 'Route 12',
     zone: 'Sousse, Sahloul',
-    status: 'in-progress',
+    status: 'IN_PROGRESS',
     stopCount: 4,
     completionPercent: 25,
-    stopIds: ['JBX-48213', 'JBX-48214', 'JBX-48215', 'JBX-48219'],
+    stopIds: ['TRK-5DF3697E', 'TRK-A12BC034', 'TRK-77F1E9AB', 'TRK-1F4A7D93'],
   },
   {
-    id: 'RS-7',
+    id: formatRunsheetId(today, 2),
     routeLabel: 'Route 7',
     zone: 'Sfax, Zone Industrielle',
-    status: 'waiting',
+    status: 'WAITING',
     stopCount: 2,
     completionPercent: 0,
-    stopIds: ['JBX-48216', 'JBX-48218'],
+    stopIds: ['TRK-3C4D8F21', 'TRK-B6F31C08'],
   },
   {
-    id: 'RS-4',
+    id: formatRunsheetId(today, 3),
     routeLabel: 'Route 4',
     zone: 'Monastir',
-    status: 'confirmed',
+    status: 'CONFIRMED',
     stopCount: 2,
     completionPercent: 50,
-    stopIds: ['JBX-48217', 'JBX-48220'],
+    stopIds: ['TRK-9E0A2B6D', 'TRK-6C2E9F45'],
   },
 ];
 
 const mockPickups: Pickup[] = [
   {
-    id: 'PU-48301',
+    id: formatPickupId('3', today, 1),
     businessName: 'Manufacture Tounsi Textile',
     address: 'Zone Industrielle, Sfax',
-    status: 'scheduled',
+    status: 'SCHEDULED',
     requestedByDate: todayAt(0, 0),
     timeWindow: '11:30–12:00',
     packageCount: 12,
   },
   {
-    id: 'PU-48302',
+    id: formatPickupId('3', today, 2),
     businessName: 'Librairie El Kitab',
     address: 'Avenue Habib Bourguiba, Sousse',
-    status: 'scheduled',
+    status: 'SCHEDULED',
     requestedByDate: todayAt(0, 0),
     timeWindow: '2:00–2:30 PM',
     packageCount: 4,
   },
   {
-    id: 'PU-48303',
+    id: formatPickupId('3', today, 3),
     businessName: 'Pharmacie El Amen',
     address: 'Rue de la Liberté, Sousse',
-    status: 'scheduled',
+    status: 'SCHEDULED',
     requestedByDate: todayAt(0, 0),
     timeWindow: '3:30–4:00 PM',
     packageCount: 2,
   },
   {
-    id: 'PU-48304',
+    id: formatPickupId('3', today, 4),
     businessName: 'Superette Boubaker',
     address: 'Avenue Farhat Hached, Sfax',
-    status: 'completed',
+    status: 'COMPLETED',
     requestedByDate: todayAt(0, 0),
     timeWindow: '9:00–9:30 AM',
     packageCount: 6,
   },
   {
-    id: 'PU-48305',
+    id: formatPickupId('3', yesterday, 1),
     businessName: 'Atelier Ben Youssef',
     address: 'Rue Ibn Khaldoun, Monastir',
-    status: 'completed',
+    status: 'COMPLETED',
     requestedByDate: daysAgoAt(1, 0, 0),
     timeWindow: '8:00–8:30 AM',
     packageCount: 3,
   },
   {
-    id: 'PU-48306',
+    id: formatPickupId('3', today, 5),
     businessName: 'Boutique Ines',
     address: 'Boulevard 14 Janvier, Sousse',
-    status: 'scheduled',
+    status: 'SCHEDULED',
     requestedByDate: todayAt(0, 0),
     timeWindow: '5:00–5:30 PM',
     packageCount: 1,
@@ -285,7 +290,7 @@ const mockPickups: Pickup[] = [
 const mockTransfers: Transfer[] = [
   {
     id: 'TR-9201',
-    status: 'in-progress',
+    status: 'IN_PROGRESS',
     origin: 'Route 12',
     destination: 'Route 7',
     itemCount: 6,
@@ -294,7 +299,7 @@ const mockTransfers: Transfer[] = [
   },
   {
     id: 'TR-9198',
-    status: 'completed',
+    status: 'COMPLETED',
     origin: 'Route 4',
     destination: 'Route 12',
     itemCount: 3,
@@ -303,7 +308,7 @@ const mockTransfers: Transfer[] = [
   },
   {
     id: 'TR-9195',
-    status: 'completed',
+    status: 'COMPLETED',
     origin: 'Route 7',
     destination: 'Route 4',
     itemCount: 5,
@@ -312,7 +317,7 @@ const mockTransfers: Transfer[] = [
   },
   {
     id: 'TR-9190',
-    status: 'in-progress',
+    status: 'IN_PROGRESS',
     origin: 'Route 3',
     destination: 'Route 12',
     itemCount: 2,
@@ -321,7 +326,7 @@ const mockTransfers: Transfer[] = [
   },
   {
     id: 'TR-9187',
-    status: 'completed',
+    status: 'COMPLETED',
     origin: 'Route 12',
     destination: 'Route 3',
     itemCount: 8,
@@ -330,44 +335,45 @@ const mockTransfers: Transfer[] = [
   },
 ];
 
+/** Historical parcel this return is tied to — predates the current active runsheet, so it won't resolve via `getJobDetail`, same as a real backend would return for a closed-out past delivery. */
 const mockReturns: Return[] = [
   {
     id: 'RET-6601',
-    status: 'pending-pickup',
-    reason: 'refused',
-    relatedJobId: 'JBX-47810',
+    status: 'PENDING_PICKUP',
+    reason: 'REFUSED',
+    relatedJobId: 'TRK-88C1E3AA',
     customerName: 'Yassine Trabelsi',
     address: 'Avenue Habib Bourguiba, Tunis',
   },
   {
     id: 'RET-6598',
-    status: 'processed',
-    reason: 'address-issue',
-    relatedJobId: 'JBX-47612',
+    status: 'PROCESSED',
+    reason: 'ADDRESS_ISSUE',
+    relatedJobId: 'TRK-4B7D2E19',
     customerName: 'Nour Chaabane',
     address: 'Rue de Marseille, Sfax',
   },
   {
     id: 'RET-6595',
-    status: 'pending-pickup',
-    reason: 'damaged',
-    relatedJobId: 'JBX-47590',
+    status: 'PENDING_PICKUP',
+    reason: 'DAMAGED',
+    relatedJobId: 'TRK-D2F80C56',
     customerName: 'Wassim Jaziri',
     address: 'Avenue de la République, Monastir',
   },
   {
     id: 'RET-6592',
-    status: 'processed',
-    reason: 'refused',
-    relatedJobId: 'JBX-47455',
+    status: 'PROCESSED',
+    reason: 'REFUSED',
+    relatedJobId: 'TRK-0AE93F71',
     customerName: 'Salma Kort',
     address: 'Rue Ibn Khaldoun, Monastir',
   },
   {
     id: 'RET-6588',
-    status: 'pending-pickup',
-    reason: 'address-issue',
-    relatedJobId: 'JBX-47320',
+    status: 'PENDING_PICKUP',
+    reason: 'ADDRESS_ISSUE',
+    relatedJobId: 'TRK-F13C6A28',
     customerName: 'Hedi Bouzid',
     address: 'Zone Industrielle, Sfax',
   },
@@ -375,58 +381,58 @@ const mockReturns: Return[] = [
 
 const mockNotifications: Notification[] = [
   {
-    id: 'PU-3-20260804-0002',
-    type: 'pickup',
+    id: formatPickupId('3', today, 6),
+    type: 'PICKUP',
     title: 'Pickup ready for collection',
     message: 'Librairie El Kitab, Sousse',
     timestamp: minutesAgo(3),
     read: false,
   },
   {
-    id: 'DL-3-20260804-0007',
-    type: 'delivery',
+    id: `DL-3-${toCompactDateKey(today)}-0007`,
+    type: 'DELIVERY',
     title: 'New stop added',
     message: 'Sarra Gharbi · Rue Ibn Khaldoun, Monastir',
     timestamp: minutesAgo(9),
     read: false,
   },
   {
-    id: 'CS-3-20260804-0012',
-    type: 'cash',
+    id: `CS-3-${toCompactDateKey(today)}-0012`,
+    type: 'CASH',
     title: 'Cash collected',
-    message: '42.00 DT from Amine Ben Salah',
+    message: `${formatCurrency(42)} from Amine Ben Salah`,
     timestamp: minutesAgo(24),
     read: true,
   },
   {
-    id: 'TR-3-20260804-0003',
-    type: 'transfer',
+    id: `TR-3-${toCompactDateKey(today)}-0003`,
+    type: 'TRANSFER',
     title: 'Transfer awaiting handoff',
     message: 'Route 12 → Route 7 at Dépôt Sahloul',
     timestamp: minutesAgo(40),
     read: true,
   },
   {
-    id: 'RT-3-20260803-0004',
-    type: 'return',
+    id: `RT-3-${toCompactDateKey(yesterday)}-0004`,
+    type: 'RETURN',
     title: 'Return flagged',
-    message: 'Order #JBX-47810 refused',
+    message: 'Order #TRK-88C1E3AA refused',
     timestamp: daysAgoAt(1, 17, 5),
     read: true,
   },
   {
-    id: 'PU-3-20260803-0009',
-    type: 'pickup',
+    id: formatPickupId('3', yesterday, 2),
+    type: 'PICKUP',
     title: 'Pickup completed',
     message: 'Atelier Ben Youssef, Monastir',
     timestamp: daysAgoAt(1, 8, 35),
     read: true,
   },
   {
-    id: 'DL-3-20260803-0021',
-    type: 'delivery',
+    id: `DL-3-${toCompactDateKey(yesterday)}-0021`,
+    type: 'DELIVERY',
     title: 'Delivery confirmed',
-    message: '42.60 DT from Ines Trabelsi',
+    message: `${formatCurrency(42.6)} from Ines Trabelsi`,
     timestamp: daysAgoAt(1, 15, 50),
     read: true,
   },
@@ -510,7 +516,7 @@ export async function login(username: string, password: string): Promise<LoginRe
   await delay(undefined);
 
   if (username !== mockUser.username || password !== mockPassword) {
-    return { success: false, error: 'Incorrect phone number or password.' };
+    return { success: false, error: 'auth.login.errors.invalidCredentials' };
   }
 
   return {
@@ -617,8 +623,8 @@ export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
     .map((id) => mockJobs.find((j) => j.id === id))
     .filter((j): j is Job => !!j);
 
-  const outstanding = jobs.filter((j) => j.status === 'pending' || j.status === 'in-transit');
-  const done = jobs.filter((j) => j.status === 'delivered' || j.status === 'failed');
+  const outstanding = jobs.filter((j) => j.status === 'PENDING' || j.status === 'IN_TRANSIT');
+  const done = jobs.filter((j) => j.status === 'DELIVERED' || j.status === 'FAILED');
 
   const ordered = nearestNeighborOrder(outstanding, DEPOT);
   return delay([...ordered.map((j) => j.id), ...done.map((j) => j.id)]);
@@ -634,7 +640,7 @@ export async function getNextStopId(currentId: string): Promise<string | null> {
 
   const remaining = runsheet.stopIds
     .map((id) => mockJobs.find((j) => j.id === id))
-    .filter((j): j is Job => !!j && j.id !== currentId && j.status !== 'delivered');
+    .filter((j): j is Job => !!j && j.id !== currentId && j.status !== 'DELIVERED');
 
   if (remaining.length === 0) return null;
   return nearestNeighborOrder(remaining, currentJob.location)[0].id;
@@ -649,16 +655,16 @@ export async function confirmDeliveryWithOTP(
 
   const job = mockJobs.find((j) => j.id === id);
   if (!job) {
-    return { success: false, error: `Job ${id} not found` };
+    return { success: false, error: 'common.genericError' };
   }
 
   const expectedOtp = otpByJobId[id];
   if (!expectedOtp || otp !== expectedOtp) {
-    return { success: false, error: 'Incorrect code. Ask the customer to confirm and try again.' };
+    return { success: false, error: 'otp.errors.incorrectCode' };
   }
 
-  const wasAlreadyDelivered = job.status === 'delivered';
-  job.status = 'delivered';
+  const wasAlreadyDelivered = job.status === 'DELIVERED';
+  job.status = 'DELIVERED';
   job.cashCollected = cashAmount;
 
   if (!wasAlreadyDelivered) {
@@ -683,11 +689,11 @@ export async function confirmDeliveryWithPhoto(
 
   const job = mockJobs.find((j) => j.id === id);
   if (!job) {
-    return { success: false, error: `Job ${id} not found` };
+    return { success: false, error: 'common.genericError' };
   }
 
-  const wasAlreadyDelivered = job.status === 'delivered';
-  job.status = 'delivered';
+  const wasAlreadyDelivered = job.status === 'DELIVERED';
+  job.status = 'DELIVERED';
   job.cashCollected = cashAmount;
   job.proofPhotoUri = photoUri;
 
@@ -718,11 +724,11 @@ export async function markDeliveryFailed(
 
   const job = mockJobs.find((j) => j.id === id);
   if (!job) {
-    return { success: false, error: `Job ${id} not found` };
+    return { success: false, error: 'common.genericError' };
   }
 
-  const wasAlreadyFailed = job.status === 'failed';
-  job.status = 'failed';
+  const wasAlreadyFailed = job.status === 'FAILED';
+  job.status = 'FAILED';
   job.failureReason = reason;
   job.failureNote = note;
 
@@ -751,7 +757,7 @@ export async function confirmScan(code: string): Promise<ScanResult> {
 
   const pickup = mockPickups.find((p) => p.id.toUpperCase() === trimmed);
   if (pickup) {
-    pickup.status = 'completed';
+    pickup.status = 'COMPLETED';
     return { success: true, label: pickup.businessName };
   }
 
@@ -760,7 +766,7 @@ export async function confirmScan(code: string): Promise<ScanResult> {
     return { success: true, label: job.customerName };
   }
 
-  return { success: false, error: 'Code not recognized. Try again or enter it manually.' };
+  return { success: false, error: 'scanner.errors.notRecognized' };
 }
 
 export async function getShiftStatus(): Promise<ShiftStatus> {

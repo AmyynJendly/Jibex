@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FormField } from '../components/FormField';
@@ -13,15 +14,16 @@ import { Radii, Spacing, Typography, useColors } from '../constants';
 import { getVehicle, updateVehicle } from '../services/mock-api';
 import type { VehicleType } from '../types';
 
-const VEHICLE_TYPES: { value: VehicleType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'motorcycle', label: 'Motorcycle', icon: 'bicycle-outline' },
-  { value: 'car', label: 'Car', icon: 'car-outline' },
-  { value: 'van', label: 'Van', icon: 'bus-outline' },
-  { value: 'bicycle', label: 'Bicycle', icon: 'bicycle-outline' },
+const VEHICLE_TYPES: { value: VehicleType; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'motorcycle', icon: 'bicycle-outline' },
+  { value: 'car', icon: 'car-outline' },
+  { value: 'van', icon: 'bus-outline' },
+  { value: 'bicycle', icon: 'bicycle-outline' },
 ];
 
 export default function VehicleDetailsScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [loaded, setLoaded] = useState(false);
   const [type, setType] = useState<VehicleType>('motorcycle');
@@ -45,7 +47,7 @@ export default function VehicleDetailsScreen() {
     setSaving(true);
     await updateVehicle({ type, plate: plate.trim(), model: model.trim(), color: color.trim() });
     setSaving(false);
-    showToast('Vehicle details saved');
+    showToast(t('vehicleDetails.savedToast'));
     router.back();
   }
 
@@ -57,7 +59,7 @@ export default function VehicleDetailsScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Vehicle Details</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('vehicleDetails.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -95,23 +97,38 @@ export default function VehicleDetailsScreen() {
                         styles.typeChipText,
                         { color: active ? '#fff' : colors.textSecondary },
                       ]}>
-                      {option.label}
+                      {t(`vehicleDetails.types.${option.value}`)}
                     </Text>
                   </AnimatedPressable>
                 );
               })}
             </View>
 
-            <FormField label="Plate Number" value={plate} onChangeText={setPlate} autoCapitalize="characters" />
-            <FormField label="Model" value={model} onChangeText={setModel} autoCapitalize="words" />
-            <FormField label="Color" value={color} onChangeText={setColor} autoCapitalize="words" />
+            <FormField
+              label={t('vehicleDetails.plateLabel')}
+              value={plate}
+              onChangeText={setPlate}
+              autoCapitalize="characters"
+            />
+            <FormField
+              label={t('vehicleDetails.modelLabel')}
+              value={model}
+              onChangeText={setModel}
+              autoCapitalize="words"
+            />
+            <FormField
+              label={t('vehicleDetails.colorLabel')}
+              value={color}
+              onChangeText={setColor}
+              autoCapitalize="words"
+            />
           </>
         )}
       </ScrollView>
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Save Changes"
+          label={t('vehicleDetails.saveChanges')}
           height={54}
           loading={saving}
           disabled={!loaded}

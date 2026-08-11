@@ -1,4 +1,5 @@
-export type PickupStatus = 'scheduled' | 'completed';
+/** Matches the real backend's uppercase enum strings. */
+export type PickupStatus = 'SCHEDULED' | 'COMPLETED';
 
 export interface Pickup {
   id: string;
