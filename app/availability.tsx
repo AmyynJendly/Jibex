@@ -77,14 +77,13 @@ export default function AvailabilityScreen() {
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>Availability</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>{t('availability.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[Typography.subhead, styles.intro, { color: colors.textSecondary }]}>
-          Tap a date to mark the time blocks you&apos;re available to take routes. Dispatch uses
-          this to plan upcoming assignments.
+          {t('availability.intro')}
         </Text>
 
         {!availability ? (
@@ -119,7 +118,7 @@ export default function AvailabilityScreen() {
               <Text style={[styles.dayCardTitle, { color: colors.text }]}>{selectedLabel}</Text>
               {isPast ? (
                 <Text style={[Typography.footnote, { color: colors.textTertiary }]}>
-                  Can&apos;t set availability for a past date.
+                  {t('availability.pastNote')}
                 </Text>
               ) : (
                 <View style={styles.blockRow}>
@@ -139,7 +138,7 @@ export default function AvailabilityScreen() {
                             styles.blockChipText,
                             { color: active ? '#fff' : colors.textSecondary },
                           ]}>
-                          {BLOCK_LABEL[block]}
+                          {t(`common.timeBlock.${block}`)}
                         </Text>
                       </AnimatedPressable>
                     );
@@ -149,8 +148,7 @@ export default function AvailabilityScreen() {
             </Animated.View>
 
             <Text style={[styles.summary, { color: colors.textSecondary }]}>
-              {monthAvailableCount} {monthAvailableCount === 1 ? 'day' : 'days'} marked available
-              this month
+              {t('availability.summary', { count: monthAvailableCount })}
             </Text>
           </>
         )}

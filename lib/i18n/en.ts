@@ -4,6 +4,17 @@
  * the `resources` assembly in `index.ts`).
  */
 const en = {
+  tabs: {
+    home: 'Home',
+    runsheets: 'Runsheets',
+    alerts: 'Alerts',
+    profile: 'Profile',
+  },
+
+  offlineBanner: {
+    message: "You're offline — changes will sync when reconnected",
+  },
+
   common: {
     cancel: 'Cancel',
     save: 'Save',

@@ -7,6 +7,17 @@ import type { TranslationResource } from './en';
  * drivers already know.
  */
 const fr: TranslationResource = {
+  tabs: {
+    home: 'Accueil',
+    runsheets: 'Tournées',
+    alerts: 'Alertes',
+    profile: 'Profil',
+  },
+
+  offlineBanner: {
+    message: 'Vous êtes hors ligne — les modifications seront synchronisées une fois reconnecté',
+  },
+
   common: {
     cancel: 'Annuler',
     save: 'Enregistrer',

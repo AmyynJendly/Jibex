@@ -1,6 +1,6 @@
 import { BlurMask, Canvas, Circle, Group } from '@shopify/react-native-skia';
 import { useEffect } from 'react';
-import { type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import {
   Easing,
   useDerivedValue,
@@ -27,6 +27,13 @@ export function AmbientGlow({ width, height, colors, style }: AmbientGlowProps) 
   const t = useSharedValue(0);
 
   useEffect(() => {
+    // Skia on web renders through a CanvasKit WASM build that isn't wired up
+    // in this project's Metro web config — every animation frame throws
+    // ("Cannot read properties of undefined (reading 'PictureRecorder')")
+    // once CanvasKit fails to load. The real target here is iOS Expo Go,
+    // where Skia runs natively and this is a non-issue, so this purely
+    // decorative effect just skips itself on web rather than crash-looping.
+    if (Platform.OS === 'web') return;
     t.value = withRepeat(
       withTiming(Math.PI * 2, { duration: 9000, easing: Easing.linear }),
       -1,
@@ -48,11 +55,21 @@ export function AmbientGlow({ width, height, colors, style }: AmbientGlowProps) 
   const cy3 = useDerivedValue(() => height * 0.65 + Math.cos(t.value * 0.85 + 4) * height * 0.1);
   const r3 = useDerivedValue(() => width * 0.24 + Math.sin(t.value * 0.9 + 3) * width * 0.03);
 
+  // See the useEffect above — CanvasKit isn't wired up for web in this
+  // project, so skip mounting the Canvas entirely there instead of crashing.
+  if (Platform.OS === 'web') return null;
+
   return (
     // `opaque={false}` is required — Skia's Canvas defaults to an opaque
     // surface when the prop is omitted, which paints a solid background
     // rect behind the blobs (visible as a hard square around the glow).
-    <Canvas opaque={false} style={[{ width, height, pointerEvents: 'none' }, style]}>
+    // `style` must be a flattened plain object, not an array — Skia's web
+    // `Platform.View` spreads it directly into a CSS style object without
+    // flattening, so an array's numeric indices ("0", "1") end up as
+    // literal style keys, which crashes React DOM on web.
+    <Canvas
+      opaque={false}
+      style={StyleSheet.flatten([{ width, height, pointerEvents: 'none' }, style])}>
       <Group>
         <Circle cx={cx1} cy={cy1} r={r1} color={colorA} opacity={0.5}>
           <BlurMask blur={30} style="normal" />

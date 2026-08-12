@@ -3,6 +3,7 @@ import { useNetInfo } from '@react-native-community/netinfo';
 import { StyleSheet, Text } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { Spacing, useColors } from '../constants';
 
@@ -14,6 +15,7 @@ import { Spacing, useColors } from '../constants';
  */
 export function OfflineBanner() {
   const colors = useColors();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const netInfo = useNetInfo();
 
@@ -26,7 +28,7 @@ export function OfflineBanner() {
       exiting={FadeOutUp.duration(180)}
       style={[styles.banner, { top: insets.top, backgroundColor: colors.warning }]}>
       <Ionicons name="cloud-offline-outline" size={15} color="#fff" />
-      <Text style={styles.text}>You&apos;re offline — changes will sync when reconnected</Text>
+      <Text style={styles.text}>{t('offlineBanner.message')}</Text>
     </Animated.View>
   );
 }

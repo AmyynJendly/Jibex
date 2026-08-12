@@ -1,4 +1,5 @@
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useTranslation } from 'react-i18next';
 
 import { useColors } from '../../constants';
 
@@ -11,16 +12,17 @@ import { useColors } from '../../constants';
  */
 export default function TabsLayout() {
   const colors = useColors();
+  const { t } = useTranslation();
 
   return (
     <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.accent}>
       <NativeTabs.Trigger name="home">
-        <Label>Home</Label>
+        <Label>{t('tabs.home')}</Label>
         <Icon sf={{ default: 'house', selected: 'house.fill' }} drawable="ic_home" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="runsheets">
-        <Label>Runsheets</Label>
+        <Label>{t('tabs.runsheets')}</Label>
         <Icon
           sf={{ default: 'list.bullet.clipboard', selected: 'list.bullet.clipboard.fill' }}
           drawable="ic_runsheets"
@@ -28,12 +30,12 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="alerts">
-        <Label>Alerts</Label>
+        <Label>{t('tabs.alerts')}</Label>
         <Icon sf={{ default: 'bell', selected: 'bell.fill' }} drawable="ic_alerts" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">
-        <Label>Profile</Label>
+        <Label>{t('tabs.profile')}</Label>
         <Icon
           sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }}
           drawable="ic_profile"
