@@ -51,9 +51,7 @@ interface HomeData {
 
 function getGreetingKey() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'home.greeting.morning';
-  if (hour < 18) return 'home.greeting.afternoon';
-  return 'home.greeting.evening';
+  return hour < 18 ? 'home.greeting.morning' : 'home.greeting.evening';
 }
 
 const percentFormatter = (n: number) => `${Math.round(n)}%`;
@@ -230,6 +228,9 @@ export default function HomeScreen() {
       <View style={styles.topRow}>
         <GlassIconButton size={40} onPress={() => router.push('/scanner')}>
           <Ionicons name="scan-outline" size={20} color={colors.text} />
+        </GlassIconButton>
+        <GlassIconButton size={40} onPress={() => router.push('/search')}>
+          <Ionicons name="search-outline" size={20} color={colors.text} />
         </GlassIconButton>
         <GlassIconButton size={40} onPress={() => router.push('/alerts')}>
           <Ionicons

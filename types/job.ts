@@ -26,6 +26,7 @@ export interface GeoPoint {
 export interface Job {
   id: string;
   customerName: string;
+  customerPhone: string;
   address: string;
   packageInfo: PackageInfo;
   status: JobStatus;

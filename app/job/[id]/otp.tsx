@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -26,8 +27,8 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import { useToast } from '../../../components/Toast';
 import { Radii, Spacing, Typography, getCardShadow, useColors, type ColorPalette } from '../../../constants';
+import { telUrl } from '../../../lib/phone';
 import { confirmDeliveryWithOTP, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -74,7 +75,6 @@ export default function OtpScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const { showToast } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [otp, setOtp] = useState('');
@@ -162,7 +162,7 @@ export default function OtpScreen() {
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.phoneButton, { backgroundColor: colors.accentSoft }]}
-                onPress={() => showToast(t('common.callToast'))}>
+                onPress={() => Linking.openURL(telUrl(job.customerPhone))}>
                 <Ionicons name="call-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
             </View>
@@ -225,7 +225,7 @@ export default function OtpScreen() {
         <AnimatedPressable
           scaleTo={0.97}
           style={styles.unreachableRow}
-          onPress={() => showToast(t('common.callToast'))}>
+          onPress={() => job && Linking.openURL(telUrl(job.customerPhone))}>
           <Ionicons name="call-outline" size={16} color={colors.textSecondary} />
           <Text style={[styles.unreachableText, { color: colors.textSecondary }]}>
             {t('otp.unreachable')}

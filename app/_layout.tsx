@@ -37,6 +37,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings" />
             <Stack.Screen name="shift-summary" options={{ gestureEnabled: false }} />
             <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="search" />
           </Stack>
           <OfflineBanner />
           <StatusBar style="auto" />

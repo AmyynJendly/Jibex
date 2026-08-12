@@ -41,7 +41,6 @@ const fr: TranslationResource = {
     },
     package_one: '{{count}} colis',
     package_other: '{{count}} colis',
-    callToast: 'Appel — bientôt disponible',
     messageToast: 'Message — bientôt disponible',
   },
 
@@ -86,7 +85,6 @@ const fr: TranslationResource = {
   home: {
     greeting: {
       morning: 'Bonjour',
-      afternoon: 'Bon après-midi',
       evening: 'Bonsoir',
     },
     shift: {
@@ -205,11 +203,23 @@ const fr: TranslationResource = {
     },
   },
 
+  search: {
+    headerTitle: 'Recherche',
+    label: 'Numéro de suivi',
+    placeholder: 'TRK-XXXXXXXX',
+    searching: 'Recherche…',
+    notFoundTitle: 'Aucun colis trouvé',
+    notFoundSubtitle: 'Aucune correspondance pour {{code}}',
+    instructions: 'Saisissez un numéro de suivi pour trouver un colis',
+  },
+
   pickups: {
     headerTitle: 'Collectes',
     segments: { scheduled: 'Prévues', completed: 'Terminées' },
     nextPickup: 'Prochaine collecte',
     startPickup: 'Démarrer la collecte',
+    navigate: 'Naviguer',
+    parcelsTitle: 'Colis',
     empty: {
       scheduled: 'Aucune collecte prévue',
       completed: 'Aucune collecte terminée',

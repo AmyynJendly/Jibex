@@ -34,6 +34,7 @@ import {
   useColors,
 } from '../../../constants';
 import { formatCurrency } from '../../../lib/currency';
+import { telUrl } from '../../../lib/phone';
 import { getJobDetail, getRunsheets } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -96,6 +97,7 @@ export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [position, setPosition] = useState<{ index: number; total: number } | null>(null);
+  const [agency, setAgency] = useState<string | null>(null);
   const ripple = useSharedValue(0);
 
   useEffect(() => {
@@ -118,6 +120,8 @@ export default function JobDetailScreen() {
       if (index !== -1) {
         setPosition({ index: index + 1, total: allStopIds.length });
       }
+      const owningRunsheet = runsheets.find((r) => r.stopIds.includes(id));
+      setAgency(owningRunsheet?.agency ?? null);
     });
   }, [id]);
 
@@ -138,9 +142,14 @@ export default function JobDetailScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         {position && (
-          <Text style={[Typography.cardTitle, { color: colors.text }]}>
-            {t('jobDetail.stopOf', { index: position.index, total: position.total })}
-          </Text>
+          <View style={styles.headerTitleWrap}>
+            <Text style={[Typography.cardTitle, { color: colors.text }]}>
+              {t('jobDetail.stopOf', { index: position.index, total: position.total })}
+            </Text>
+            {agency && (
+              <Text style={[styles.headerAgency, { color: colors.textSecondary }]}>{agency}</Text>
+            )}
+          </View>
         )}
         <GlassIconButton onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
@@ -189,7 +198,7 @@ export default function JobDetailScreen() {
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.iconButton, { backgroundColor: colors.accentSoft }]}
-                onPress={() => showToast(t('common.callToast'))}>
+                onPress={() => Linking.openURL(telUrl(job.customerPhone))}>
                 <Ionicons name="call-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
               <AnimatedPressable
@@ -275,6 +284,14 @@ const styles = StyleSheet.create({
     paddingTop: 58,
     paddingHorizontal: Spacing.xxl,
     paddingBottom: Spacing.xxs,
+  },
+  headerTitleWrap: {
+    alignItems: 'center',
+  },
+  headerAgency: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
   },
   content: {
     paddingHorizontal: Spacing.xxl,

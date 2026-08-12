@@ -1,6 +1,6 @@
 import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
-import { formatPickupId, formatRunsheetId } from '../lib/ids';
+import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids';
 import type {
   Availability,
   DayAvailability,
@@ -11,6 +11,7 @@ import type {
   Notification,
   PayoutInfo,
   Pickup,
+  PickupParcel,
   Return,
   Runsheet,
   ShiftStatus,
@@ -125,6 +126,7 @@ const mockJobs: Job[] = [
   {
     id: 'TRK-5DF3697E',
     customerName: 'Amine Ben Salah',
+    customerPhone: '+216 20 456 789',
     address: 'Rue de la Liberté, Sahloul, Sousse',
     packageInfo: { count: 1, weightLbs: 2.4, fragile: true, note: 'Leave with concierge if not home' },
     status: 'IN_TRANSIT',
@@ -135,6 +137,7 @@ const mockJobs: Job[] = [
   {
     id: 'TRK-A12BC034',
     customerName: 'Karim Mejri',
+    customerPhone: '+216 22 314 908',
     address: 'Avenue Farhat Hached, Sfax',
     packageInfo: { count: 2, weightLbs: 5.1, fragile: false },
     status: 'PENDING',
@@ -144,6 +147,7 @@ const mockJobs: Job[] = [
   {
     id: 'TRK-77F1E9AB',
     customerName: 'Sarra Gharbi',
+    customerPhone: '+216 26 771 244',
     address: 'Rue Ibn Khaldoun, Monastir',
     packageInfo: { count: 1, weightLbs: 1.2, fragile: false },
     status: 'PENDING',
@@ -153,6 +157,7 @@ const mockJobs: Job[] = [
   {
     id: 'TRK-3C4D8F21',
     customerName: 'Nizar Guesmi',
+    customerPhone: '+216 24 590 118',
     address: 'Rue de Marseille, Sfax',
     packageInfo: { count: 3, weightLbs: 8.0, fragile: false },
     status: 'PENDING',
@@ -163,24 +168,29 @@ const mockJobs: Job[] = [
   {
     id: 'TRK-9E0A2B6D',
     customerName: 'Rania Cherif',
+    customerPhone: '+216 27 683 052',
     address: 'Avenue de la République, Monastir',
     packageInfo: { count: 1, weightLbs: 0.8, fragile: true, note: 'Ring twice' },
     status: 'FAILED',
+    failureReason: 'NO_ANSWER',
     cashToCollect: 22.0,
     location: { lat: 35.77, lng: 10.82 },
   },
   {
     id: 'TRK-B6F31C08',
     customerName: 'Walid Ammar',
+    customerPhone: '+216 21 908 366',
     address: 'Zone Industrielle, Sfax',
     packageInfo: { count: 4, weightLbs: 12.5, fragile: false },
     status: 'FAILED',
+    failureReason: 'INCORRECT_ADDRESS',
     cashToCollect: 0,
     location: { lat: 34.72, lng: 10.69 },
   },
   {
     id: 'TRK-1F4A7D93',
     customerName: 'Ines Trabelsi',
+    customerPhone: '+216 25 447 610',
     address: 'Boulevard 14 Janvier, Sousse',
     packageInfo: { count: 1, weightLbs: 3.0, fragile: false },
     status: 'DELIVERED',
@@ -191,6 +201,7 @@ const mockJobs: Job[] = [
   {
     id: 'TRK-6C2E9F45',
     customerName: 'Yassine Trabelsi',
+    customerPhone: '+216 29 152 837',
     address: 'Avenue Habib Bourguiba, Tunis',
     packageInfo: { count: 1, weightLbs: 1.5, fragile: false },
     status: 'DELIVERED',
@@ -205,6 +216,7 @@ const mockRunsheets: Runsheet[] = [
     id: formatRunsheetId(today, 1),
     routeLabel: 'Route 12',
     zone: 'Sousse, Sahloul',
+    agency: 'Agence Sousse',
     status: 'IN_PROGRESS',
     stopCount: 4,
     completionPercent: 25,
@@ -214,6 +226,7 @@ const mockRunsheets: Runsheet[] = [
     id: formatRunsheetId(today, 2),
     routeLabel: 'Route 7',
     zone: 'Sfax, Zone Industrielle',
+    agency: 'Agence Sousse',
     status: 'WAITING',
     stopCount: 2,
     completionPercent: 0,
@@ -223,12 +236,32 @@ const mockRunsheets: Runsheet[] = [
     id: formatRunsheetId(today, 3),
     routeLabel: 'Route 4',
     zone: 'Monastir',
+    agency: 'Agence Sousse',
     status: 'CONFIRMED',
     stopCount: 2,
     completionPercent: 50,
     stopIds: ['TRK-9E0A2B6D', 'TRK-6C2E9F45'],
   },
 ];
+
+/** Recipient names cycled across generated parcels — not tied to any Job, purely mock display data. */
+const PARCEL_CONTACTS = [
+  'Sami Klibi',
+  'Nadia Ferjani',
+  'Hatem Sassi',
+  'Emna Rekik',
+  'Bilel Chtioui',
+  'Rim Abidi',
+];
+
+function generateParcels(count: number, address: string): PickupParcel[] {
+  return Array.from({ length: count }, (_, i) => ({
+    trackingNumber: generateTrackingId(),
+    contactName: PARCEL_CONTACTS[i % PARCEL_CONTACTS.length],
+    address,
+    codAmount: Math.round((15 + ((i * 11) % 60)) * 100) / 100,
+  }));
+}
 
 const mockPickups: Pickup[] = [
   {
@@ -239,6 +272,9 @@ const mockPickups: Pickup[] = [
     requestedByDate: todayAt(0, 0),
     timeWindow: '11:30–12:00',
     packageCount: 12,
+    contactName: 'Youssef Mansour',
+    contactPhone: '+216 20 774 512',
+    parcels: generateParcels(12, 'Zone Industrielle, Sfax'),
   },
   {
     id: formatPickupId('3', today, 2),
@@ -248,6 +284,9 @@ const mockPickups: Pickup[] = [
     requestedByDate: todayAt(0, 0),
     timeWindow: '2:00–2:30 PM',
     packageCount: 4,
+    contactName: 'Leila Haddad',
+    contactPhone: '+216 22 638 904',
+    parcels: generateParcels(4, 'Avenue Habib Bourguiba, Sousse'),
   },
   {
     id: formatPickupId('3', today, 3),
@@ -257,6 +296,9 @@ const mockPickups: Pickup[] = [
     requestedByDate: todayAt(0, 0),
     timeWindow: '3:30–4:00 PM',
     packageCount: 2,
+    contactName: 'Mehdi Zouari',
+    contactPhone: '+216 26 190 447',
+    parcels: generateParcels(2, 'Rue de la Liberté, Sousse'),
   },
   {
     id: formatPickupId('3', today, 4),
@@ -266,6 +308,9 @@ const mockPickups: Pickup[] = [
     requestedByDate: todayAt(0, 0),
     timeWindow: '9:00–9:30 AM',
     packageCount: 6,
+    contactName: 'Ahmed Boubaker',
+    contactPhone: '+216 24 883 021',
+    parcels: generateParcels(6, 'Avenue Farhat Hached, Sfax'),
   },
   {
     id: formatPickupId('3', yesterday, 1),
@@ -275,6 +320,9 @@ const mockPickups: Pickup[] = [
     requestedByDate: daysAgoAt(1, 0, 0),
     timeWindow: '8:00–8:30 AM',
     packageCount: 3,
+    contactName: 'Fares Ben Youssef',
+    contactPhone: '+216 27 509 366',
+    parcels: generateParcels(3, 'Rue Ibn Khaldoun, Monastir'),
   },
   {
     id: formatPickupId('3', today, 5),
@@ -284,6 +332,9 @@ const mockPickups: Pickup[] = [
     requestedByDate: todayAt(0, 0),
     timeWindow: '5:00–5:30 PM',
     packageCount: 1,
+    contactName: 'Ines Karray',
+    contactPhone: '+216 21 265 798',
+    parcels: generateParcels(1, 'Boulevard 14 Janvier, Sousse'),
   },
 ];
 

@@ -38,7 +38,6 @@ const en = {
     },
     package_one: '{{count}} package',
     package_other: '{{count}} packages',
-    callToast: 'Calling — coming soon',
     messageToast: 'Messaging — coming soon',
   },
 
@@ -83,7 +82,6 @@ const en = {
   home: {
     greeting: {
       morning: 'Good Morning',
-      afternoon: 'Good Afternoon',
       evening: 'Good Evening',
     },
     shift: {
@@ -200,11 +198,23 @@ const en = {
     },
   },
 
+  search: {
+    headerTitle: 'Search',
+    label: 'Tracking Number',
+    placeholder: 'TRK-XXXXXXXX',
+    searching: 'Searching…',
+    notFoundTitle: 'No parcel found',
+    notFoundSubtitle: "{{code}} doesn't match any tracking number",
+    instructions: 'Enter a tracking number to find a parcel',
+  },
+
   pickups: {
     headerTitle: 'Pickups',
     segments: { scheduled: 'Scheduled', completed: 'Completed' },
     nextPickup: 'Next Pickup',
     startPickup: 'Start Pickup',
+    navigate: 'Navigate',
+    parcelsTitle: 'Parcels',
     empty: {
       scheduled: 'No scheduled pickups',
       completed: 'No completed pickups',

@@ -46,11 +46,13 @@ export default function RunsheetsScreen() {
   const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [stops, setStops] = useState<Job[] | null>(null);
+  const [agency, setAgency] = useState<string | null>(null);
   const [segment, setSegment] = useState<Segment>('all');
 
   const load = useCallback(async () => {
     setStops(null);
     const runsheets = await getRunsheets();
+    setAgency(runsheets[0]?.agency ?? null);
     const rawIds = runsheets.flatMap((r) => r.stopIds);
     const orderedIds = await optimizeRouteOrder(rawIds);
     const jobs = await Promise.all(orderedIds.map((id) => getJobDetail(id)));
@@ -87,9 +89,17 @@ export default function RunsheetsScreen() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={[Typography.pageTitle, { color: colors.text }]}>
-          {t('runsheets.headerTitle')}
-        </Text>
+        <View>
+          <Text style={[Typography.pageTitle, { color: colors.text }]}>
+            {t('runsheets.headerTitle')}
+          </Text>
+          {agency && (
+            <View style={styles.agencyRow}>
+              <Ionicons name="business-outline" size={12} color={colors.textSecondary} />
+              <Text style={[styles.agencyText, { color: colors.textSecondary }]}>{agency}</Text>
+            </View>
+          )}
+        </View>
         <GlassIconButton onPress={() => router.push('/runsheet-schedule')}>
           <Ionicons name="calendar-outline" size={20} color={colors.text} />
         </GlassIconButton>
@@ -167,6 +177,7 @@ export default function RunsheetsScreen() {
             listed.map((stop, i) => {
               const sc = statusColors(stop.status, colors);
               const isDelivered = stop.status === 'DELIVERED';
+              const isFailed = stop.status === 'FAILED';
               return (
                 <Animated.View
                   key={stop.id}
@@ -194,6 +205,11 @@ export default function RunsheetsScreen() {
                       <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
                         {stop.address}
                       </Text>
+                      {isFailed && stop.failureReason && (
+                        <Text style={[styles.failureReasonText, { color: colors.danger }]}>
+                          {enumLabel(t, 'failureReason', stop.failureReason)}
+                        </Text>
+                      )}
                     </View>
                     <Text
                       style={[
@@ -227,8 +243,18 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+  },
+  agencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  agencyText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   optimizedRow: {
     flexDirection: 'row',
@@ -303,6 +329,11 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  failureReasonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
   },
   rowStatusChip: {
     fontSize: 12,
