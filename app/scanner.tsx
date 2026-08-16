@@ -18,7 +18,7 @@ import { GlassIconButton } from '../components/GlassIconButton';
 import { GlassSurface } from '../components/GlassSurface';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useToast } from '../components/Toast';
-import { Radii, Spacing, Typography } from '../constants';
+import { Fonts, Radii, Spacing, Typography, monoStyle } from '../constants';
 import { confirmScan } from '../services/mock-api';
 
 /**
@@ -48,6 +48,7 @@ export default function ScannerScreen() {
   const [manualEntry, setManualEntry] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [scannedCount, setScannedCount] = useState(0);
   const scanLockedRef = useRef(false);
   const sweep = useSharedValue(-SWEEP_RANGE);
 
@@ -83,7 +84,10 @@ export default function ScannerScreen() {
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast(t('scanner.confirmedToast', { label: result.label }));
-      setTimeout(() => router.back(), 700);
+      setScannedCount((c) => c + 1);
+      setTimeout(() => {
+        scanLockedRef.current = false;
+      }, 900);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showToast(t(result.error ?? 'scanner.errors.notRecognized'));
@@ -177,26 +181,52 @@ export default function ScannerScreen() {
             </AnimatedPressable>
           </View>
         ) : (
-          <GlassSurface tint="dark" colorScheme="dark" style={styles.hintPill}>
-            <Text style={[Typography.callout, styles.hintText]}>
-              {submitting ? t('scanner.hintChecking') : t('scanner.hintAlign')}
-            </Text>
+          <GlassSurface tint="dark" colorScheme="dark" style={styles.hintCard}>
+            <View style={styles.hintIcon}>
+              <Ionicons name="scan-outline" size={18} color={ACCENT} />
+            </View>
+            <View style={styles.hintTextStack}>
+              <Text style={styles.hintTitle}>
+                {submitting ? t('scanner.hintChecking') : t('scanner.hintTitle')}
+              </Text>
+              {!submitting && <Text style={styles.hintSubtitle}>{t('scanner.hintSubtitle')}</Text>}
+            </View>
           </GlassSurface>
         )}
-        <Text onPress={() => setManualEntry((v) => !v)} style={[Typography.headline, styles.manual]}>
-          {manualEntry ? t('scanner.useCamera') : t('scanner.enterManually')}
-        </Text>
+
+        <View style={styles.actionRow}>
+          <AnimatedPressable
+            scaleTo={0.95}
+            style={[styles.actionButton, styles.actionButtonDark]}
+            onPress={() => setManualEntry((v) => !v)}>
+            <Text style={styles.actionButtonTextLight}>
+              {manualEntry ? t('scanner.title') : t('scanner.enterCode')}
+            </Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            scaleTo={0.95}
+            style={[styles.actionButton, styles.actionButtonAccent]}
+            onPress={() => setManualEntry(false)}>
+            <Text style={styles.actionButtonTextDark}>{t('scanner.burstScan')}</Text>
+          </AnimatedPressable>
+        </View>
+
+        {scannedCount > 0 && (
+          <Text style={styles.scannedCount}>
+            {t('scanner.scannedCount', { count: scannedCount })}
+          </Text>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
 }
 
-const ACCENT = '#0A5FFF';
+const ACCENT = '#EAB464';
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0a0a0c',
+    backgroundColor: '#2E3439',
   },
   header: {
     flexDirection: 'row',
@@ -226,13 +256,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   permissionTitle: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 19,
-    fontWeight: '700',
     color: '#fff',
   },
   permissionBody: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 15,
-    fontWeight: '500',
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
   },
@@ -302,18 +332,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.lg,
   },
-  hintPill: {
+  hintCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    alignSelf: 'stretch',
     borderRadius: Radii.xxl,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     overflow: 'hidden',
   },
-  hintText: {
-    color: '#fff',
-    textAlign: 'center',
+  hintIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  manual: {
-    color: ACCENT,
+  hintTextStack: {
+    flex: 1,
+  },
+  hintTitle: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 14,
+    color: '#fff',
+  },
+  hintSubtitle: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 1,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    gap: Spacing.smd,
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: Radii.full,
+  },
+  actionButtonDark: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  actionButtonAccent: {
+    backgroundColor: ACCENT,
+  },
+  actionButtonTextLight: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 14,
+    color: '#fff',
+  },
+  actionButtonTextDark: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 14,
+    color: '#2E3439',
+  },
+  scannedCount: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
   },
   manualEntryRow: {
     flexDirection: 'row',
@@ -322,6 +404,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   manualInput: {
+    ...monoStyle(17, 'medium'),
     flex: 1,
     height: 52,
     borderRadius: Radii.input,
@@ -330,8 +413,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: Spacing.lg,
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '500',
   },
   manualSubmit: {
     width: 52,

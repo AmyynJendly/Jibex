@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Radii, Spacing, useColors } from '../constants';
+import { Fonts, Radii, Spacing, useColors } from '../constants';
 import { addMonths, fromDateKey, isSameMonth, localeTag, toDateKey } from '../lib/date';
 import { AnimatedPressable } from './AnimatedPressable';
 import { GlassIconButton } from './GlassIconButton';
@@ -155,17 +155,17 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   monthLabel: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 16,
-    fontWeight: '700',
   },
   weekdayRow: {
     flexDirection: 'row',
   },
   weekdayLabel: {
+    fontFamily: Fonts.archivoBold,
     flex: 1,
     textAlign: 'center',
     fontSize: 11,
-    fontWeight: '700',
     textTransform: 'uppercase',
   },
   grid: {
@@ -187,8 +187,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayText: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 14,
-    fontWeight: '600',
   },
   dot: {
     position: 'absolute',

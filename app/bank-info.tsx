@@ -9,7 +9,7 @@ import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
-import { Spacing, Typography, useColors } from '../constants';
+import { Fonts, Spacing, Typography, useColors } from '../constants';
 import { getPayoutInfo, updatePayoutInfo } from '../services/mock-api';
 
 export default function BankInfoScreen() {
@@ -133,9 +133,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   noteText: {
+    fontFamily: Fonts.archivoSemiBold,
     flex: 1,
     fontSize: 12,
-    fontWeight: '600',
   },
   footer: {
     paddingHorizontal: Spacing.xxl,

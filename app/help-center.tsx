@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
-import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
 
 interface Faq {
   question: string;
@@ -119,13 +119,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactTitle: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 15,
-    fontWeight: '700',
     color: '#fff',
   },
   contactSubtitle: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 13,
-    fontWeight: '500',
     color: 'rgba(255,255,255,0.8)',
     marginTop: 1,
   },
@@ -148,13 +148,13 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   faqQuestion: {
+    fontFamily: Fonts.archivoBold,
     flex: 1,
     fontSize: 14,
-    fontWeight: '700',
   },
   faqAnswer: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 13,
-    fontWeight: '500',
     lineHeight: 19,
   },
 });

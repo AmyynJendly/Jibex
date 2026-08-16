@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import { Radii, Spacing, Typography } from '../../../constants';
+import { Fonts, Radii, Spacing, Typography } from '../../../constants';
 import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   permissionBody: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 15,
-    fontWeight: '500',
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
   },
@@ -157,14 +157,14 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
   },
   hint: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 14,
-    fontWeight: '500',
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
   },
   retake: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 15,
-    fontWeight: '600',
     color: '#fff',
   },
   shutterOuter: {

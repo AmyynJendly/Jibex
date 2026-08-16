@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { Spacing, Typography, useColors } from '../constants';
+import { Fonts, Spacing, Typography, useColors } from '../constants';
 import { GlassSurface } from './GlassSurface';
 
 interface Segment<T extends string> {
@@ -46,9 +46,15 @@ export function SegmentedControl<T extends string>({
               </>
             )}
             <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
               style={[
                 Typography.subhead,
-                { color: active ? '#fff' : colors.textSecondary, fontWeight: active ? '700' : '600' },
+                {
+                  color: active ? '#fff' : colors.textSecondary,
+                  fontFamily: active ? Fonts.archivoBold : Fonts.archivoSemiBold,
+                },
               ]}>
               {segment.label}
             </Text>

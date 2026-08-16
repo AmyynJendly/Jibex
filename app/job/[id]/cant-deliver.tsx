@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import { Radii, Spacing, Typography, useColors } from '../../../constants';
+import { Fonts, Radii, Spacing, Typography, useColors } from '../../../constants';
 import { markDeliveryFailed } from '../../../services/mock-api';
 import type { DeliveryFailureReason } from '../../../types';
 
@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
     gap: Spacing.xxl,
   },
   title: {
+    fontFamily: Fonts.archivoExtraBold,
     fontSize: 30,
-    fontWeight: '800',
     letterSpacing: -0.02 * 30,
     paddingTop: Spacing.lg,
   },
@@ -190,17 +190,17 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   noteLabel: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-    fontWeight: '600',
     paddingLeft: Spacing.xxs,
   },
   noteInput: {
+    fontFamily: Fonts.archivoMedium,
     minHeight: 90,
     borderRadius: Radii.input,
     borderWidth: 1,
     padding: Spacing.lg,
     fontSize: 16,
-    fontWeight: '500',
     textAlignVertical: 'top',
   },
   footer: {

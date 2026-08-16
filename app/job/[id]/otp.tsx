@@ -1,19 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, {
   interpolate,
   interpolateColor,
@@ -27,12 +16,28 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import { Radii, Spacing, Typography, getCardShadow, useColors, type ColorPalette } from '../../../constants';
+import {
+  Fonts,
+  Radii,
+  Spacing,
+  Typography,
+  monoLabelStyle,
+  monoStyle,
+  useColors,
+  type ColorPalette,
+} from '../../../constants';
 import { telUrl } from '../../../lib/phone';
 import { confirmDeliveryWithOTP, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
 const OTP_LENGTH = 4;
+const RESEND_SECONDS = 24;
+const KEYPAD_ROWS = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['sms', '0', 'del'],
+] as const;
 
 interface OtpBoxProps {
   digit: string | undefined;
@@ -74,18 +79,23 @@ function OtpBox({ digit, active, error, colors }: OtpBoxProps) {
 export default function OtpScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
   const errorPulse = useSharedValue(0);
 
   useEffect(() => {
     getJobDetail(id).then(setJob);
   }, [id]);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+    const timer = setTimeout(() => setResendSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendSeconds]);
 
   useEffect(() => {
     if (!error) return;
@@ -113,7 +123,6 @@ export default function OtpScreen() {
     if (!result.success) {
       setError(t(result.error ?? 'common.genericError'));
       setOtp('');
-      inputRef.current?.focus();
       return;
     }
 
@@ -127,47 +136,45 @@ export default function OtpScreen() {
     });
   }
 
+  const handleResend = useCallback(() => {
+    setOtp('');
+    setError(null);
+    setResendSeconds(RESEND_SECONDS);
+  }, []);
+
+  function handleKeyPress(key: string) {
+    if (key === 'del') {
+      setOtp((prev) => prev.slice(0, -1));
+      setError(null);
+      return;
+    }
+    if (key === 'sms') {
+      if (resendSeconds > 0) return;
+      handleResend();
+      return;
+    }
+    setOtp((prev) => (prev.length < OTP_LENGTH ? prev + key : prev));
+    setError(null);
+  }
+
+  const firstName = job?.customerName.split(' ')[0] ?? '';
+
   return (
-    <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
+        {job && <Text style={[monoStyle(12), { color: colors.textTertiary }]}>{job.id}</Text>}
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.text }]}>{t('otp.title')}</Text>
         <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
-          {t('otp.subtitle')}
+          {t('otp.subtitle', { name: firstName })}
         </Text>
 
         <View style={styles.section}>
-          {job && (
-            <View
-              style={[
-                styles.customerCard,
-                { backgroundColor: colors.bgElevated },
-                getCardShadow(scheme),
-              ]}>
-              <View>
-                <Text style={[Typography.cardTitle, { color: colors.text }]}>
-                  {job.customerName}
-                </Text>
-                <Text style={[styles.customerAddress, { color: colors.textSecondary }]}>
-                  {job.address}
-                </Text>
-              </View>
-              <AnimatedPressable
-                scaleTo={0.88}
-                style={[styles.phoneButton, { backgroundColor: colors.accentSoft }]}
-                onPress={() => Linking.openURL(telUrl(job.customerPhone))}>
-                <Ionicons name="call-outline" size={18} color={colors.accent} />
-              </AnimatedPressable>
-            </View>
-          )}
-
           <View style={styles.otpRowWrap}>
             <Animated.View
               style={[
@@ -177,40 +184,65 @@ export default function OtpScreen() {
                 errorPulseStyle,
               ]}
             />
-            <Pressable style={styles.otpRow} onPress={() => inputRef.current?.focus()}>
+            <View style={styles.otpRow}>
               {Array.from({ length: OTP_LENGTH }).map((_, i) => {
                 const isNext = i === otp.length && otp.length < OTP_LENGTH;
                 return (
                   <OtpBox key={i} digit={otp[i]} active={isNext} error={!!error} colors={colors} />
                 );
               })}
-            </Pressable>
+            </View>
           </View>
-
-          <TextInput
-            ref={inputRef}
-            value={otp}
-            onChangeText={(text) => {
-              setOtp(text.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH));
-              setError(null);
-            }}
-            keyboardType="number-pad"
-            maxLength={OTP_LENGTH}
-            autoFocus
-            style={styles.hiddenInput}
-          />
 
           {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
-          <Text
-            onPress={() => {
-              setOtp('');
-              setError(null);
-              inputRef.current?.focus();
-            }}
-            style={[styles.resend, { color: colors.accent }]}>
-            {t('otp.resend')}
-          </Text>
+          <View style={styles.resendRow}>
+            {resendSeconds > 0 ? (
+              <Text style={[monoLabelStyle(11, 0.04), { color: colors.textTertiary }]}>
+                {t('otp.resendIn', { seconds: String(resendSeconds).padStart(2, '0') })}
+              </Text>
+            ) : (
+              <Text
+                onPress={handleResend}
+                style={[monoLabelStyle(11, 0.04), { color: colors.accent }]}>
+                {t('otp.resend')}
+              </Text>
+            )}
+            <Text
+              onPress={() => job && Linking.openURL(telUrl(job.customerPhone))}
+              style={[monoLabelStyle(11, 0.06), { color: colors.accent }]}>
+              {t('otp.call')}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.keypad}>
+          {KEYPAD_ROWS.map((row, ri) => (
+            <View key={ri} style={styles.keypadRow}>
+              {row.map((key) => (
+                <AnimatedPressable
+                  key={key}
+                  scaleTo={0.92}
+                  disabled={key === 'sms' && resendSeconds > 0}
+                  style={[styles.key, { backgroundColor: colors.bgElevated }]}
+                  onPress={() => handleKeyPress(key)}>
+                  {key === 'del' ? (
+                    <Ionicons name="backspace-outline" size={20} color={colors.text} />
+                  ) : key === 'sms' ? (
+                    <Text
+                      style={[
+                        monoLabelStyle(11, 0.06),
+                        { color: resendSeconds > 0 ? colors.textTertiary : colors.accent },
+                      ]}>
+                      SMS
+                    </Text>
+                  ) : (
+                    <Text style={[monoStyle(24, 'medium'), { color: colors.text }]}>{key}</Text>
+                  )}
+                </AnimatedPressable>
+              ))}
+            </View>
+          ))}
         </View>
       </ScrollView>
 
@@ -222,38 +254,33 @@ export default function OtpScreen() {
           disabled={otp.length < OTP_LENGTH}
           onPress={handleVerify}
         />
-        <AnimatedPressable
-          scaleTo={0.97}
-          style={styles.unreachableRow}
-          onPress={() => job && Linking.openURL(telUrl(job.customerPhone))}>
-          <Ionicons name="call-outline" size={16} color={colors.textSecondary} />
-          <Text style={[styles.unreachableText, { color: colors.textSecondary }]}>
-            {t('otp.unreachable')}
-          </Text>
-        </AnimatedPressable>
         <Text
           onPress={() => router.push({ pathname: '/job/[id]/photo-proof', params: { id } })}
           style={[styles.photoLink, { color: colors.accent }]}>
           {t('otp.takePhotoInstead')}
         </Text>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 58,
     paddingHorizontal: Spacing.xxl,
     paddingBottom: Spacing.xxs,
   },
   content: {
     paddingHorizontal: Spacing.xxl,
+    paddingBottom: Spacing.xl,
   },
   title: {
+    fontFamily: Fonts.archivoExtraBold,
     fontSize: 30,
-    fontWeight: '800',
     letterSpacing: -0.02 * 30,
     paddingTop: Spacing.lg,
   },
@@ -262,26 +289,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxl,
   },
   section: {
-    gap: 22,
-  },
-  customerCard: {
-    borderRadius: 20,
-    padding: Spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  customerAddress: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  phoneButton: {
-    width: 38,
-    height: 38,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.lg,
   },
   otpRowWrap: {
     position: 'relative',
@@ -302,25 +310,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   otpDigit: {
-    fontSize: 30,
-    fontWeight: '800',
-  },
-  hiddenInput: {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
+    ...monoStyle(30, 'medium'),
   },
   error: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-    fontWeight: '600',
     textAlign: 'center',
-    marginTop: -Spacing.md,
   },
-  resend: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.sm,
+  },
+  keypad: {
+    marginTop: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  keypadRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  key: {
+    flex: 1,
+    height: 56,
+    borderRadius: Radii.input,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     paddingHorizontal: Spacing.xxl,
@@ -328,19 +344,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     gap: Spacing.lg,
   },
-  unreachableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  unreachableText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
   photoLink: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 14,
-    fontWeight: '600',
     textAlign: 'center',
   },
 });

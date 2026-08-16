@@ -16,7 +16,8 @@ export default function SettingsScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
-  const [pushEnabled, setPushEnabled] = useState(true);
+  const [biometricLogin, setBiometricLogin] = useState(true);
+  const [newJobAlerts, setNewJobAlerts] = useState(true);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -60,6 +61,28 @@ export default function SettingsScreen() {
 
         <View>
           <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
+            {t('settings.sectionSecurity')}
+          </Text>
+          <View
+            style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+            <View style={styles.row}>
+              <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
+                <Ionicons name="finger-print-outline" size={16} color={colors.accent} />
+              </View>
+              <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                {t('settings.biometricLogin')}
+              </Text>
+              <Switch
+                value={biometricLogin}
+                onValueChange={setBiometricLogin}
+                trackColor={{ true: colors.accent }}
+              />
+            </View>
+          </View>
+        </View>
+
+        <View>
+          <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
             {t('settings.sectionNotifications')}
           </Text>
           <View
@@ -69,11 +92,11 @@ export default function SettingsScreen() {
                 <Ionicons name="notifications-outline" size={15} color={colors.accent} />
               </View>
               <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                {t('settings.newAssignmentAlerts')}
+                {t('settings.newJobAlerts')}
               </Text>
               <Switch
-                value={pushEnabled}
-                onValueChange={setPushEnabled}
+                value={newJobAlerts}
+                onValueChange={setNewJobAlerts}
                 trackColor={{ true: colors.accent }}
               />
             </View>

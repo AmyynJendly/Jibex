@@ -2,58 +2,90 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
-import { AmbientGlow } from '../../../components/AmbientGlow';
-import { DrawnCheckmark } from '../../../components/DrawnCheckmark';
+import { Barcode } from '../../../components/Barcode';
+import { InkStampSeal } from '../../../components/InkStampSeal';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import { Radii, Spacing, Typography, getCardShadow, useColors } from '../../../constants';
+import { RollingDigits } from '../../../components/RollingDigits';
+import {
+  Fonts,
+  Radii,
+  Spacing,
+  Typography,
+  getCardShadow,
+  monoLabelStyle,
+  monoStyle,
+  useColors,
+} from '../../../constants';
+import { localeTag } from '../../../lib/date';
 import { formatCurrency } from '../../../lib/currency';
-import { getNextStopId } from '../../../services/mock-api';
+import { getJobDetail, getNextStopId, getRunsheets } from '../../../services/mock-api';
+
+/** Best-effort "neighborhood" from a full street address — the segment before the city. */
+function extractPlace(address: string) {
+  const parts = address.split(',').map((p) => p.trim());
+  return parts.length >= 3 ? parts[parts.length - 2] : parts[0];
+}
 
 export default function CashCollectedScreen() {
   const colors = useColors();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { id, cashAmount, previousTotal } = useLocalSearchParams<{
     id: string;
     cashAmount: string;
     previousTotal: string;
   }>();
+  const [place, setPlace] = useState('');
+  const [position, setPosition] = useState<number | null>(null);
   const [nextStopId, setNextStopId] = useState<string | null | undefined>(undefined);
+  const [nextStopName, setNextStopName] = useState<string | null>(null);
 
   useEffect(() => {
-    getNextStopId(id).then(setNextStopId);
+    getJobDetail(id).then((job) => setPlace(extractPlace(job.address)));
+    getRunsheets().then((runsheets) => {
+      const allStopIds = runsheets.flatMap((r) => r.stopIds);
+      const index = allStopIds.indexOf(id);
+      if (index !== -1) setPosition(index + 1);
+    });
+    getNextStopId(id).then((nextId) => {
+      setNextStopId(nextId);
+      if (nextId) getJobDetail(nextId).then((job) => setNextStopName(job.customerName));
+    });
   }, [id]);
 
   const amount = Number(cashAmount);
   const before = Number(previousTotal);
   const after = before + amount;
+  const confirmedAt = new Date().toLocaleTimeString(localeTag(i18n.language), {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // Left-pad the shorter string so digit columns line up positionally from
+  // the right (ones, tens, decimal, currency suffix) — `RollingDigits`
+  // needs equal-length input.
+  const rawFrom = formatCurrency(before);
+  const rawTo = formatCurrency(after);
+  const totalLength = Math.max(rawFrom.length, rawTo.length);
+  const fromTotal = rawFrom.padStart(totalLength);
+  const toTotal = rawTo.padStart(totalLength);
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.content}>
-        <View style={styles.glowStage}>
-          <View style={styles.glowLayer}>
-            <AmbientGlow width={180} height={180} colors={['#1FAE5C', '#0A5FFF', '#32D74B']} />
-          </View>
-          <Animated.View
-            entering={ZoomIn.springify(280).dampingRatio(1)}
-            style={styles.iconWrap}>
-            <View style={[styles.iconOuter, { backgroundColor: colors.successSoft }]} />
-            <View style={[styles.iconInner, { backgroundColor: colors.success }, checkGlow]}>
-              <DrawnCheckmark size={30} color="#fff" strokeWidth={2.6} />
-            </View>
-          </Animated.View>
-        </View>
+        <InkStampSeal topText="JIBEX · SOUSSE" bottomText={confirmedAt} />
 
         <Animated.View
           entering={FadeInUp.delay(120).springify(220).dampingRatio(1)}
           style={styles.textBlock}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('cashCollected.title')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {t('cashCollected.title', { index: position ?? '—' })}
+          </Text>
           <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
-            {t('cashCollected.subtitle', { id })}
+            {t('cashCollected.subtitle', { time: confirmedAt, place })}
           </Text>
         </Animated.View>
 
@@ -64,25 +96,27 @@ export default function CashCollectedScreen() {
             { backgroundColor: colors.bgElevated },
             getCardShadow(scheme),
           ]}>
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              {t('cashCollected.cashCollected')}
-            </Text>
-            <Text style={[styles.summaryAmount, { color: colors.success }]}>
-              {formatCurrency(amount)}
-            </Text>
+          <View style={styles.summaryColumns}>
+            <View style={styles.summaryCol}>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                {t('cashCollected.cashCollected')}
+              </Text>
+              <Text style={[styles.summaryAmount, { color: colors.success }]}>
+                {formatCurrency(amount)}
+              </Text>
+            </View>
+            <View style={[styles.summaryColDivider, { backgroundColor: colors.separator }]} />
+            <View style={[styles.summaryCol, styles.summaryColRight]}>
+              <Text style={[styles.summaryLabel, styles.summaryLabelRight, { color: colors.textSecondary }]}>
+                {t('cashCollected.todaysTotal')}
+              </Text>
+              <RollingDigits from={fromTotal} to={toTotal} style={styles.summaryTotal} />
+            </View>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.separator }]} />
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              {t('cashCollected.todaysTotal')}
-            </Text>
-            <Text style={[styles.summaryTotal, { color: colors.text }]}>
-              {t('cashCollected.totalChange', {
-                before: formatCurrency(before),
-                after: formatCurrency(after),
-              })}
-            </Text>
+          <View style={styles.barcodeBlock}>
+            <Barcode seed={id} color={colors.text} />
+            <Text style={[monoStyle(11), { color: colors.textTertiary }]}>{id}</Text>
           </View>
         </Animated.View>
       </View>
@@ -90,7 +124,11 @@ export default function CashCollectedScreen() {
       <View style={styles.footer}>
         {nextStopId && (
           <PrimaryButton
-            label={t('cashCollected.nextStop')}
+            label={
+              nextStopName
+                ? t('cashCollected.nextStopWithName', { name: nextStopName })
+                : t('cashCollected.nextStop')
+            }
             height={56}
             onPress={() => router.replace({ pathname: '/job/[id]', params: { id: nextStopId } })}
           />
@@ -105,13 +143,6 @@ export default function CashCollectedScreen() {
   );
 }
 
-const checkGlow = {
-  shadowColor: '#1FAE5C',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.35,
-  shadowRadius: 24,
-};
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: {
@@ -121,43 +152,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xxxl,
     gap: 18,
   },
-  glowStage: {
-    width: 180,
-    height: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: -Spacing.xxxl,
-  },
-  glowLayer: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-  },
-  iconWrap: {
-    width: 96,
-    height: 96,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconOuter: {
-    position: 'absolute',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-  },
-  iconInner: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   textBlock: {
     alignItems: 'center',
   },
   title: {
+    fontFamily: Fonts.archivoExtraBold,
     fontSize: 26,
-    fontWeight: '800',
     letterSpacing: -0.02 * 26,
     textAlign: 'center',
   },
@@ -170,25 +170,42 @@ const styles = StyleSheet.create({
     padding: Spacing.xxl,
     gap: Spacing.md,
   },
-  summaryRow: {
+  summaryColumns: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
+  summaryCol: {
+    flex: 1,
+    gap: 4,
+  },
+  summaryColRight: {
+    alignItems: 'flex-end',
+  },
+  summaryColDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginHorizontal: Spacing.lg,
+  },
   summaryLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...monoLabelStyle(10, 0.06),
+    textTransform: 'uppercase',
+  },
+  summaryLabelRight: {
+    textAlign: 'right',
   },
   summaryAmount: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...monoStyle(24, 'medium'),
   },
   summaryTotal: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...monoStyle(16, 'medium'),
   },
   divider: {
     height: 1,
+  },
+  barcodeBlock: {
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   footer: {
     paddingHorizontal: Spacing.xxxl,
@@ -196,8 +213,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   backLink: {
+    fontFamily: Fonts.archivoSemiBold,
     textAlign: 'center',
     fontSize: 15,
-    fontWeight: '600',
   },
 });

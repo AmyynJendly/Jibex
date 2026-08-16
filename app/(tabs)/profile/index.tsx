@@ -7,31 +7,27 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
+import { Barcode } from '../../../components/Barcode';
 import { GlassIconButton } from '../../../components/GlassIconButton';
-import { GlassSurface } from '../../../components/GlassSurface';
 import { SkeletonBlock, SkeletonRow } from '../../../components/Skeleton';
 import { useToast } from '../../../components/Toast';
 import {
+  Fonts,
   Radii,
   Spacing,
   Typography,
   getCardShadow,
+  monoLabelStyle,
+  monoStyle,
   sectionLabelStyle,
   useColors,
 } from '../../../constants';
 import { formatCurrency } from '../../../lib/currency';
 import { clearToken } from '../../../lib/token';
-import { getDriverStats, getUser } from '../../../services/mock-api';
-import type { DriverStats, User } from '../../../types';
+import { getDriverStats, getUser, getVehicle } from '../../../services/mock-api';
+import type { DriverStats, User, Vehicle } from '../../../types';
 
 const STAGGER_MS = 40;
-
-/** Tunisian mobile numbers are 8 digits after the +216 country code. */
-function formatPhone(username: string) {
-  const digits = username.replace(/\D/g, '');
-  const local = digits.startsWith('216') ? digits.slice(3) : digits;
-  return `+216 ${local.slice(0, 2)} ${local.slice(2, 5)} ${local.slice(5, 8)}`;
-}
 
 interface AccountRow {
   key: string;
@@ -39,8 +35,10 @@ interface AccountRow {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   soft: string;
+  /** Right-aligned secondary value (e.g. a cash balance, a toggle state). */
+  trailing?: string;
   /** When set, the row navigates here instead of showing the "coming soon" toast. */
-  href?: '/personal-info' | '/vehicle-details' | '/bank-info' | '/availability';
+  href?: '/personal-info' | '/vehicle-details' | '/bank-info';
 }
 
 export default function ProfileScreen() {
@@ -50,11 +48,13 @@ export default function ProfileScreen() {
   const { showToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<DriverStats | null>(null);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
 
   const load = useCallback(async () => {
-    const [u, s] = await Promise.all([getUser(), getDriverStats()]);
+    const [u, s, v] = await Promise.all([getUser(), getDriverStats(), getVehicle()]);
     setUser(u);
     setStats(s);
+    setVehicle(v);
   }, []);
 
   useFocusEffect(
@@ -91,15 +91,8 @@ export default function ProfileScreen() {
       icon: 'cash-outline',
       color: colors.success,
       soft: colors.successSoft,
+      trailing: stats ? formatCurrency(stats.cashCollectedTotal) : undefined,
       href: '/bank-info',
-    },
-    {
-      key: 'availability',
-      label: t('profile.rows.availability'),
-      icon: 'calendar-outline',
-      color: colors.warning,
-      soft: colors.warningSoft,
-      href: '/availability',
     },
   ];
 
@@ -109,7 +102,9 @@ export default function ProfileScreen() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={[Typography.pageTitle, { color: colors.text }]}>{t('profile.headerTitle')}</Text>
+        <Text style={[Typography.pageTitle, { color: colors.text }]}>
+          {t('profile.headerTitle')}
+        </Text>
         <GlassIconButton size={40} onPress={() => router.push('/settings')}>
           <Ionicons name="settings-outline" size={20} color={colors.text} />
         </GlassIconButton>
@@ -117,52 +112,58 @@ export default function ProfileScreen() {
 
       {!user || !stats ? (
         <View style={styles.skeletonGroup}>
-          <SkeletonBlock height={230} radius={Radii.pill} />
+          <SkeletonBlock height={96} radius={Radii.card + 2} />
           <SkeletonBlock height={86} radius={Radii.card} />
           <SkeletonRow />
           <SkeletonRow />
         </View>
       ) : (
         <>
-          <GlassSurface style={styles.profileCard}>
+          <View style={[styles.profileCard, getCardShadow(scheme)]}>
+            {/* Fixed warm gradient, not theme-adaptive — same treatment as the
+                design's driver card, which never switches to a neutral surface. */}
             <LinearGradient
-              colors={[colors.accentSoft, 'transparent']}
+              colors={['#EAB464', '#C99A6D', colors.accent]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
-            <View style={styles.avatarWrap}>
-              <View style={[styles.avatar, { backgroundColor: colors.separator }]}>
-                <Ionicons name="person-outline" size={42} color={colors.textTertiary} />
+            <View style={styles.profileCardTopRow}>
+              <View style={styles.avatarWrap}>
+                <View style={styles.avatar}>
+                  <Ionicons name="person-outline" size={30} color="#7E5731" />
+                </View>
+                <AnimatedPressable
+                  scaleTo={0.85}
+                  style={[styles.editBadge, { backgroundColor: colors.accent }]}
+                  onPress={() => showToast(t('profile.editPhotoToast'))}>
+                  <Ionicons name="pencil" size={12} color="#fff" />
+                </AnimatedPressable>
               </View>
-              <AnimatedPressable
-                scaleTo={0.85}
-                style={[
-                  styles.editBadge,
-                  { backgroundColor: colors.accent, borderColor: colors.bgElevated },
-                ]}
-                onPress={() => showToast(t('profile.editPhotoToast'))}>
-                <Ionicons name="pencil" size={13} color="#fff" />
-              </AnimatedPressable>
+              <View style={styles.nameBlock}>
+                <Text style={styles.name}>{user.name}</Text>
+                <Text style={styles.handle}>
+                  {user.driverCode} · {t('profile.hub')}
+                </Text>
+              </View>
+              <View style={styles.ratingPill}>
+                <Ionicons name="star" size={13} color="#7E5731" />
+                <Text style={styles.ratingText}>{t('profile.rating', { rating: '4.92' })}</Text>
+              </View>
             </View>
-            <View style={styles.nameBlock}>
-              <Text style={[styles.name, { color: colors.text }]}>{user.name}</Text>
-              <Text style={[styles.handle, { color: colors.textSecondary }]}>
-                {formatPhone(user.username)}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.ratingPill,
-                { backgroundColor: colors.bgElevated },
-                getCardShadow(scheme),
-              ]}>
-              <Ionicons name="star" size={14} color="#FF9F0A" />
-              <Text style={[styles.ratingText, { color: colors.text }]}>
-                {t('profile.rating', { rating: '4.92' })}
-              </Text>
-            </View>
-          </GlassSurface>
+
+            {vehicle && (
+              <View style={styles.plateRow}>
+                <Barcode
+                  seed={user.id + vehicle.plate}
+                  color="rgba(46,52,57,0.55)"
+                  width={150}
+                  height={20}
+                />
+                <Text style={styles.plateText}>{vehicle.plate}</Text>
+              </View>
+            )}
+          </View>
 
           <View
             style={[
@@ -171,27 +172,29 @@ export default function ProfileScreen() {
               getCardShadow(scheme),
             ]}>
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stats.delivered}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>
+                {stats.lifetimeDeliveries}
+              </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.delivered')}
+                {t('profile.stats.lifetimeDeliveries')}
               </Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.success }]}>
-                {stats.completionPercent}%
+                {stats.onTimeRate}%
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.completion')}
+                {t('profile.stats.onTimeRate')}
               </Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statValueSmall, { color: colors.accent }]}>
-                {formatCurrency(stats.cashCollectedTotal)}
+                {formatCurrency(stats.weeklyCashCollected)}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.cashCollected')}
+                {t('profile.stats.weeklyCash')}
               </Text>
             </View>
           </View>
@@ -227,6 +230,11 @@ export default function ProfileScreen() {
                     <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                       {row.label}
                     </Text>
+                    {row.trailing && (
+                      <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]}>
+                        {row.trailing}
+                      </Text>
+                    )}
                     <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                   </AnimatedPressable>
                 </Animated.View>
@@ -249,6 +257,28 @@ export default function ProfileScreen() {
                   .springify(220)
                   .dampingRatio(1)}>
                 <AnimatedPressable
+                  onPress={() => showToast(t('common.comingSoon', { feature: t('profile.rows.callDispatch') }))}
+                  style={[
+                    styles.row,
+                    {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: colors.separator,
+                    },
+                  ]}>
+                  <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
+                    <Ionicons name="call-outline" size={15} color={colors.accent} />
+                  </View>
+                  <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                    {t('profile.rows.callDispatch')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </AnimatedPressable>
+              </Animated.View>
+              <Animated.View
+                entering={FadeInUp.delay((accountRows.length + 1) * STAGGER_MS)
+                  .springify(220)
+                  .dampingRatio(1)}>
+                <AnimatedPressable
                   onPress={() => router.push('/help-center')}
                   style={[
                     styles.row,
@@ -267,7 +297,7 @@ export default function ProfileScreen() {
                 </AnimatedPressable>
               </Animated.View>
               <Animated.View
-                entering={FadeInUp.delay((accountRows.length + 1) * STAGGER_MS)
+                entering={FadeInUp.delay((accountRows.length + 2) * STAGGER_MS)
                   .springify(220)
                   .dampingRatio(1)}>
                 <AnimatedPressable onPress={handleLogOut} style={styles.row}>
@@ -311,21 +341,37 @@ const styles = StyleSheet.create({
     gap: Spacing.xl,
   },
   profileCard: {
-    borderRadius: Radii.pill,
+    borderRadius: Radii.card + 2,
     overflow: 'hidden',
-    paddingVertical: Spacing.huge,
-    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.lg,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+  },
+  profileCardTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
+  plateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  plateText: {
+    ...monoStyle(12, 'medium'),
+    color: 'rgba(46,52,57,0.6)',
+  },
   avatarWrap: {
-    width: 84,
-    height: 84,
+    width: 60,
+    height: 60,
   },
   avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: Radii.pill,
+    width: 60,
+    height: 60,
+    borderRadius: Radii.xl,
+    backgroundColor: 'rgba(255,252,248,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,252,248,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -333,36 +379,40 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2.5,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFFCF8',
     alignItems: 'center',
     justifyContent: 'center',
   },
   nameBlock: {
-    alignItems: 'center',
+    flex: 1,
+    gap: 2,
   },
   name: {
-    fontSize: 21,
-    fontWeight: '800',
+    fontFamily: Fonts.archivoExtraBold,
+    fontSize: 19,
+    color: '#2E3439',
   },
   handle: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 2,
+    ...monoStyle(12),
+    color: 'rgba(46,52,57,0.7)',
   },
   ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: 15,
+    gap: 4,
+    backgroundColor: 'rgba(255,252,248,0.55)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
   },
   ratingText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: Fonts.archivoBold,
+    fontSize: 12,
+    color: '#2E3439',
   },
   statsCard: {
     flexDirection: 'row',
@@ -376,16 +426,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 19,
-    fontWeight: '800',
+    ...monoStyle(18, 'medium'),
   },
   statValueSmall: {
-    fontSize: 17,
-    fontWeight: '800',
+    ...monoStyle(16, 'medium'),
   },
   statLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    ...monoLabelStyle(9, 0.1),
     marginTop: 2,
   },
   statDivider: {
@@ -418,6 +465,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logOutLabel: {
-    fontWeight: '600',
+    fontFamily: Fonts.archivoBold,
   },
 });

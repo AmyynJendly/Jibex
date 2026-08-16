@@ -9,7 +9,7 @@ import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { type DayMark, MonthCalendar } from '../components/MonthCalendar';
 import { SkeletonBlock } from '../components/Skeleton';
-import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
 import { addMonths, fromDateKey, isSameMonth, localeTag, toDateKey } from '../lib/date';
 import { getAvailability, setAvailability } from '../services/mock-api';
 import { AVAILABILITY_BLOCKS, type Availability, type AvailabilityBlock } from '../types';
@@ -187,8 +187,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   dayCardTitle: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 15,
-    fontWeight: '700',
   },
   blockRow: {
     flexDirection: 'row',
@@ -202,13 +202,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   blockChipText: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 13,
-    fontWeight: '700',
   },
   summary: {
+    fontFamily: Fonts.archivoSemiBold,
     textAlign: 'center',
     fontSize: 13,
-    fontWeight: '600',
     paddingTop: Spacing.sm,
   },
 });

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -16,37 +17,38 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { CountUpText } from '../../../components/CountUpText';
 import { GlassIconButton } from '../../../components/GlassIconButton';
-import { GlassSurface } from '../../../components/GlassSurface';
-import { PrimaryButton } from '../../../components/PrimaryButton';
+import { ParticleMotes } from '../../../components/ParticleMotes';
 import { SkeletonBlock } from '../../../components/Skeleton';
-import { Radii, Spacing, Typography, getCardShadow, useColors } from '../../../constants';
+import { SunArcGauge } from '../../../components/SunArcGauge';
+import { useToast } from '../../../components/Toast';
+import {
+  Fonts,
+  Radii,
+  Spacing,
+  Typography,
+  getCardShadow,
+  monoStyle,
+  useColors,
+} from '../../../constants';
 import { formatCurrency } from '../../../lib/currency';
-import { localeTag } from '../../../lib/date';
-import { registerForPushNotifications } from '../../../lib/push';
 import {
   getDriverStats,
   getJobDetail,
   getNotifications,
-  getReturns,
   getRunsheets,
-  getShiftStatus,
-  getTransfers,
   getUser,
-  startShift,
+  optimizeRouteOrder,
 } from '../../../services/mock-api';
-import type { DriverStats, Job, ShiftStatus, User } from '../../../types';
+import type { DriverStats, Job, User } from '../../../types';
 
 const STAGGER_MS = 40;
 
 interface HomeData {
   user: User;
   stats: DriverStats;
-  runsheetStops: number;
-  activeTransfers: number;
-  pendingReturns: number;
   hasUnreadNotifications: boolean;
-  shiftStatus: ShiftStatus;
-  timeSensitiveStops: Job[];
+  nextStop: Job | null;
+  nextStopIndex: number;
 }
 
 function getGreetingKey() {
@@ -54,51 +56,51 @@ function getGreetingKey() {
   return hour < 18 ? 'home.greeting.morning' : 'home.greeting.evening';
 }
 
-const percentFormatter = (n: number) => `${Math.round(n)}%`;
 const integerFormatter = (n: number) => String(Math.round(n));
+
+/** Driver's approximate start point — Sousse/Sahloul depot (mirrors mock-api's DEPOT). */
+const DEPOT = { lat: 35.848, lng: 10.5975 };
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
 
 export default function HomeScreen() {
   const colors = useColors();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 
-  function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  }
   const [data, setData] = useState<HomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [shiftBusy, setShiftBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const [user, stats, runsheets, transfers, returns, notifications, shiftStatus] =
-      await Promise.all([
-        getUser(),
-        getDriverStats(),
-        getRunsheets(),
-        getTransfers(),
-        getReturns(),
-        getNotifications(),
-        getShiftStatus(),
-      ]);
+    const [user, stats, runsheets, notifications] = await Promise.all([
+      getUser(),
+      getDriverStats(),
+      getRunsheets(),
+      getNotifications(),
+    ]);
 
     const stopIds = runsheets.flatMap((r) => r.stopIds);
-    const jobs = await Promise.all(stopIds.map((id) => getJobDetail(id)));
-    const timeSensitiveStops = jobs.filter(
-      (j) => j.deliverBy && j.status !== 'DELIVERED' && j.status !== 'FAILED'
-    );
+    const orderedIds = await optimizeRouteOrder(stopIds);
+    const jobs = await Promise.all(orderedIds.map((id) => getJobDetail(id)));
+    const nextStop =
+      jobs.find((j) => j.status === 'IN_TRANSIT') ?? jobs.find((j) => j.status === 'PENDING') ?? null;
+    const nextStopIndex = nextStop ? orderedIds.indexOf(nextStop.id) + 1 : 0;
 
     setData({
       user,
       stats,
-      runsheetStops: runsheets.reduce((sum, r) => sum + r.stopCount, 0),
-      activeTransfers: transfers.filter((transfer) => transfer.status === 'IN_PROGRESS').length,
-      pendingReturns: returns.filter((r) => r.status === 'PENDING_PICKUP').length,
       hasUnreadNotifications: notifications.some((n) => !n.read),
-      shiftStatus,
-      timeSensitiveStops,
+      nextStop,
+      nextStopIndex,
     });
   }, []);
 
@@ -114,80 +116,53 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [load]);
 
-  async function handleStartShift() {
-    if (shiftBusy) return;
-    setShiftBusy(true);
-    const status = await startShift();
-    registerForPushNotifications();
-    setShiftBusy(false);
-    setData((prev) => (prev ? { ...prev, shiftStatus: status } : prev));
-  }
-
   if (!data) {
     return (
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={styles.content}>
-        <View style={styles.topRow}>
-          <SkeletonBlock width={40} height={40} radius={20} />
-          <SkeletonBlock width={40} height={40} radius={20} />
-        </View>
-        <View style={styles.skeletonGreeting}>
-          <SkeletonBlock width={120} height={14} radius={4} />
-          <SkeletonBlock width={160} height={30} radius={6} />
-        </View>
-        <SkeletonBlock height={64} radius={Radii.card} />
-        <SkeletonBlock height={210} radius={Radii.card} />
-        <SkeletonBlock height={64} radius={Radii.xxl} />
-        <View style={styles.quickActions}>
-          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
-          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
-          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
-          <SkeletonBlock height={70} radius={Radii.xl} style={styles.quickActionWrapper} />
-        </View>
-      </ScrollView>
+      <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={styles.content}>
+          <View style={styles.topRow}>
+            <SkeletonBlock width={40} height={40} radius={20} />
+            <SkeletonBlock width={40} height={40} radius={20} />
+          </View>
+          <View style={styles.skeletonGreeting}>
+            <SkeletonBlock width={160} height={30} radius={6} />
+            <SkeletonBlock width={120} height={14} radius={4} />
+          </View>
+          <SkeletonBlock height={190} radius={Radii.card} />
+          <SkeletonBlock height={120} radius={Radii.card} />
+          <View style={styles.compactRow}>
+            <SkeletonBlock height={52} radius={Radii.xl} style={styles.compactWrapper} />
+            <SkeletonBlock height={52} radius={Radii.xl} style={styles.compactWrapper} />
+            <SkeletonBlock height={52} radius={Radii.xl} style={styles.compactWrapper} />
+          </View>
+          <SkeletonBlock height={64} radius={Radii.xxl} />
+        </ScrollView>
+      </View>
     );
   }
 
-  const {
-    user,
-    stats,
-    runsheetStops,
-    activeTransfers,
-    pendingReturns,
-    hasUnreadNotifications,
-    shiftStatus,
-    timeSensitiveStops,
-  } = data;
+  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex } = data;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];
+  const nextStopDistanceKm = nextStop ? haversineKm(DEPOT, nextStop.location) : 0;
+  const nextStopEtaMinutes = nextStop ? Math.max(1, Math.round((nextStopDistanceKm / 35) * 60)) : 0;
 
-  const quickActions: {
+  const compactActions: {
     key: string;
     label: string;
     icon: keyof typeof Ionicons.glyphMap;
     color: string;
     soft: ColorValue;
-    count: number;
-    href: '/runsheets' | '/pickups' | '/transfers' | '/returns';
+    href: '/pickups' | '/transfers' | '/returns';
   }[] = [
-    {
-      key: 'runsheets',
-      label: t('common.nav.runsheets'),
-      icon: 'list-outline',
-      color: colors.accent,
-      soft: colors.accentSoft,
-      count: runsheetStops,
-      href: '/runsheets',
-    },
     {
       key: 'pickups',
       label: t('common.nav.pickups'),
       icon: 'cube-outline',
       color: colors.purple,
       soft: colors.purpleSoft,
-      count: stats.pickupsCount,
       href: '/pickups',
     },
     {
@@ -196,7 +171,6 @@ export default function HomeScreen() {
       icon: 'swap-horizontal-outline',
       color: colors.warning,
       soft: colors.warningSoft,
-      count: activeTransfers,
       href: '/transfers',
     },
     {
@@ -205,7 +179,6 @@ export default function HomeScreen() {
       icon: 'arrow-undo-outline',
       color: colors.danger,
       soft: colors.dangerSoft,
-      count: pendingReturns,
       href: '/returns',
     },
   ];
@@ -218,19 +191,22 @@ export default function HomeScreen() {
   ];
 
   return (
-    <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
-      }>
-      <View style={styles.topRow}>
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <LinearGradient
+        colors={[colors.warning, `${colors.warning}00`]}
+        style={styles.heroGradient}
+        pointerEvents="none"
+      />
+      <ParticleMotes style={styles.heroGradient} />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        }>
+        <View style={styles.topRow}>
         <GlassIconButton size={40} onPress={() => router.push('/scanner')}>
           <Ionicons name="scan-outline" size={20} color={colors.text} />
-        </GlassIconButton>
-        <GlassIconButton size={40} onPress={() => router.push('/search')}>
-          <Ionicons name="search-outline" size={20} color={colors.text} />
         </GlassIconButton>
         <GlassIconButton size={40} onPress={() => router.push('/alerts')}>
           <Ionicons
@@ -247,9 +223,8 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.greeting}>
-        <Text style={[styles.greetingLabel, { color: colors.accent }]}>{t(getGreetingKey())}</Text>
         <Text style={[Typography.largeTitle, styles.name, { color: colors.text }]}>
-          {firstName}
+          {t(getGreetingKey())}, {firstName}
         </Text>
         <View style={styles.locationRow}>
           <Ionicons name="location-outline" size={13} color={colors.accent} />
@@ -259,89 +234,22 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {shiftStatus.isActive ? (
-        <View style={[styles.shiftPill, { backgroundColor: colors.successSoft }]}>
-          <View style={styles.shiftPillLeft}>
-            <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
-            <Text style={[styles.shiftPillText, { color: colors.text }]}>
-              {t('home.shift.onShiftSince', {
-                time: shiftStatus.startedAt ? formatTime(shiftStatus.startedAt) : '—',
-              })}
-            </Text>
-          </View>
-          <Text
-            onPress={() => router.push('/shift-summary')}
-            style={[styles.endShiftLink, { color: colors.danger }]}>
-            {t('home.shift.endShift')}
-          </Text>
-        </View>
-      ) : (
-        <View
-          style={[
-            styles.shiftCard,
-            { backgroundColor: colors.bgElevated, borderColor: colors.accent },
-            getCardShadow(scheme),
-          ]}>
-          <View style={styles.shiftCardText}>
-            <Text style={[Typography.cardTitle, { color: colors.text }]}>
-              {t('home.shift.readyTitle')}
-            </Text>
-            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              {t('home.shift.readySubtitle')}
-            </Text>
-          </View>
-          <PrimaryButton
-            label={t('home.shift.startShift')}
-            height={40}
-            loading={shiftBusy}
-            onPress={handleStartShift}
-            style={styles.shiftButton}
-            labelStyle={styles.shiftButtonLabel}
-          />
-        </View>
-      )}
-
-      {timeSensitiveStops.length > 0 && (
-        <AnimatedPressable
-          scaleTo={0.98}
-          onPress={() => router.push('/runsheets')}
-          style={[styles.timeSensitiveBanner, { backgroundColor: colors.warningSoft }]}>
-          <Ionicons name="alarm-outline" size={18} color={colors.warning} />
-          <Text style={[styles.timeSensitiveText, { color: colors.text }]}>
-            {t('home.timeSensitive', { count: timeSensitiveStops.length })}
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-        </AnimatedPressable>
-      )}
-
       <View
         style={[
           styles.card,
           { backgroundColor: colors.bgElevated, borderRadius: Radii.card },
           getCardShadow(scheme),
         ]}>
-        <View style={styles.cardTopRow}>
-          <Text style={[Typography.cardTitle, { color: colors.text }]}>
-            {t('home.deliveriesCardTitle')}
-          </Text>
-          <CountUpText
-            value={stats.completionPercent}
-            formatter={percentFormatter}
-            style={[Typography.title2, { color: colors.accent }]}
-          />
-        </View>
-        <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-          {t('home.completedOfTotal', { delivered: stats.delivered, total: totalStops })}
+        <Text style={[Typography.cardTitle, { color: colors.text }]}>
+          {t('home.deliveriesCardTitle')}
         </Text>
-        <View style={[styles.progressTrack, { backgroundColor: colors.separator }]}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${stats.completionPercent}%`, backgroundColor: colors.accent },
-            ]}
-          />
-        </View>
-        <View style={styles.paceRow}>
+        <SunArcGauge
+          percent={stats.completionPercent}
+          caption={t('home.stopsCaption', { delivered: stats.delivered, total: totalStops })}
+          style={styles.arcGauge}
+          scale={0.78}
+        />
+        <View style={[styles.paceRow, { backgroundColor: colors.bg }]}>
           <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
           <Text style={[Typography.footnote, styles.paceText, { color: colors.textSecondary }]}>
             {t('home.onPace', { time: stats.onPaceFinishTime })}
@@ -369,58 +277,127 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <View style={[styles.cashStrip, { backgroundColor: colors.successSoft }]}>
-        <View style={[styles.cashIcon, { backgroundColor: colors.success }]}>
-          <Ionicons name="card-outline" size={18} color="#fff" />
-        </View>
-        <Text style={[styles.cashLabel, { color: colors.text }]}>{t('home.cashCollected')}</Text>
-        <View style={{ flex: 1 }} />
-        <CountUpText
-          value={stats.cashCollectedTotal}
-          formatter={formatCurrency}
-          style={[styles.cashAmount, { color: colors.text }]}
-        />
-      </View>
+      {nextStop && (
+        <AnimatedPressable
+          scaleTo={0.98}
+          onPress={() => router.push({ pathname: '/job/[id]', params: { id: nextStop.id } })}
+          style={[
+            styles.nextStopCard,
+            { backgroundColor: colors.bgElevated, borderColor: colors.accent },
+            getCardShadow(scheme),
+          ]}>
+          <View style={styles.nextStopTopRow}>
+            <Text style={[monoStyle(11), styles.nextStopLabel, { color: colors.accent }]}>
+              {t('home.nextStop.label')}
+              {nextStopIndex ? ` · ${nextStopIndex}` : ''}
+            </Text>
+            <Text style={[monoStyle(11), { color: colors.textSecondary }]}>
+              {t('home.nextStop.distanceEta', {
+                distance: nextStopDistanceKm.toFixed(1),
+                minutes: nextStopEtaMinutes,
+              })}
+            </Text>
+          </View>
+          <View style={styles.nextStopBody}>
+            <View style={styles.nextStopText}>
+              <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
+                {nextStop.customerName}
+              </Text>
+              <Text style={[Typography.subhead, { color: colors.textSecondary }]} numberOfLines={1}>
+                {nextStop.address}
+              </Text>
+            </View>
+            <View style={[styles.nextStopIcon, { backgroundColor: colors.accentSoft }]}>
+              <Ionicons name="cube-outline" size={17} color={colors.accent} />
+            </View>
+          </View>
+          <View style={styles.nextStopBottomRow}>
+            <View>
+              <Text style={[monoStyle(9), styles.nextStopCodLabel, { color: colors.textTertiary }]}>
+                {t('home.nextStop.codLabel')}
+              </Text>
+              <Text style={[monoStyle(19, 'medium'), { color: colors.text }]}>
+                {formatCurrency(nextStop.cashToCollect)}
+              </Text>
+            </View>
+            <View style={[styles.goPill, { backgroundColor: colors.accent }]}>
+              <Ionicons name="navigate" size={12} color="#fff" />
+              <Text style={styles.goPillText}>{t('home.nextStop.go')}</Text>
+            </View>
+          </View>
+        </AnimatedPressable>
+      )}
 
-      <View style={styles.quickActions}>
-        {quickActions.map((action, i) => (
+      <View style={styles.compactRow}>
+        {compactActions.map((action, i) => (
           <Animated.View
             key={action.key}
             entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
-            style={styles.quickActionWrapper}>
-            <AnimatedPressable onPress={() => router.push(action.href)}>
-              <GlassSurface style={styles.quickAction}>
-                <Ionicons name={action.icon} size={20} color={action.color} />
-                <View style={styles.quickActionLabelRow}>
-                  <Text style={[Typography.caption2, { color: colors.textSecondary }]}>
-                    {action.label}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.quickActionBadge,
-                      { color: action.color, backgroundColor: action.soft },
-                    ]}>
-                    {action.count}
-                  </Text>
-                </View>
-              </GlassSurface>
+            style={styles.compactWrapper}>
+            <AnimatedPressable
+              scaleTo={0.95}
+              onPress={() => router.push(action.href)}
+              style={[
+                styles.compactAction,
+                { backgroundColor: colors.bgElevated },
+                getCardShadow(scheme),
+              ]}>
+              <View style={[styles.compactActionIcon, { backgroundColor: action.soft }]}>
+                <Ionicons name={action.icon} size={16} color={action.color} />
+              </View>
+              <Text
+                style={[Typography.caption2, { color: colors.text }]}
+                numberOfLines={1}>
+                {action.label}
+              </Text>
             </AnimatedPressable>
           </Animated.View>
         ))}
       </View>
-    </ScrollView>
+
+      <View style={styles.cashStrip}>
+        <View style={styles.cashIcon}>
+          <Ionicons name="card-outline" size={18} color="#F5EEE6" />
+        </View>
+        <View style={styles.cashTextStack}>
+          <Text style={[monoStyle(10), styles.cashLabel]}>{t('home.cashCollected')}</Text>
+          <CountUpText
+            value={stats.cashCollectedTotal}
+            formatter={formatCurrency}
+            style={[monoStyle(22, 'medium'), styles.cashAmount]}
+          />
+        </View>
+        <AnimatedPressable
+          scaleTo={0.94}
+          style={[styles.depositPill, { backgroundColor: colors.warning }]}
+          onPress={() => showToast(t('common.comingSoon', { feature: t('home.cashCollected') }))}>
+          <Text style={[Typography.caption1, { color: '#2E3439' }]}>{t('home.deposit')}</Text>
+        </AnimatedPressable>
+      </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  heroGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 230,
+  },
   content: {
     paddingHorizontal: Spacing.xxl,
     // `contentInsetAdjustmentBehavior="automatic"` below already pushes content
     // past the status bar/notch — this is just breathing room on top of that,
     // not a second safe-area offset.
-    paddingTop: Spacing.md,
-    paddingBottom: 130,
-    gap: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: 100,
+    gap: Spacing.smd,
   },
   topRow: {
     flexDirection: 'row',
@@ -441,13 +418,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   greeting: {
-    marginTop: -6,
-  },
-  greetingLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.06 * 14,
+    marginTop: -8,
   },
   name: {
     letterSpacing: -0.03 * 34,
@@ -459,90 +430,26 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     marginTop: Spacing.sm,
   },
-  shiftCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: Radii.card,
-    borderWidth: 1.5,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  shiftCardText: {
-    flex: 1,
-    gap: 2,
-  },
-  shiftButton: {
-    paddingHorizontal: Spacing.xl,
-  },
-  shiftButtonLabel: {
-    fontSize: 14,
-  },
-  shiftPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: Radii.xxl,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-  },
-  shiftPillLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  shiftPillText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  endShiftLink: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  timeSensitiveBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    borderRadius: Radii.xxl,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-  },
-  timeSensitiveText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '700',
-  },
   card: {
-    paddingVertical: Spacing.xxl,
-    paddingHorizontal: Spacing.xxl,
-    gap: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.md,
+    gap: Spacing.sm,
   },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
+  arcGauge: {
+    marginTop: -10,
+    marginBottom: -6,
   },
   paceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+    borderRadius: Radii.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
   },
   paceText: {
-    fontWeight: '500',
+    fontFamily: Fonts.archivoMedium,
   },
   divider: {
     height: 1,
@@ -565,56 +472,113 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
+  // Fixed dark-charcoal card, not theme-adaptive — same reasoning as
+  // `getAccentGlow`: the design hardcodes this regardless of light/dark.
   cashStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
     borderRadius: Radii.xxl,
-    paddingVertical: Spacing.mlg,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
+    backgroundColor: '#4E565F',
   },
   cashIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245,238,230,0.16)',
+  },
+  cashTextStack: {
+    flex: 1,
+    gap: 1,
+  },
+  cashLabel: {
+    letterSpacing: 0.14 * 10,
+    color: 'rgba(245,238,230,0.7)',
+  },
+  cashAmount: {
+    color: '#F5EEE6',
+  },
+  depositPill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.smd,
+    borderRadius: Radii.md - 1,
+  },
+  nextStopCard: {
+    borderRadius: Radii.card,
+    borderWidth: 1.5,
+    padding: Spacing.md,
+    gap: Spacing.xs,
+  },
+  nextStopTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  nextStopLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.04 * 11,
+  },
+  nextStopBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.smd,
+  },
+  nextStopText: {
+    flex: 1,
+  },
+  nextStopIcon: {
     width: 36,
     height: 36,
     borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cashLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+  nextStopBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
   },
-  cashAmount: {
-    fontSize: 19,
-    fontWeight: '800',
-    letterSpacing: -0.01 * 19,
+  nextStopCodLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.1 * 9,
+    marginBottom: 2,
   },
-  quickActions: {
+  goPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radii.full,
+  },
+  goPillText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 12,
+    color: '#fff',
+  },
+  compactRow: {
     flexDirection: 'row',
     gap: Spacing.smd,
   },
-  quickActionWrapper: {
+  compactWrapper: {
     flex: 1,
   },
-  quickAction: {
-    height: 70,
+  compactAction: {
+    alignItems: 'center',
+    gap: Spacing.xs,
     borderRadius: Radii.xl,
-    overflow: 'hidden',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  compactActionIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: Radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-  },
-  quickActionLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  quickActionBadge: {
-    fontSize: 10,
-    fontWeight: '700',
-    borderRadius: 7,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    overflow: 'hidden',
   },
 });

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -9,19 +9,22 @@ import { useTranslation } from 'react-i18next';
 import { AmbientGlow } from '../../components/AmbientGlow';
 import { AnimatedPressable } from '../../components/AnimatedPressable';
 import { FormField } from '../../components/FormField';
-import { GlassSurface } from '../../components/GlassSurface';
+import { PackageCube } from '../../components/PackageCube';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { useToast } from '../../components/Toast';
-import { Radii, Spacing, Typography, getAccentGlow, useColors } from '../../constants';
+import { TickerMarquee } from '../../components/TickerMarquee';
+import { Fonts, Radii, Spacing, Typography, monoLabelStyle, useColors } from '../../constants';
+import { telUrl } from '../../lib/phone';
 import { saveToken } from '../../lib/token';
 import { login } from '../../services/mock-api';
+
+const DISPATCH_PHONE = '+216 71 200 300';
 
 export default function LoginScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const { showToast } = useToast();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [pinVisible, setPinVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,19 +57,17 @@ export default function LoginScreen() {
           <View style={styles.header}>
             <View style={styles.logoStage}>
               <View style={styles.glowLayer}>
-                <AmbientGlow width={220} height={220} />
+                <AmbientGlow width={220} height={220} color={colors.warning} />
               </View>
-              <Animated.View
-                entering={ZoomIn.springify(320).dampingRatio(1)}
-                style={[styles.logo, { backgroundColor: colors.accent }, getAccentGlow(0.35)]}>
-                <Ionicons name="cube-outline" size={30} color="#fff" />
+              <Animated.View entering={ZoomIn.springify(320).dampingRatio(1)}>
+                <PackageCube size={88} />
               </Animated.View>
             </View>
             <Text style={[Typography.title1, { color: colors.text, marginTop: Spacing.xs }]}>
               Jibex
             </Text>
-            <Text style={[Typography.callout, { color: colors.textSecondary }]}>
-              {t('auth.login.tagline')}
+            <Text style={[monoLabelStyle(12, 0.12), styles.subtitle, { color: colors.textSecondary }]}>
+              {t('auth.login.subtitle')}
             </Text>
           </View>
 
@@ -80,12 +81,18 @@ export default function LoginScreen() {
               textContentType="telephoneNumber"
             />
             <FormField
-              label={t('auth.login.passwordLabel')}
-              placeholder={t('auth.login.passwordPlaceholder')}
+              label={t('auth.login.pinLabel')}
               value={password}
               onChangeText={setPassword}
-              secureTextEntry
+              secureTextEntry={!pinVisible}
               textContentType="password"
+              labelRight={
+                <Text
+                  onPress={() => setPinVisible((v) => !v)}
+                  style={[monoLabelStyle(11, 0.08), { color: colors.accent }]}>
+                  {pinVisible ? t('auth.login.hide') : t('auth.login.reveal')}
+                </Text>
+              }
             />
 
             {error ? (
@@ -100,44 +107,32 @@ export default function LoginScreen() {
             ) : null}
 
             <PrimaryButton
-              label={t('auth.login.logIn')}
+              label={t('auth.login.startRoute')}
               onPress={handleLogin}
               loading={loading}
               style={styles.loginButton}
             />
 
-            <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
-              <Text style={[Typography.caption1, { color: colors.textTertiary }]}>
-                {t('auth.login.or')}
+            <AnimatedPressable
+              scaleTo={0.97}
+              style={styles.forgotPinRow}
+              onPress={() => Linking.openURL(telUrl(DISPATCH_PHONE))}>
+              <Ionicons name="call-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.forgotPin, { color: colors.textSecondary }]}>
+                {t('auth.login.forgotPin')}
               </Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
-            </View>
-
-            <View style={styles.socialRow}>
-              <AnimatedPressable
-                scaleTo={0.92}
-                style={styles.socialButton}
-                onPress={() => showToast(t('auth.login.appleToast'))}>
-                <GlassSurface style={styles.socialFill}>
-                  <Ionicons name="logo-apple" size={27} color={colors.text} />
-                </GlassSurface>
-              </AnimatedPressable>
-              <AnimatedPressable
-                scaleTo={0.92}
-                style={styles.socialButton}
-                onPress={() => showToast(t('auth.login.googleToast'))}>
-                <GlassSurface style={styles.socialFill}>
-                  <Ionicons name="logo-google" size={24} color={colors.text} />
-                </GlassSurface>
-              </AnimatedPressable>
-            </View>
+            </AnimatedPressable>
           </View>
+
+          <TickerMarquee
+            items={t('auth.login.ticker', { returnObjects: true }) as string[]}
+            style={styles.ticker}
+          />
 
           <Link href="/(auth)/register" style={styles.footer}>
             <Text style={[Typography.callout, { color: colors.textSecondary }]}>
               {t('auth.login.newDriver')}
-              <Text style={{ color: colors.accent, fontWeight: '700' }}>
+              <Text style={[Typography.headline, { color: colors.accent }]}>
                 {t('auth.login.createAccount')}
               </Text>
             </Text>
@@ -178,13 +173,6 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
   },
-  logo: {
-    width: 64,
-    height: 64,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   form: {
     gap: Spacing.mlg,
   },
@@ -197,34 +185,26 @@ const styles = StyleSheet.create({
   loginButton: {
     marginTop: Spacing.smd,
   },
-  dividerRow: {
+  forgotPinRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    marginVertical: Spacing.xs,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  socialRow: {
-    flexDirection: 'row',
     justifyContent: 'center',
-    gap: Spacing.xl,
+    gap: Spacing.xs,
+    paddingTop: Spacing.xs,
   },
-  socialButton: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    overflow: 'hidden',
+  forgotPin: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 14,
   },
-  socialFill: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
+  subtitle: {
+    marginTop: -2,
   },
   footer: {
     alignItems: 'center',
     paddingTop: Spacing.lg,
+  },
+  ticker: {
+    marginTop: Spacing.xxl,
+    marginHorizontal: -Spacing.xxxl,
   },
 });

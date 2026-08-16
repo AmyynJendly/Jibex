@@ -497,6 +497,9 @@ let mockDriverStats: DriverStats = {
   cashCollectedTotal: 486.5,
   completionPercent: 70,
   onPaceFinishTime: '5:30 PM',
+  lifetimeDeliveries: 1204,
+  onTimeRate: 98.4,
+  weeklyCashCollected: 1284,
 };
 
 let mockUser: User = {
@@ -507,6 +510,7 @@ let mockUser: User = {
   username: '21620456789',
   email: 'marcus.alden@jibex.com',
   avatarInitials: 'MA',
+  driverCode: 'DRV-2841',
 };
 
 /** Dev-only mock credentials — irrelevant once login() calls a real API. */
@@ -580,7 +584,7 @@ export async function login(username: string, password: string): Promise<LoginRe
 export interface RegisterParams {
   name: string;
   phone: string;
-  email: string;
+  email?: string;
   vehiclePlate: string;
   password: string;
 }
@@ -601,8 +605,9 @@ export async function register(params: RegisterParams): Promise<LoginResult> {
     id: `driver-${Date.now()}`,
     name: params.name.trim(),
     username: params.phone.replace(/\D/g, ''),
-    email: params.email.trim(),
+    email: params.email?.trim() ?? '',
     avatarInitials: initialsFor(params.name),
+    driverCode: `DRV-${Math.floor(1000 + Math.random() * 9000)}`,
   };
 
   return {

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AmbientGlow } from '../components/AmbientGlow';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, getCardShadow, monoStyle, useColors } from '../constants';
 import { formatCurrency } from '../lib/currency';
 import { localeTag } from '../lib/date';
 import { confirmCashHandoff, endShift } from '../services/mock-api';
@@ -62,7 +62,7 @@ export default function ShiftSummaryScreen() {
       <View style={styles.content}>
         <View style={styles.glowStage}>
           <View style={styles.glowLayer}>
-            <AmbientGlow width={150} height={150} colors={['#0A5FFF', '#7C6FEE', '#1FAE5C']} />
+            <AmbientGlow width={150} height={150} color={colors.warning} />
           </View>
           <Animated.View
             entering={ZoomIn.springify(280).dampingRatio(1)}
@@ -182,8 +182,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
+    fontFamily: Fonts.archivoExtraBold,
     fontSize: 26,
-    fontWeight: '800',
     letterSpacing: -0.02 * 26,
     textAlign: 'center',
   },
@@ -208,12 +208,11 @@ const styles = StyleSheet.create({
     height: 30,
   },
   statValue: {
-    fontSize: 22,
-    fontWeight: '800',
+    ...monoStyle(20, 'medium'),
   },
   statLabel: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 11,
-    fontWeight: '600',
   },
   cashCard: {
     width: '100%',
@@ -227,12 +226,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   cashLabel: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-    fontWeight: '600',
   },
   cashAmount: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...monoStyle(22, 'medium'),
   },
   handoffButton: {
     paddingHorizontal: Spacing.xl,
@@ -246,8 +244,8 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   handedOffText: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 14,
-    fontWeight: '700',
   },
   footer: {
     paddingHorizontal: Spacing.xxxl,

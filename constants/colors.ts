@@ -20,64 +20,97 @@ export interface ColorPalette {
   purpleSoft: string;
   warning: string;
   warningSoft: string;
-  /** iOS systemGray — stop-number badges, secondary status chips. Same in both schemes (matches Apple's own systemGray, not extracted per-theme in the source). */
+  /** Stop-number badges, secondary status chips ("Paid", "Closed", timestamp pills). */
   neutral: string;
   neutralSoft: string;
-  /** Fixed informational blue (`#0A84FF`) — "In Transit"/"Damaged" chips. Distinct from `accent` and non-adaptive, same as the design's literal. */
+  /** "In Transit" filled-chip color — the design's darker clay tone, distinct from `accent` and `warning`. */
   info: string;
   infoSoft: string;
 }
 
+/**
+ * "Sunlit" theme — clay-and-sand surfaces, warm cream backgrounds, ink-stamp
+ * accents (Claude Design project 6f820bf5-c67c-4e8a-8512-4f2c82bf319d,
+ * "Jibex Box theme.dc.html"). Values below are lifted directly from that
+ * source's light palette.
+ *
+ * The source design only defines ONE palette (its `renderVals()` hardcodes
+ * `light: false`, i.e. an always-warm-cream UI — the only true dark surface
+ * shown anywhere is the Scanner screen, which every screen in the app has
+ * always rendered forced-dark regardless of system theme). Since this app
+ * still needs to support `useColorScheme()`-driven dark mode, the `dark`
+ * palette below is derived (not lifted) — anchored to the Scanner screen's
+ * real colors (`#2E3439` bg, `rgba(245,238,230,*)` text/borders, `#EAB464`
+ * accent) and extended using the same light/dark relationship the previous
+ * palette had, rather than inventing new hues.
+ */
 export const palette: { light: ColorPalette; dark: ColorPalette } = {
   light: {
-    bg: '#F2F2F7',
-    bgElevated: '#FFFFFF',
-    text: '#000000',
-    textSecondary: 'rgba(60,60,67,0.6)',
-    textTertiary: 'rgba(60,60,67,0.3)',
-    separator: 'rgba(60,60,67,0.12)',
-    glassTint: 'rgba(255,255,255,0.55)',
-    glassTintStrong: 'rgba(255,255,255,0.75)',
-    glassBorder: 'rgba(0,0,0,0.06)',
-    accent: '#0A5FFF',
-    accentSoft: 'rgba(10,95,255,0.10)',
-    success: '#1FAE5C',
-    successSoft: 'rgba(31,174,92,0.12)',
-    danger: '#FF3B30',
-    dangerSoft: 'rgba(255,59,48,0.1)',
-    purple: '#7C6FEE',
-    purpleSoft: 'rgba(124,111,238,0.12)',
-    warning: '#FF9500',
-    warningSoft: 'rgba(255,149,0,0.12)',
-    neutral: '#8E8E93',
-    neutralSoft: 'rgba(142,142,147,0.16)',
-    info: '#0A84FF',
-    infoSoft: 'rgba(10,132,255,0.14)',
+    bg: '#F5EEE6',
+    bgElevated: '#FFFCF8',
+    text: '#2E3439',
+    textSecondary: '#646E78',
+    textTertiary: '#8D98A7',
+    separator: '#E9DDCE',
+    // The design has no backdrop-blur glass anywhere — chrome (icon buttons,
+    // tab bar) is opaque clay-white cards. `glassTint` stays a real (if
+    // near-opaque) alpha rather than a flat color so `GlassSurface` still
+    // renders through native `GlassView`/`BlurView`, just tinted to read as
+    // solid, matching the design without restructuring every call site.
+    glassTint: 'rgba(255,252,248,0.92)',
+    glassTintStrong: 'rgba(255,252,248,0.97)',
+    glassBorder: 'rgba(228,214,198,0.9)',
+    accent: '#A7754D',
+    accentSoft: '#F7E7D2',
+    // The design renders "delivered/done" states in neutral ink-gray, not
+    // green — there is no green anywhere in this palette.
+    success: '#646E78',
+    successSoft: '#EDEAE4',
+    // The design's only red-family swatch, used for "Se déconnecter" — the
+    // one negative/destructive accent in an otherwise all-warm-neutral
+    // palette. Reused here for error text/failed badges/end-shift, which
+    // need a distinct "problem" color the source doesn't otherwise supply.
+    danger: '#B4564E',
+    dangerSoft: 'rgba(180,86,78,0.12)',
+    // No purple/lavender exists in this palette — aliased to accent, same
+    // as how the design itself colors the Pickups quick-action count badge.
+    purple: '#A7754D',
+    purpleSoft: '#F7E7D2',
+    // Gold — the design's "urgent / live / needs attention" highlight
+    // (pulsing dots, priority alerts, next-stop borders).
+    warning: '#EAB464',
+    warningSoft: 'rgba(234,180,100,0.18)',
+    neutral: '#8D98A7',
+    neutralSoft: '#E6E7E4',
+    // Darker clay — the design's "in transit / active" filled-chip color,
+    // kept distinct from `warning` gold and `accent` clay-brown.
+    info: '#96683F',
+    infoSoft: 'rgba(150,104,63,0.14)',
   },
   dark: {
-    bg: '#000000',
-    bgElevated: '#1C1C1E',
-    text: '#FFFFFF',
-    textSecondary: 'rgba(235,235,245,0.6)',
-    textTertiary: 'rgba(235,235,245,0.3)',
-    separator: 'rgba(84,84,88,0.65)',
-    glassTint: 'rgba(120,120,128,0.28)',
-    glassTintStrong: 'rgba(90,90,96,0.5)',
-    glassBorder: 'rgba(255,255,255,0.14)',
-    accent: '#3B82F6',
-    accentSoft: 'rgba(59,130,246,0.20)',
-    success: '#32D74B',
-    successSoft: 'rgba(50,215,75,0.16)',
-    danger: '#FF453A',
-    dangerSoft: 'rgba(255,69,58,0.16)',
-    purple: '#9F91F7',
-    purpleSoft: 'rgba(159,145,247,0.20)',
-    warning: '#FF9F0A',
-    warningSoft: 'rgba(255,159,10,0.20)',
-    neutral: '#8E8E93',
-    neutralSoft: 'rgba(142,142,147,0.16)',
-    info: '#0A84FF',
-    infoSoft: 'rgba(10,132,255,0.14)',
+    bg: '#2E3439',
+    bgElevated: '#3E464C',
+    text: '#F5EEE6',
+    textSecondary: 'rgba(245,238,230,0.6)',
+    textTertiary: 'rgba(245,238,230,0.3)',
+    separator: 'rgba(245,238,230,0.16)',
+    glassTint: 'rgba(245,238,230,0.12)',
+    glassTintStrong: 'rgba(245,238,230,0.18)',
+    glassBorder: 'rgba(245,238,230,0.2)',
+    accent: '#EAB464',
+    accentSoft: 'rgba(234,180,100,0.2)',
+    success: '#8D98A7',
+    successSoft: 'rgba(141,152,167,0.16)',
+    danger: '#D97B72',
+    dangerSoft: 'rgba(217,123,114,0.18)',
+    purple: '#EAB464',
+    purpleSoft: 'rgba(234,180,100,0.2)',
+    warning: '#EAB464',
+    warningSoft: 'rgba(234,180,100,0.2)',
+    neutral: '#8D98A7',
+    neutralSoft: 'rgba(141,152,167,0.18)',
+    info: '#C99A6D',
+    infoSoft: 'rgba(201,154,109,0.18)',
   },
 };
 

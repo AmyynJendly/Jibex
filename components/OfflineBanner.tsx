@@ -5,7 +5,7 @@ import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { Spacing, useColors } from '../constants';
+import { Fonts, Spacing, useColors } from '../constants';
 
 /**
  * A persistent (not auto-dismissing, unlike Toast) banner shown whenever the
@@ -47,8 +47,8 @@ const styles = StyleSheet.create({
     zIndex: 998,
   },
   text: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 12,
-    fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
   },

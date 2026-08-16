@@ -26,14 +26,18 @@ import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import {
+  Fonts,
   Radii,
   Spacing,
   Typography,
   getAccentGlow,
   getCardShadow,
+  monoLabelStyle,
+  monoStyle,
   useColors,
 } from '../../../constants';
 import { formatCurrency } from '../../../lib/currency';
+import { localeTag } from '../../../lib/date';
 import { telUrl } from '../../../lib/phone';
 import { getJobDetail, getRunsheets } from '../../../services/mock-api';
 import type { Job } from '../../../types';
@@ -91,13 +95,12 @@ async function openInMaps(job: Job) {
 
 export default function JobDetailScreen() {
   const colors = useColors();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [position, setPosition] = useState<{ index: number; total: number } | null>(null);
-  const [agency, setAgency] = useState<string | null>(null);
   const ripple = useSharedValue(0);
 
   useEffect(() => {
@@ -120,8 +123,6 @@ export default function JobDetailScreen() {
       if (index !== -1) {
         setPosition({ index: index + 1, total: allStopIds.length });
       }
-      const owningRunsheet = runsheets.find((r) => r.stopIds.includes(id));
-      setAgency(owningRunsheet?.agency ?? null);
     });
   }, [id]);
 
@@ -134,6 +135,11 @@ export default function JobDetailScreen() {
   }
 
   const distanceMiles = haversineMiles(DEPOT, job.location);
+  const etaMinutes = Math.max(1, Math.round((distanceMiles / 22) * 60));
+  const etaTime = new Date(Date.now() + etaMinutes * 60_000).toLocaleTimeString(
+    localeTag(i18n.language),
+    { hour: '2-digit', minute: '2-digit' }
+  );
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -142,13 +148,10 @@ export default function JobDetailScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         {position && (
-          <View style={styles.headerTitleWrap}>
-            <Text style={[Typography.cardTitle, { color: colors.text }]}>
-              {t('jobDetail.stopOf', { index: position.index, total: position.total })}
+          <View style={[styles.stopChip, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+            <Text style={[monoLabelStyle(12, 0.04), { color: colors.text }]}>
+              {t('jobDetail.stopChip', { index: position.index, total: position.total })}
             </Text>
-            {agency && (
-              <Text style={[styles.headerAgency, { color: colors.textSecondary }]}>{agency}</Text>
-            )}
           </View>
         )}
         <GlassIconButton onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
@@ -173,21 +176,20 @@ export default function JobDetailScreen() {
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.pinWrap}>
-            <Animated.View style={[styles.pinRipple, rippleStyle]} />
-            <View style={[styles.pin, getAccentGlow(0.35, 12)]}>
+            <Animated.View
+              style={[styles.pinRipple, { backgroundColor: colors.accent }, rippleStyle]}
+            />
+            <View style={[styles.pin, { backgroundColor: colors.accent }, getAccentGlow(0.35, 12)]}>
               <Ionicons name="location" size={16} color="#fff" />
             </View>
           </View>
           <Text style={styles.mapBadge}>
             {t('jobDetail.mapBadge', {
               distance: distanceMiles.toFixed(1),
-              minutes: Math.max(1, Math.round((distanceMiles / 22) * 60)),
+              minutes: etaMinutes,
             })}
           </Text>
-          <View style={styles.navigateChip}>
-            <Ionicons name="navigate" size={13} color="#fff" />
-            <Text style={styles.navigateText}>{t('jobDetail.navigate')}</Text>
-          </View>
+          <Text style={styles.etaBadge}>{t('jobDetail.etaLabel', { time: etaTime })}</Text>
         </AnimatedPressable>
 
         <View
@@ -221,17 +223,35 @@ export default function JobDetailScreen() {
             </Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.separator }]} />
-          <View style={styles.packageRow}>
-            <View style={[styles.packageIcon, { backgroundColor: colors.separator }]}>
-              <Ionicons name="cube-outline" size={16} color={colors.textSecondary} />
+          <View style={styles.metaRow}>
+            <View style={styles.metaCol}>
+              <Text style={[monoLabelStyle(9, 0.12), { color: colors.textTertiary }]}>
+                {t('jobDetail.billLabel')}
+              </Text>
+              <Text style={[monoStyle(13, 'medium'), { color: colors.text }]}>{job.id}</Text>
             </View>
-            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              {t('jobDetail.packageInfo', {
-                count: job.packageInfo.count,
-                weight: job.packageInfo.weightLbs,
-              })}
-              {job.packageInfo.fragile ? ` · ${t('jobDetail.fragile')}` : ''}
-            </Text>
+            <View style={[styles.metaDivider, { backgroundColor: colors.separator }]} />
+            <View style={styles.metaCol}>
+              <Text style={[monoLabelStyle(9, 0.12), { color: colors.textTertiary }]}>
+                {t('jobDetail.parcelLabel')}
+              </Text>
+              <Text style={[monoStyle(13, 'medium'), { color: colors.text }]}>
+                {job.packageInfo.count} · {job.packageInfo.weightLbs} KG
+              </Text>
+            </View>
+            <View style={[styles.metaDivider, { backgroundColor: colors.separator }]} />
+            <View style={styles.metaCol}>
+              <Text style={[monoLabelStyle(9, 0.12), { color: colors.textTertiary }]}>
+                {t('jobDetail.careLabel')}
+              </Text>
+              <Text
+                style={[
+                  monoStyle(13, 'medium'),
+                  { color: job.packageInfo.fragile ? colors.danger : colors.text },
+                ]}>
+                {job.packageInfo.fragile ? t('jobDetail.fragile') : t('jobDetail.standard')}
+              </Text>
+            </View>
           </View>
           {job.packageInfo.note && (
             <Text style={[styles.note, { color: colors.textTertiary }]}>
@@ -264,11 +284,24 @@ export default function JobDetailScreen() {
           height={56}
           onPress={() => router.push({ pathname: '/job/[id]/otp', params: { id } })}
         />
-        <Text
-          onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}
-          style={[styles.cancel, { color: colors.danger }]}>
-          {t('jobDetail.cantDeliver')}
-        </Text>
+        <View style={styles.footerButtonRow}>
+          <AnimatedPressable
+            scaleTo={0.97}
+            style={[styles.secondaryButton, { backgroundColor: colors.bgElevated }]}
+            onPress={() => showToast(t('jobDetail.rescheduleToast'))}>
+            <Text style={[Typography.footnote, { color: colors.text }]}>
+              {t('jobDetail.reschedule')}
+            </Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            scaleTo={0.97}
+            style={[styles.secondaryButton, { backgroundColor: colors.dangerSoft }]}
+            onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
+            <Text style={[Typography.footnote, { color: colors.danger }]}>
+              {t('jobDetail.deliveryFailed')}
+            </Text>
+          </AnimatedPressable>
+        </View>
       </View>
     </View>
   );
@@ -285,13 +318,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xxl,
     paddingBottom: Spacing.xxs,
   },
-  headerTitleWrap: {
-    alignItems: 'center',
-  },
-  headerAgency: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
+  stopChip: {
+    borderRadius: Radii.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
   },
   content: {
     paddingHorizontal: Spacing.xxl,
@@ -328,11 +358,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mapBadge: {
+    ...monoStyle(12),
     position: 'absolute',
     bottom: 12,
     left: 14,
-    fontSize: 13,
-    fontWeight: '600',
     color: '#fff',
     backgroundColor: 'rgba(0,0,0,0.45)',
     paddingHorizontal: 10,
@@ -340,22 +369,17 @@ const styles = StyleSheet.create({
     borderRadius: Radii.sm,
     overflow: 'hidden',
   },
-  navigateChip: {
+  etaBadge: {
+    ...monoStyle(12),
     position: 'absolute',
     bottom: 12,
     right: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#0A5FFF',
+    color: '#fff',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: Radii.sm,
-  },
-  navigateText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#fff',
+    overflow: 'hidden',
   },
   card: {
     borderRadius: Radii.card,
@@ -387,29 +411,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addressText: {
+    fontFamily: Fonts.archivoMedium,
     flex: 1,
     fontSize: 15,
-    fontWeight: '500',
   },
   divider: {
     height: 1,
     marginVertical: 2,
   },
-  packageRow: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.smd,
   },
-  packageIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: Radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
+  metaCol: {
+    flex: 1,
+    gap: 3,
+  },
+  metaDivider: {
+    width: 1,
+    height: 28,
+    marginHorizontal: Spacing.md,
   },
   note: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 13,
-    fontWeight: '500',
     fontStyle: 'italic',
   },
   codCard: {
@@ -420,14 +445,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   codLabel: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-    fontWeight: '600',
     color: 'rgba(255,255,255,0.8)',
   },
   codAmount: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.01 * 26,
+    ...monoStyle(26, 'medium'),
     color: '#fff',
     marginTop: 2,
   },
@@ -437,9 +460,15 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     gap: Spacing.smd,
   },
-  cancel: {
-    textAlign: 'center',
-    fontSize: 15,
-    fontWeight: '600',
+  footerButtonRow: {
+    flexDirection: 'row',
+    gap: Spacing.smd,
+  },
+  secondaryButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radii.pill / 2,
+    paddingVertical: Spacing.md,
   },
 });

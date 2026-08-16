@@ -8,7 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MonthCalendar } from '../components/MonthCalendar';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
 import { fromDateKey, localeTag, toDateKey } from '../lib/date';
 
 const today = new Date();
@@ -110,8 +110,8 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   resultTitle: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 15,
-    fontWeight: '700',
   },
   resultBody: {
     textAlign: 'center',

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Radii, Spacing, Typography, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 
 interface ToastContextValue {
   /** Shows a transient, non-blocking status message — the honest placeholder for not-yet-built actions. */
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   text: {
-    fontWeight: '600',
+    fontFamily: Fonts.archivoSemiBold,
     textAlign: 'center',
   },
 });

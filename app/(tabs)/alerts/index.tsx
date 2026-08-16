@@ -9,10 +9,12 @@ import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { EmptyState } from '../../../components/EmptyState';
 import { SkeletonRow } from '../../../components/Skeleton';
 import {
+  Fonts,
   Radii,
   Spacing,
   Typography,
   getCardShadow,
+  monoStyle,
   sectionLabelStyle,
   useColors,
   type ColorPalette,
@@ -34,7 +36,7 @@ function typeStyle(type: NotificationType, colors: ColorPalette) {
     case 'DELIVERY':
       return { icon: 'location-outline' as const, color: colors.accent, soft: colors.accentSoft };
     case 'CASH':
-      return { icon: 'card-outline' as const, color: colors.success, soft: colors.successSoft };
+      return { icon: 'card-outline' as const, color: colors.info, soft: colors.infoSoft };
     case 'TRANSFER':
       return {
         icon: 'swap-horizontal-outline' as const,
@@ -96,8 +98,37 @@ export default function AlertsScreen() {
   }
 
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
-  const today = notifications?.filter((n) => isToday(n.timestamp)) ?? [];
+  const now = notifications?.[0];
+  const isNowPriority = !!now && !now.read;
+  const today = notifications?.filter((n) => isToday(n.timestamp) && n.id !== now?.id) ?? [];
   const earlier = notifications?.filter((n) => !isToday(n.timestamp)) ?? [];
+
+  function renderPriorityCard(notification: Notification) {
+    const style = typeStyle(notification.type, colors);
+    return (
+      <Animated.View entering={FadeInUp.springify(220).dampingRatio(1)}>
+        <AnimatedPressable
+          onPress={() => handlePress(notification.id)}
+          style={[styles.priorityCard, { backgroundColor: style.soft }]}>
+          <View style={[styles.priorityIcon, { backgroundColor: colors.bgElevated }]}>
+            <Ionicons name={style.icon} size={19} color={style.color} />
+          </View>
+          <View style={styles.textBlock}>
+            <Text style={[styles.title, { color: colors.text }]}>{notification.title}</Text>
+            <Text style={[styles.message, { color: colors.textSecondary }]}>
+              {notification.message}
+            </Text>
+          </View>
+          <View style={styles.meta}>
+            <Text style={[styles.time, { color: colors.textTertiary }]}>
+              {formatTime(notification.timestamp)}
+            </Text>
+            <View style={[styles.dot, { backgroundColor: colors.warning }]} />
+          </View>
+        </AnimatedPressable>
+      </Animated.View>
+    );
+  }
 
   function renderCard(notification: Notification, dimmed: boolean, index: number) {
     const style = typeStyle(notification.type, colors);
@@ -140,13 +171,18 @@ export default function AlertsScreen() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={[Typography.pageTitle, { color: colors.text }]}>{t('alerts.headerTitle')}</Text>
-          {unreadCount > 0 && (
-            <View style={[styles.badge, { backgroundColor: colors.danger }]}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
-            </View>
-          )}
+        <View>
+          <Text style={[sectionLabelStyle, styles.eyebrow, { color: colors.textTertiary }]}>
+            {t('alerts.eyebrow')}
+          </Text>
+          <View style={styles.headerLeft}>
+            <Text style={[Typography.pageTitle, { color: colors.text }]}>{t('alerts.headerTitle')}</Text>
+            {unreadCount > 0 && (
+              <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </View>
         </View>
         {unreadCount > 0 && (
           <Text onPress={handleMarkAllRead} style={[styles.markAllRead, { color: colors.accent }]}>
@@ -163,6 +199,15 @@ export default function AlertsScreen() {
         </View>
       ) : (
         <>
+          {isNowPriority && now && (
+            <View style={styles.section}>
+              <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
+                {t('alerts.now')}
+              </Text>
+              {renderPriorityCard(now)}
+            </View>
+          )}
+
           {today.length > 0 && (
             <View style={styles.section}>
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
@@ -205,8 +250,12 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
+  },
+  eyebrow: {
+    paddingLeft: 2,
+    marginBottom: 2,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -221,13 +270,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...monoStyle(13, 'medium'),
     color: '#fff',
   },
   markAllRead: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-    fontWeight: '600',
   },
   section: {
     gap: Spacing.sm,
@@ -245,6 +293,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: Spacing.mlg,
   },
+  priorityCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    borderRadius: 20,
+    padding: Spacing.mlg,
+  },
+  priorityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   icon: {
     width: 36,
     height: 36,
@@ -256,12 +318,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 14,
-    fontWeight: '700',
   },
   message: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 13,
-    fontWeight: '500',
     marginTop: 2,
   },
   meta: {
@@ -269,8 +331,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   time: {
-    fontSize: 12,
-    fontWeight: '500',
+    ...monoStyle(11),
   },
   dot: {
     width: 8,

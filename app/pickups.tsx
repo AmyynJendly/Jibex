@@ -13,7 +13,18 @@ import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
-import { Radii, Spacing, Typography, getCardShadow, useColors, type ColorPalette } from '../constants';
+import { useToast } from '../components/Toast';
+import {
+  Fonts,
+  Radii,
+  Spacing,
+  Typography,
+  getCardShadow,
+  monoLabelStyle,
+  monoStyle,
+  useColors,
+  type ColorPalette,
+} from '../constants';
 import { formatCurrency } from '../lib/currency';
 import { enumLabel } from '../lib/enumLabel';
 import { telUrl } from '../lib/phone';
@@ -76,7 +87,10 @@ function PickupDetails({ pickup, colors, t }: PickupDetailsProps) {
         <View style={styles.detailActions}>
           <AnimatedPressable
             scaleTo={0.88}
-            style={[styles.detailActionButton, { backgroundColor: colors.accentSoft }]}
+            style={[
+              styles.detailActionButton,
+              { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+            ]}
             onPress={() => Linking.openURL(telUrl(pickup.contactPhone))}>
             <Ionicons name="call-outline" size={16} color={colors.accent} />
           </AnimatedPressable>
@@ -89,6 +103,15 @@ function PickupDetails({ pickup, colors, t }: PickupDetailsProps) {
           </AnimatedPressable>
         </View>
       </View>
+
+      {pickup.status === 'SCHEDULED' && (
+        <PrimaryButton
+          label={t('pickups.startPickup')}
+          onPress={() => router.push('/scanner')}
+          height={42}
+          labelStyle={styles.startButtonLabel}
+        />
+      )}
 
       <Text style={[styles.parcelsTitle, { color: colors.textTertiary }]}>
         {t('pickups.parcelsTitle')}
@@ -118,6 +141,7 @@ function PickupDetails({ pickup, colors, t }: PickupDetailsProps) {
 export default function PickupsScreen() {
   const colors = useColors();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [pickups, setPickups] = useState<Pickup[] | null>(null);
   const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
@@ -139,19 +163,31 @@ export default function PickupsScreen() {
     });
   }
 
-  const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
-  const completed = pickups?.filter((p) => p.status === 'COMPLETED') ?? [];
-  const nextPickup = segment === 'SCHEDULED' ? scheduled[0] : undefined;
-  const restPickups = segment === 'SCHEDULED' ? scheduled.slice(1) : completed;
+  const displayed = pickups?.filter((p) => p.status === segment) ?? [];
+  const totalPackages = pickups?.reduce((sum, p) => sum + p.packageCount, 0) ?? 0;
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.header}>
+      <View style={styles.backRow}>
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>{t('pickups.headerTitle')}</Text>
-        <View style={styles.headerSpacer} />
+      </View>
+      <View style={styles.header}>
+        <View>
+          <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
+            {t('pickups.eyebrow')}
+          </Text>
+          <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
+            {t('pickups.headerTitle')}
+          </Text>
+        </View>
+        <View style={styles.headerCount}>
+          <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{totalPackages}</Text>
+          <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
+            {t('pickups.parcelCountLabel')}
+          </Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -172,71 +208,13 @@ export default function PickupsScreen() {
           </View>
         ) : (
           <>
-            {nextPickup &&
-              (() => {
-                const isExpanded = expandedIds.has(nextPickup.id);
-                return (
-                  <Animated.View
-                    entering={FadeInUp.springify(220).dampingRatio(1)}
-                    style={[
-                      styles.nextCard,
-                      { backgroundColor: colors.bgElevated, borderColor: colors.accent },
-                      getCardShadow(scheme),
-                    ]}>
-                    <View style={styles.nextCardTopRow}>
-                      <Text style={[styles.nextCardLabel, { color: colors.accent }]}>
-                        {t('pickups.nextPickup')}
-                      </Text>
-                      <View style={styles.nextCardTopRight}>
-                        <Text
-                          style={[
-                            styles.timeChip,
-                            { color: colors.text, backgroundColor: colors.separator },
-                          ]}>
-                          {nextPickup.timeWindow}
-                        </Text>
-                        <AnimatedPressable
-                          scaleTo={0.85}
-                          onPress={() => toggleExpand(nextPickup.id)}
-                          hitSlop={8}>
-                          <Ionicons
-                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                            size={18}
-                            color={colors.textTertiary}
-                          />
-                        </AnimatedPressable>
-                      </View>
-                    </View>
-                    <Text style={[Typography.title3, { color: colors.text }]}>
-                      {nextPickup.businessName}
-                    </Text>
-                    <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-                      {nextPickup.address}
-                    </Text>
-                    <View style={styles.nextCardBottomRow}>
-                      <Text style={[styles.packageCount, { color: colors.textTertiary }]}>
-                        {t('common.package', { count: nextPickup.packageCount })}
-                      </Text>
-                      <PrimaryButton
-                        label={t('pickups.startPickup')}
-                        onPress={() => router.push('/scanner')}
-                        height={38}
-                        style={styles.startButton}
-                        labelStyle={styles.startButtonLabel}
-                      />
-                    </View>
-                    {isExpanded && <PickupDetails pickup={nextPickup} colors={colors} t={t} />}
-                  </Animated.View>
-                );
-              })()}
-
-            {restPickups.length === 0 && !nextPickup ? (
+            {displayed.length === 0 ? (
               <EmptyState
                 icon={segment === 'SCHEDULED' ? 'cube-outline' : 'checkmark-done-outline'}
                 title={segment === 'SCHEDULED' ? t('pickups.empty.scheduled') : t('pickups.empty.completed')}
               />
             ) : (
-              restPickups.map((pickup, i) => {
+              displayed.map((pickup, i) => {
                 const isExpanded = expandedIds.has(pickup.id);
                 return (
                   <Animated.View
@@ -255,7 +233,7 @@ export default function PickupsScreen() {
                         <Text style={[Typography.title3, styles.rowTitle, { color: colors.text }]}>
                           {pickup.businessName}
                         </Text>
-                        <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+                        <Text style={[Typography.subhead, { color: colors.textSecondary }]} numberOfLines={1}>
                           {pickup.timeWindow} · {t('common.package', { count: pickup.packageCount })}
                         </Text>
                       </View>
@@ -275,6 +253,27 @@ export default function PickupsScreen() {
                 );
               })
             )}
+
+            {segment === 'SCHEDULED' && (
+              <AnimatedPressable
+                scaleTo={0.98}
+                style={[styles.addRow, { borderColor: colors.separator }]}
+                onPress={() =>
+                  showToast(t('common.comingSoon', { feature: t('pickups.addSpontaneous') }))
+                }>
+                <View style={[styles.addRowIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="add" size={18} color={colors.accent} />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={[Typography.title3, styles.rowTitle, { color: colors.text }]}>
+                    {t('pickups.addSpontaneous')}
+                  </Text>
+                  <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+                    {t('pickups.addSpontaneousSubtitle')}
+                  </Text>
+                </View>
+              </AnimatedPressable>
+            )}
           </>
         )}
       </ScrollView>
@@ -286,15 +285,22 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  backRow: {
     paddingHorizontal: Spacing.xxl,
     paddingBottom: Spacing.xxs,
   },
-  headerSpacer: {
-    width: 44,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xxl,
+    paddingBottom: Spacing.sm,
+  },
+  headerTitle: {
+    fontSize: 28,
+  },
+  headerCount: {
+    alignItems: 'flex-end',
   },
   content: {
     paddingHorizontal: Spacing.xxl,
@@ -305,55 +311,28 @@ const styles = StyleSheet.create({
   skeletonGroup: {
     gap: Spacing.mlg,
   },
-  nextCard: {
-    borderRadius: Radii.card,
-    borderWidth: 1.5,
-    padding: Spacing.xl,
-    gap: Spacing.smd,
-  },
-  nextCardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  nextCardTopRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  nextCardLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.04 * 12,
-  },
-  timeChip: {
-    fontSize: 13,
-    fontWeight: '600',
-    paddingHorizontal: Spacing.smd,
-    paddingVertical: Spacing.xxs,
-    borderRadius: Radii.md - 4,
-    overflow: 'hidden',
-  },
-  nextCardBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  packageCount: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  startButton: {
-    paddingHorizontal: Spacing.xl,
-  },
   startButtonLabel: {
     fontSize: 13,
   },
   row: {
     borderRadius: Radii.xxl,
     padding: Spacing.lg,
+  },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderRadius: Radii.xxl,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    padding: Spacing.lg,
+  },
+  addRowIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rowTopLine: {
     flexDirection: 'row',
@@ -371,7 +350,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    fontWeight: '700',
+    fontFamily: Fonts.archivoBold,
     fontSize: 15,
   },
   details: {
@@ -387,8 +366,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   detailStatusText: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-    fontWeight: '600',
   },
   contactRow: {
     flexDirection: 'row',
@@ -403,8 +382,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactText: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 13,
-    fontWeight: '500',
     flexShrink: 1,
   },
   detailActions: {
@@ -416,6 +395,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: Radii.sm,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -428,15 +408,13 @@ const styles = StyleSheet.create({
     borderRadius: Radii.sm,
   },
   navigateChipText: {
+    fontFamily: Fonts.archivoSemiBold,
     fontSize: 12,
-    fontWeight: '600',
     color: '#fff',
   },
   parcelsTitle: {
-    fontSize: 11,
-    fontWeight: '700',
+    ...monoLabelStyle(11, 0.04),
     textTransform: 'uppercase',
-    letterSpacing: 0.04 * 11,
     marginTop: 2,
   },
   parcelRow: {
@@ -450,16 +428,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   parcelTracking: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...monoStyle(13, 'medium'),
   },
   parcelContact: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 12,
-    fontWeight: '500',
     marginTop: 1,
   },
   parcelCod: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...monoStyle(13, 'medium'),
   },
 });

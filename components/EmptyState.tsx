@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Spacing, Typography, useColors } from '../constants';
+import { Fonts, Spacing, Typography, useColors } from '../constants';
 import { AmbientGlow } from './AmbientGlow';
 
 interface EmptyStateProps {
@@ -44,7 +44,7 @@ export function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
     <Animated.View entering={FadeIn.duration(250)} style={styles.container}>
       <View style={styles.iconStage}>
         <View style={styles.glowLayer}>
-          <AmbientGlow width={140} height={140} />
+          <AmbientGlow width={140} height={140} color={colors.warning} />
         </View>
         <Animated.View style={[styles.iconCircle, { backgroundColor: colors.separator }, floatStyle]}>
           <Ionicons name={icon} size={26} color={colors.textTertiary} />
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontWeight: '600',
+    fontFamily: Fonts.archivoSemiBold,
     textAlign: 'center',
   },
   subtitle: {

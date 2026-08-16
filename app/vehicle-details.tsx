@@ -10,7 +10,7 @@ import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
-import { Radii, Spacing, Typography, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { getVehicle, updateVehicle } from '../services/mock-api';
 import type { VehicleType } from '../types';
 
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   typeChipText: {
+    fontFamily: Fonts.archivoBold,
     fontSize: 13,
-    fontWeight: '700',
   },
   footer: {
     paddingHorizontal: Spacing.xxl,

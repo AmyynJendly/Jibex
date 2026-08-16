@@ -1,7 +1,19 @@
 import 'react-native-reanimated';
 import '../lib/i18n';
 
+import {
+  Archivo_400Regular,
+  Archivo_500Medium,
+  Archivo_600SemiBold,
+  Archivo_700Bold,
+  Archivo_800ExtraBold,
+  Archivo_900Black,
+} from '@expo-google-fonts/archivo';
+import { DMMono_400Regular, DMMono_500Medium } from '@expo-google-fonts/dm-mono';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -15,7 +27,29 @@ export const unstable_settings = {
   initialRouteName: '(auth)',
 };
 
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Archivo_400Regular,
+    Archivo_500Medium,
+    Archivo_600SemiBold,
+    Archivo_700Bold,
+    Archivo_800ExtraBold,
+    Archivo_900Black,
+    DMMono_400Regular,
+    DMMono_500Medium,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
+  // Every screen's `Typography`/`monoStyle` names one of these font families
+  // directly (not `fontWeight`, since custom TTFs aren't a single variable
+  // family) — so nothing should render until they're actually loaded.
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaProvider>
       <LanguageProvider>
