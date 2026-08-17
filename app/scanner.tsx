@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
@@ -43,6 +43,7 @@ const BARCODE_TYPES = ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a'] as c
 export default function ScannerScreen() {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const { batchIds: batchIdsParam } = useLocalSearchParams<{ batchIds?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [torchOn, setTorchOn] = useState(false);
   const [manualEntry, setManualEntry] = useState(false);
@@ -51,6 +52,24 @@ export default function ScannerScreen() {
   const [scannedCount, setScannedCount] = useState(0);
   const scanLockedRef = useRef(false);
   const sweep = useSharedValue(-SWEEP_RANGE);
+
+  // "Tout scanner" on the Returns screen passes the pending returns' ids
+  // here so this same generic scanner can track progress through that
+  // specific batch — a single-item "Scanner" tap never sets this param.
+  const batchIds = useMemo(() => {
+    if (!batchIdsParam) return null;
+    try {
+      const parsed = JSON.parse(batchIdsParam);
+      return Array.isArray(parsed) && parsed.length > 0 ? (parsed as string[]) : null;
+    } catch {
+      return null;
+    }
+  }, [batchIdsParam]);
+  const isBatchMode = !!batchIds;
+  const batchTotal = batchIds?.length ?? 0;
+  const [remainingBatchIds, setRemainingBatchIds] = useState<string[]>(batchIds ?? []);
+  const batchComplete = isBatchMode && remainingBatchIds.length === 0;
+  const batchScannedCount = batchTotal - remainingBatchIds.length;
 
   useEffect(() => {
     sweep.value = withRepeat(
@@ -83,8 +102,13 @@ export default function ScannerScreen() {
 
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast(t('scanner.confirmedToast', { label: result.label }));
+      const toastKey =
+        result.kind === 'transfer' ? 'scanner.transferConfirmedToast' : 'scanner.confirmedToast';
+      showToast(t(toastKey, { label: result.label }));
       setScannedCount((c) => c + 1);
+      if (result.kind === 'return' && result.id) {
+        setRemainingBatchIds((prev) => prev.filter((id) => id !== result.id));
+      }
       setTimeout(() => {
         scanLockedRef.current = false;
       }, 900);
@@ -110,7 +134,7 @@ export default function ScannerScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {permission?.granted && (
+      {permission?.granted && !batchComplete && (
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
@@ -124,7 +148,9 @@ export default function ScannerScreen() {
         <GlassIconButton forceDark onPress={() => router.back()}>
           <Ionicons name="close" size={20} color="#fff" />
         </GlassIconButton>
-        <Text style={[Typography.headline, styles.title]}>{t('scanner.title')}</Text>
+        <Text style={[Typography.headline, styles.title]}>
+          {t(isBatchMode ? 'scanner.batchTitle' : 'scanner.title')}
+        </Text>
         <GlassIconButton forceDark onPress={() => setTorchOn((v) => !v)}>
           <Ionicons
             name={torchOn ? 'flashlight' : 'flashlight-outline'}
@@ -134,7 +160,28 @@ export default function ScannerScreen() {
         </GlassIconButton>
       </View>
 
-      {!permission?.granted ? (
+      {isBatchMode && !batchComplete && (
+        <View style={styles.batchProgressRow}>
+          <Text style={styles.batchProgressText}>
+            {t('scanner.batchProgress', { done: batchScannedCount, total: batchTotal })}
+          </Text>
+        </View>
+      )}
+
+      {batchComplete ? (
+        <View style={styles.batchCompleteBlock}>
+          <View style={styles.batchCompleteIcon}>
+            <Ionicons name="checkmark" size={32} color="#2E3439" />
+          </View>
+          <Text style={styles.permissionTitle}>{t('scanner.batchCompleteTitle')}</Text>
+          <Text style={styles.permissionBody}>{t('scanner.batchCompleteBody')}</Text>
+          <PrimaryButton
+            label={t('scanner.batchDoneButton')}
+            onPress={() => router.back()}
+            style={styles.permissionButton}
+          />
+        </View>
+      ) : !permission?.granted ? (
         <View style={styles.permissionBlock}>
           <View style={styles.permissionIcon}>
             <Ionicons name="camera-outline" size={28} color="#fff" />
@@ -159,6 +206,7 @@ export default function ScannerScreen() {
         </View>
       )}
 
+      {!batchComplete && (
       <View style={styles.footer}>
         {manualEntry ? (
           <View style={styles.manualEntryRow}>
@@ -211,12 +259,13 @@ export default function ScannerScreen() {
           </AnimatedPressable>
         </View>
 
-        {scannedCount > 0 && (
+        {!isBatchMode && scannedCount > 0 && (
           <Text style={styles.scannedCount}>
             {t('scanner.scannedCount', { count: scannedCount })}
           </Text>
         )}
       </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -269,6 +318,31 @@ const styles = StyleSheet.create({
   permissionButton: {
     marginTop: Spacing.lg,
     alignSelf: 'stretch',
+  },
+  batchProgressRow: {
+    alignItems: 'center',
+    paddingTop: Spacing.xs,
+  },
+  batchProgressText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 13,
+    color: ACCENT,
+  },
+  batchCompleteBlock: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xxxl,
+    gap: Spacing.sm,
+  },
+  batchCompleteIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: ACCENT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
   },
   viewfinder: {
     flex: 1,

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
@@ -11,7 +12,6 @@ import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonRow } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
 import {
   Fonts,
   Radii,
@@ -36,11 +36,11 @@ function abbreviateRoute(label: string) {
 export default function TransfersScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
-  const { showToast } = useToast();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [transfers, setTransfers] = useState<Transfer[] | null>(null);
   const [myRoute, setMyRoute] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [qrTransferId, setQrTransferId] = useState<string | null>(null);
 
   function toggleExpand(id: string) {
     setExpandedIds((prev) => {
@@ -66,10 +66,12 @@ export default function TransfersScreen() {
     return route === myRoute ? `${abbreviated} · ${t('transfers.you')}` : abbreviated;
   }
 
-  useEffect(() => {
-    getTransfers().then(setTransfers);
-    getRunsheets().then((runsheets) => setMyRoute(runsheets[0]?.routeLabel ?? null));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getTransfers().then(setTransfers);
+      getRunsheets().then((runsheets) => setMyRoute(runsheets[0]?.routeLabel ?? null));
+    }, [])
+  );
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -85,12 +87,7 @@ export default function TransfersScreen() {
             {t('transfers.headerTitle')}
           </Text>
         </View>
-        <GlassIconButton
-          onPress={() =>
-            showToast(t('common.comingSoon', { feature: t('transfers.initiateTransfer') }))
-          }>
-          <Ionicons name="add" size={22} color={colors.text} />
-        </GlassIconButton>
+        <View style={styles.headerSpacer} />
       </View>
 
       {!transfers ? (
@@ -174,14 +171,40 @@ export default function TransfersScreen() {
                           </Text>
                         </View>
                       </View>
-                      {!completed && (
-                        <PrimaryButton
-                          label={t('transfers.showQr')}
-                          height={44}
-                          onPress={() =>
-                            showToast(t('common.comingSoon', { feature: t('transfers.showQr') }))
-                          }
-                        />
+                      {!completed &&
+                        (qrTransferId === transfer.id ? (
+                          <View style={styles.qrBlock}>
+                            <View style={styles.qrCard}>
+                              <QRCode value={`JIBEX-TRANSFER:${transfer.id}`} size={140} />
+                            </View>
+                            <Text style={[monoStyle(11), { color: colors.textTertiary }]}>
+                              {transfer.id}
+                            </Text>
+                            <AnimatedPressable
+                              scaleTo={0.95}
+                              onPress={() => setQrTransferId(null)}>
+                              <Text style={[Typography.footnote, { color: colors.accent }]}>
+                                {t('transfers.hideQr')}
+                              </Text>
+                            </AnimatedPressable>
+                          </View>
+                        ) : (
+                          <PrimaryButton
+                            label={t('transfers.showQr')}
+                            height={44}
+                            onPress={() => setQrTransferId(transfer.id)}
+                          />
+                        ))}
+                      {!completed && qrTransferId !== transfer.id && (
+                        <AnimatedPressable
+                          scaleTo={0.97}
+                          style={[styles.scanToConfirmButton, { borderColor: colors.separator }]}
+                          onPress={() => router.push('/scanner')}>
+                          <Ionicons name="scan-outline" size={16} color={colors.textSecondary} />
+                          <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
+                            {t('transfers.scanToConfirm')}
+                          </Text>
+                        </AnimatedPressable>
                       )}
                     </Animated.View>
                   )}
@@ -218,6 +241,9 @@ const styles = StyleSheet.create({
   headerTitleWrap: {
     alignItems: 'center',
   },
+  headerSpacer: {
+    width: 44,
+  },
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
@@ -245,6 +271,25 @@ const styles = StyleSheet.create({
   swapValue: {
     fontFamily: Fonts.archivoBold,
     fontSize: 15,
+  },
+  qrBlock: {
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  qrCard: {
+    backgroundColor: '#fff',
+    padding: Spacing.md,
+    borderRadius: Radii.md,
+  },
+  scanToConfirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    height: 40,
+    borderRadius: Radii.full,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   card: {
     borderRadius: Radii.xxl,

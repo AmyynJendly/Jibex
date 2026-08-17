@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
@@ -23,8 +23,9 @@ import {
   useColors,
 } from '../../../constants';
 import { formatCurrency } from '../../../lib/currency';
+import { DISPATCH_PHONE, telUrl } from '../../../lib/phone';
 import { clearToken } from '../../../lib/token';
-import { getDriverStats, getUser, getVehicle } from '../../../services/mock-api';
+import { getDriverStats, getRunsheets, getUser, getVehicle } from '../../../services/mock-api';
 import type { DriverStats, User, Vehicle } from '../../../types';
 
 const STAGGER_MS = 40;
@@ -49,12 +50,19 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<DriverStats | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [hub, setHub] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [u, s, v] = await Promise.all([getUser(), getDriverStats(), getVehicle()]);
+    const [u, s, v, runsheets] = await Promise.all([
+      getUser(),
+      getDriverStats(),
+      getVehicle(),
+      getRunsheets(),
+    ]);
     setUser(u);
     setStats(s);
     setVehicle(v);
+    setHub(runsheets[0]?.agency ?? null);
   }, []);
 
   useFocusEffect(
@@ -129,26 +137,14 @@ export default function ProfileScreen() {
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.profileCardTopRow}>
-              <View style={styles.avatarWrap}>
-                <View style={styles.avatar}>
-                  <Ionicons name="person-outline" size={30} color="#7E5731" />
-                </View>
-                <AnimatedPressable
-                  scaleTo={0.85}
-                  style={[styles.editBadge, { backgroundColor: colors.accent }]}
-                  onPress={() => showToast(t('profile.editPhotoToast'))}>
-                  <Ionicons name="pencil" size={12} color="#fff" />
-                </AnimatedPressable>
+              <View style={styles.avatar}>
+                <Ionicons name="person-outline" size={30} color="#7E5731" />
               </View>
               <View style={styles.nameBlock}>
                 <Text style={styles.name}>{user.name}</Text>
                 <Text style={styles.handle}>
-                  {user.driverCode} · {t('profile.hub')}
+                  {user.driverCode} · {hub ?? t('profile.hub')}
                 </Text>
-              </View>
-              <View style={styles.ratingPill}>
-                <Ionicons name="star" size={13} color="#7E5731" />
-                <Text style={styles.ratingText}>{t('profile.rating', { rating: '4.92' })}</Text>
               </View>
             </View>
 
@@ -257,7 +253,7 @@ export default function ProfileScreen() {
                   .springify(220)
                   .dampingRatio(1)}>
                 <AnimatedPressable
-                  onPress={() => showToast(t('common.comingSoon', { feature: t('profile.rows.callDispatch') }))}
+                  onPress={() => Linking.openURL(telUrl(DISPATCH_PHONE))}
                   style={[
                     styles.row,
                     {
@@ -361,10 +357,6 @@ const styles = StyleSheet.create({
     ...monoStyle(12, 'medium'),
     color: 'rgba(46,52,57,0.6)',
   },
-  avatarWrap: {
-    width: 60,
-    height: 60,
-  },
   avatar: {
     width: 60,
     height: 60,
@@ -372,18 +364,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,252,248,0.55)',
     borderWidth: 1,
     borderColor: 'rgba(255,252,248,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#FFFCF8',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -399,20 +379,6 @@ const styles = StyleSheet.create({
   handle: {
     ...monoStyle(12),
     color: 'rgba(46,52,57,0.7)',
-  },
-  ratingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,252,248,0.55)',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  ratingText: {
-    fontFamily: Fonts.archivoBold,
-    fontSize: 12,
-    color: '#2E3439',
   },
   statsCard: {
     flexDirection: 'row',

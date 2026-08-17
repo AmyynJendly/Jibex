@@ -39,21 +39,10 @@ import {
 import { formatCurrency } from '../../../lib/currency';
 import { localeTag } from '../../../lib/date';
 import { telUrl } from '../../../lib/phone';
+import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
+import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { getJobDetail, getRunsheets } from '../../../services/mock-api';
 import type { Job } from '../../../types';
-
-/** Driver's approximate start point — Sousse/Sahloul depot (mirrors mock-api's DEPOT). */
-const DEPOT = { lat: 35.848, lng: 10.5975 };
-
-function haversineMiles(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const R = 3958.8;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
 
 /**
  * No-key static map image — shows the job's real location instead of a
@@ -101,6 +90,7 @@ export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [position, setPosition] = useState<{ index: number; total: number } | null>(null);
+  const liveCoords = useLiveCoords();
   const ripple = useSharedValue(0);
 
   useEffect(() => {
@@ -134,8 +124,8 @@ export default function JobDetailScreen() {
     );
   }
 
-  const distanceMiles = haversineMiles(DEPOT, job.location);
-  const etaMinutes = Math.max(1, Math.round((distanceMiles / 22) * 60));
+  const distanceKm = haversineKm(liveCoords ?? FALLBACK_ORIGIN, job.location);
+  const etaMinutes = Math.max(1, Math.round((distanceKm / 35) * 60));
   const etaTime = new Date(Date.now() + etaMinutes * 60_000).toLocaleTimeString(
     localeTag(i18n.language),
     { hour: '2-digit', minute: '2-digit' }
@@ -185,7 +175,7 @@ export default function JobDetailScreen() {
           </View>
           <Text style={styles.mapBadge}>
             {t('jobDetail.mapBadge', {
-              distance: distanceMiles.toFixed(1),
+              distance: distanceKm.toFixed(1),
               minutes: etaMinutes,
             })}
           </Text>
@@ -284,24 +274,14 @@ export default function JobDetailScreen() {
           height={56}
           onPress={() => router.push({ pathname: '/job/[id]/otp', params: { id } })}
         />
-        <View style={styles.footerButtonRow}>
-          <AnimatedPressable
-            scaleTo={0.97}
-            style={[styles.secondaryButton, { backgroundColor: colors.bgElevated }]}
-            onPress={() => showToast(t('jobDetail.rescheduleToast'))}>
-            <Text style={[Typography.footnote, { color: colors.text }]}>
-              {t('jobDetail.reschedule')}
-            </Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            scaleTo={0.97}
-            style={[styles.secondaryButton, { backgroundColor: colors.dangerSoft }]}
-            onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
-            <Text style={[Typography.footnote, { color: colors.danger }]}>
-              {t('jobDetail.deliveryFailed')}
-            </Text>
-          </AnimatedPressable>
-        </View>
+        <AnimatedPressable
+          scaleTo={0.97}
+          style={[styles.secondaryButton, { backgroundColor: colors.dangerSoft }]}
+          onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
+          <Text style={[Typography.footnote, { color: colors.danger }]}>
+            {t('jobDetail.deliveryFailed')}
+          </Text>
+        </AnimatedPressable>
       </View>
     </View>
   );
@@ -460,12 +440,8 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     gap: Spacing.smd,
   },
-  footerButtonRow: {
-    flexDirection: 'row',
-    gap: Spacing.smd,
-  },
   secondaryButton: {
-    flex: 1,
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radii.pill / 2,

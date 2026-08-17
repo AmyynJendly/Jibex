@@ -13,7 +13,6 @@ import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
 import {
   Fonts,
   Radii,
@@ -141,7 +140,6 @@ function PickupDetails({ pickup, colors, t }: PickupDetailsProps) {
 export default function PickupsScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const { showToast } = useToast();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [pickups, setPickups] = useState<Pickup[] | null>(null);
   const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
@@ -253,27 +251,6 @@ export default function PickupsScreen() {
                 );
               })
             )}
-
-            {segment === 'SCHEDULED' && (
-              <AnimatedPressable
-                scaleTo={0.98}
-                style={[styles.addRow, { borderColor: colors.separator }]}
-                onPress={() =>
-                  showToast(t('common.comingSoon', { feature: t('pickups.addSpontaneous') }))
-                }>
-                <View style={[styles.addRowIcon, { backgroundColor: colors.accentSoft }]}>
-                  <Ionicons name="add" size={18} color={colors.accent} />
-                </View>
-                <View style={styles.rowText}>
-                  <Text style={[Typography.title3, styles.rowTitle, { color: colors.text }]}>
-                    {t('pickups.addSpontaneous')}
-                  </Text>
-                  <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-                    {t('pickups.addSpontaneousSubtitle')}
-                  </Text>
-                </View>
-              </AnimatedPressable>
-            )}
           </>
         )}
       </ScrollView>
@@ -317,22 +294,6 @@ const styles = StyleSheet.create({
   row: {
     borderRadius: Radii.xxl,
     padding: Spacing.lg,
-  },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    borderRadius: Radii.xxl,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    padding: Spacing.lg,
-  },
-  addRowIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   rowTopLine: {
     flexDirection: 'row',

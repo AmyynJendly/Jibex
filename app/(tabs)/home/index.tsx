@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -20,6 +21,7 @@ import { GlassIconButton } from '../../../components/GlassIconButton';
 import { ParticleMotes } from '../../../components/ParticleMotes';
 import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
+import { useConfirm } from '../../../components/ConfirmDialog';
 import { useToast } from '../../../components/Toast';
 import {
   Fonts,
@@ -31,7 +33,10 @@ import {
   useColors,
 } from '../../../constants';
 import { formatCurrency } from '../../../lib/currency';
+import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
+import { useLiveCoords } from '../../../lib/useLiveCoords';
 import {
+  confirmCashHandoff,
   getDriverStats,
   getJobDetail,
   getNotifications,
@@ -49,6 +54,8 @@ interface HomeData {
   hasUnreadNotifications: boolean;
   nextStop: Job | null;
   nextStopIndex: number;
+  /** Fallback shown until (or unless) a real GPS fix resolves — the driver's assigned runsheet zone. */
+  zone: string | null;
 }
 
 function getGreetingKey() {
@@ -58,27 +65,18 @@ function getGreetingKey() {
 
 const integerFormatter = (n: number) => String(Math.round(n));
 
-/** Driver's approximate start point — Sousse/Sahloul depot (mirrors mock-api's DEPOT). */
-const DEPOT = { lat: 35.848, lng: 10.5975 };
-
-function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
 export default function HomeScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 
   const [data, setData] = useState<HomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [depositing, setDepositing] = useState(false);
+  const [gpsLocation, setGpsLocation] = useState<string | null>(null);
+  const liveCoords = useLiveCoords();
 
   const load = useCallback(async () => {
     const [user, stats, runsheets, notifications] = await Promise.all([
@@ -101,6 +99,7 @@ export default function HomeScreen() {
       hasUnreadNotifications: notifications.some((n) => !n.read),
       nextStop,
       nextStopIndex,
+      zone: runsheets[0]?.zone ?? null,
     });
   }, []);
 
@@ -110,11 +109,52 @@ export default function HomeScreen() {
     }, [load])
   );
 
+  // Real device GPS (via `useLiveCoords`) reverse-geocoded into a label —
+  // falls back silently to the runsheet zone (shown from `data.zone`) if
+  // permission is denied or reverse geocoding isn't available on this
+  // platform (e.g. Expo web).
+  useEffect(() => {
+    if (!liveCoords) return;
+    let cancelled = false;
+
+    Location.reverseGeocodeAsync({ latitude: liveCoords.lat, longitude: liveCoords.lng })
+      .catch(() => [])
+      .then(([place]) => {
+        if (cancelled || !place) return;
+        const label = [place.district || place.subregion, place.city].filter(Boolean).join(', ');
+        if (label) setGpsLocation(label);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [liveCoords]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
     setRefreshing(false);
   }, [load]);
+
+  async function handleDeposit() {
+    if (!data || data.stats.cashCollectedTotal <= 0 || depositing) return;
+
+    const confirmed = await confirm({
+      title: t('home.depositConfirmTitle'),
+      message: t('home.depositConfirmMessage', {
+        amount: formatCurrency(data.stats.cashCollectedTotal),
+      }),
+      confirmLabel: t('home.deposit'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!confirmed) return;
+
+    setDepositing(true);
+    await confirmCashHandoff();
+    await load();
+    setDepositing(false);
+    showToast(t('home.depositedToast'));
+  }
 
   if (!data) {
     return (
@@ -143,10 +183,13 @@ export default function HomeScreen() {
     );
   }
 
-  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex } = data;
+  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex, zone } = data;
+  const locationLabel = gpsLocation ?? zone;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];
-  const nextStopDistanceKm = nextStop ? haversineKm(DEPOT, nextStop.location) : 0;
+  const nextStopDistanceKm = nextStop
+    ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, nextStop.location)
+    : 0;
   const nextStopEtaMinutes = nextStop ? Math.max(1, Math.round((nextStopDistanceKm / 35) * 60)) : 0;
 
   const compactActions: {
@@ -226,12 +269,14 @@ export default function HomeScreen() {
         <Text style={[Typography.largeTitle, styles.name, { color: colors.text }]}>
           {t(getGreetingKey())}, {firstName}
         </Text>
-        <View style={styles.locationRow}>
-          <Ionicons name="location-outline" size={13} color={colors.accent} />
-          <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-            Sousse, Sahloul 4
-          </Text>
-        </View>
+        {locationLabel && (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={13} color={colors.accent} />
+            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+              {locationLabel}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View
@@ -369,9 +414,15 @@ export default function HomeScreen() {
         </View>
         <AnimatedPressable
           scaleTo={0.94}
-          style={[styles.depositPill, { backgroundColor: colors.warning }]}
-          onPress={() => showToast(t('common.comingSoon', { feature: t('home.cashCollected') }))}>
-          <Text style={[Typography.caption1, { color: '#2E3439' }]}>{t('home.deposit')}</Text>
+          disabled={stats.cashCollectedTotal <= 0 || depositing}
+          style={[
+            styles.depositPill,
+            { backgroundColor: colors.warning, opacity: stats.cashCollectedTotal <= 0 ? 0.5 : 1 },
+          ]}
+          onPress={handleDeposit}>
+          <Text style={[Typography.caption1, { color: '#2E3439' }]}>
+            {depositing ? t('home.depositing') : t('home.deposit')}
+          </Text>
         </AnimatedPressable>
       </View>
       </ScrollView>

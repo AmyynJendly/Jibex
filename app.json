@@ -45,6 +45,12 @@
           "cameraPermission": "Jibex uses your camera to scan package barcodes and capture delivery photos."
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Jibex uses your location to show your current zone on the Home screen and to track your route while on shift."
+        }
+      ],
       "expo-notifications",
       "expo-localization"
     ],

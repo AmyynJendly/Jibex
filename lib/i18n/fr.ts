@@ -54,7 +54,7 @@ const fr: TranslationResource = {
       hide: 'Masquer',
       startRoute: 'Commencer la tournée',
       forgotPin: 'PIN oublié ? Appeler le dispatch',
-      ticker: ['Hub Sousse Ouvert', '14 Tournées', 'Ciel Dégagé 31°C'],
+      ticker: ['Assistance dispatch : {{phone}}', "Conditions d'utilisation", 'Politique de confidentialité'],
       newDriver: 'Nouveau chauffeur ? ',
       createAccount: 'Créer un compte',
       errors: {
@@ -122,6 +122,11 @@ const fr: TranslationResource = {
     },
     cashCollected: 'Espèces en sacoche',
     deposit: 'Déposer',
+    depositing: 'Dépôt en cours…',
+    depositedToast: 'Espèces déposées',
+    depositConfirmTitle: 'Confirmer le dépôt',
+    depositConfirmMessage:
+      'Déposer {{amount}} ? Cela remet à zéro vos espèces en sacoche et ne peut pas être annulé.',
     nextStop: {
       label: 'Prochain arrêt',
       distanceEta: '{{distance}} km · {{minutes}} min',
@@ -166,7 +171,7 @@ const fr: TranslationResource = {
     stopChip: 'ARRÊT {{index}} / {{total}}',
     etaLabel: 'ETA {{time}}',
     moreOptionsToast: "Plus d'options — bientôt disponible",
-    mapBadge: '{{distance}} mi · ≈{{minutes}} min',
+    mapBadge: '{{distance}} km · ≈{{minutes}} min',
     navigate: 'Itinéraire',
     codLabel: 'Encaissement à la livraison',
     codCash: '{{amount}} en espèces',
@@ -178,9 +183,7 @@ const fr: TranslationResource = {
     fragile: 'Fragile',
     standard: 'Standard',
     startDelivery: 'Sur place — scanner le colis',
-    reschedule: 'Reporter',
     deliveryFailed: 'Échec de livraison',
-    rescheduleToast: 'Report — bientôt disponible',
     cantDeliver: 'Impossible de livrer',
   },
 
@@ -225,6 +228,16 @@ const fr: TranslationResource = {
     retake: 'Reprendre la photo',
   },
 
+  returnPhoto: {
+    title: 'Photo du dommage',
+    permissionBody: "L'accès à la caméra est nécessaire pour documenter l'article endommagé.",
+    enableCamera: 'Activer la caméra',
+    hintCapture: 'Prenez une photo nette du dommage.',
+    hintConfirm: 'Ça vous convient ? Joignez cette photo au retour.',
+    attach: 'Joindre la photo',
+    retake: 'Reprendre la photo',
+  },
+
   scanner: {
     title: 'Scanner le colis',
     permissionTitle: 'Accès à la caméra requis',
@@ -239,6 +252,12 @@ const fr: TranslationResource = {
     scannedCount_one: '{{count}} colis scanné à cet arrêt',
     scannedCount_other: '{{count}} colis scannés à cet arrêt',
     confirmedToast: 'Confirmé — {{label}}',
+    transferConfirmedToast: 'Transfert terminé — {{label}}',
+    batchTitle: 'Scanner les retours',
+    batchProgress: '{{done}} sur {{total}} scannés',
+    batchCompleteTitle: 'Tous les retours ont été scannés',
+    batchCompleteBody: 'Chaque retour de ce lot a été traité.',
+    batchDoneButton: 'Retour aux retours',
     errors: {
       notRecognized: 'Code non reconnu. Réessayez ou saisissez-le manuellement.',
     },
@@ -262,8 +281,6 @@ const fr: TranslationResource = {
     startPickup: 'Démarrer la collecte',
     navigate: 'Naviguer',
     parcelsTitle: 'Colis',
-    addSpontaneous: 'Ajouter un ramassage spontané',
-    addSpontaneousSubtitle: 'Le marchand vous a appelé directement',
     empty: {
       scheduled: 'Aucune collecte prévue',
       completed: 'Aucune collecte terminée',
@@ -275,11 +292,12 @@ const fr: TranslationResource = {
     eyebrow: 'Passations entre coursiers',
     status: { completed: 'Terminé', awaitingHandoff: 'En attente de remise' },
     detailLine: '{{count}} · {{location}} · {{time}}',
-    initiateTransfer: 'Initier un transfert',
     from: 'De',
     to: 'Vers',
     you: 'Vous',
     showQr: 'Afficher le QR de remise',
+    hideQr: 'Masquer le QR',
+    scanToConfirm: 'Scanner pour confirmer la remise',
     qrInfoNote:
       'Les deux coursiers doivent scanner le même QR sous 5 minutes pour valider la garde.',
     empty: 'Aucun transfert en cours',
@@ -291,7 +309,6 @@ const fr: TranslationResource = {
     inBagLabel: 'En sacoche',
     orderNumber: 'Commande #{{id}}',
     scan: 'Scanner',
-    addPhotoToast: 'Photo — bientôt disponible',
     scanAll: 'Tout scanner',
     scanNote: 'Les retours doivent être scannés au dépôt avant la clôture de la tournée.',
     empty: 'Aucun retour en attente',
@@ -311,8 +328,6 @@ const fr: TranslationResource = {
   profile: {
     headerTitle: 'Profil',
     hub: 'Hub Sousse',
-    editPhotoToast: 'Modifier la photo — bientôt disponible',
-    rating: '{{rating}} note',
     stats: { lifetimeDeliveries: 'Livraisons', onTimeRate: 'À l\'heure', weeklyCash: 'DT / semaine' },
     sectionAccount: 'Compte',
     sectionSupport: 'Assistance',

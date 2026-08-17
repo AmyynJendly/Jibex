@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,6 @@ import { AnimatedPressable } from '../components/AnimatedPressable';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { SkeletonRow } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
 import {
   Fonts,
   Radii,
@@ -42,15 +41,17 @@ function reasonColors(reason: ReturnReason, colors: ColorPalette) {
 export default function ReturnsScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const { showToast } = useToast();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [returns, setReturns] = useState<Return[] | null>(null);
 
-  useEffect(() => {
-    getReturns().then(setReturns);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getReturns().then(setReturns);
+    }, [])
+  );
 
-  const inBagCount = returns?.filter((r) => r.status === 'PENDING_PICKUP').length ?? 0;
+  const pendingIds = returns?.filter((r) => r.status === 'PENDING_PICKUP').map((r) => r.id) ?? [];
+  const inBagCount = pendingIds.length;
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -123,21 +124,24 @@ export default function ReturnsScreen() {
                       <AnimatedPressable
                         scaleTo={0.95}
                         style={[styles.scanButton, { backgroundColor: colors.accent }]}
-                        onPress={() => showToast(t('common.comingSoon', { feature: t('returns.scan') }))}>
+                        onPress={() => router.push('/scanner')}>
                         <Text style={styles.scanButtonText}>{t('returns.scan')}</Text>
                       </AnimatedPressable>
                     )}
                   </View>
                   {pending && item.reason === 'DAMAGED' && (
                     <View style={styles.photoRow}>
-                      <View style={[styles.photoPlaceholder, { backgroundColor: colors.separator }]} />
-                      <View style={[styles.photoPlaceholder, { backgroundColor: colors.separator }]} />
-                      <AnimatedPressable
-                        scaleTo={0.9}
-                        style={[styles.photoAdd, { borderColor: colors.separator }]}
-                        onPress={() => showToast(t('returns.addPhotoToast'))}>
-                        <Ionicons name="add" size={16} color={colors.textSecondary} />
-                      </AnimatedPressable>
+                      {(item.photoUris ?? []).map((uri) => (
+                        <Image key={uri} source={{ uri }} style={styles.photoThumb} />
+                      ))}
+                      {(item.photoUris?.length ?? 0) < 2 && (
+                        <AnimatedPressable
+                          scaleTo={0.9}
+                          style={[styles.photoAdd, { borderColor: colors.separator }]}
+                          onPress={() => router.push({ pathname: '/return-photo', params: { id: item.id } })}>
+                          <Ionicons name="add" size={16} color={colors.textSecondary} />
+                        </AnimatedPressable>
+                      )}
                     </View>
                   )}
                 </Animated.View>
@@ -157,7 +161,13 @@ export default function ReturnsScreen() {
               <AnimatedPressable
                 scaleTo={0.95}
                 style={[styles.scanAllButton, { backgroundColor: colors.warning }]}
-                onPress={() => showToast(t('common.comingSoon', { feature: t('returns.scanAll') }))}>
+                onPress={() =>
+                  router.push(
+                    pendingIds.length > 0
+                      ? { pathname: '/scanner', params: { batchIds: JSON.stringify(pendingIds) } }
+                      : '/scanner'
+                  )
+                }>
                 <Text style={styles.scanAllButtonText}>{t('returns.scanAll')}</Text>
               </AnimatedPressable>
             </View>
@@ -251,7 +261,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginTop: 2,
   },
-  photoPlaceholder: {
+  photoThumb: {
     width: 48,
     height: 48,
     borderRadius: Radii.sm,

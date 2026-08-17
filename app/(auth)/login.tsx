@@ -13,11 +13,9 @@ import { PackageCube } from '../../components/PackageCube';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { TickerMarquee } from '../../components/TickerMarquee';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, useColors } from '../../constants';
-import { telUrl } from '../../lib/phone';
+import { DISPATCH_PHONE, telUrl } from '../../lib/phone';
 import { saveToken } from '../../lib/token';
 import { login } from '../../services/mock-api';
-
-const DISPATCH_PHONE = '+216 71 200 300';
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -125,7 +123,7 @@ export default function LoginScreen() {
           </View>
 
           <TickerMarquee
-            items={t('auth.login.ticker', { returnObjects: true }) as string[]}
+            items={t('auth.login.ticker', { returnObjects: true, phone: DISPATCH_PHONE }) as string[]}
             style={styles.ticker}
           />
 

@@ -10,4 +10,6 @@ export interface Return {
   relatedJobId: string;
   customerName: string;
   address: string;
+  /** Local device photo URIs documenting damage — populated via `attachReturnPhoto`. */
+  photoUris?: string[];
 }
