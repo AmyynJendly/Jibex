@@ -1,16 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Barcode } from '../../../components/Barcode';
-import { GlassIconButton } from '../../../components/GlassIconButton';
 import { SkeletonBlock, SkeletonRow } from '../../../components/Skeleton';
-import { useToast } from '../../../components/Toast';
 import {
   Fonts,
   Radii,
@@ -22,8 +21,9 @@ import {
   sectionLabelStyle,
   useColors,
 } from '../../../constants';
-import { formatCurrency } from '../../../lib/currency';
-import { DISPATCH_PHONE, telUrl } from '../../../lib/phone';
+import { formatCurrency, formatDecimal } from '../../../lib/currency';
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
+import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { clearToken } from '../../../lib/token';
 import { getDriverStats, getRunsheets, getUser, getVehicle } from '../../../services/mock-api';
 import type { DriverStats, User, Vehicle } from '../../../types';
@@ -36,21 +36,20 @@ interface AccountRow {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   soft: string;
-  /** Right-aligned secondary value (e.g. a cash balance, a toggle state). */
-  trailing?: string;
-  /** When set, the row navigates here instead of showing the "coming soon" toast. */
-  href?: '/personal-info' | '/vehicle-details' | '/bank-info';
+  href: '/personal-info' | '/vehicle-details';
 }
 
 export default function ProfileScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const { showToast } = useToast();
+  const { language, setLanguage } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<DriverStats | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [hub, setHub] = useState<string | null>(null);
+  const [biometricLogin, setBiometricLogin] = useState(true);
+  const [newJobAlerts, setNewJobAlerts] = useState(true);
 
   const load = useCallback(async () => {
     const [u, s, v, runsheets] = await Promise.all([
@@ -76,6 +75,8 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   }
 
+  // Both open read-only detail screens — the agency owns this data, the
+  // driver can view it but not edit it.
   const accountRows: AccountRow[] = [
     {
       key: 'personal',
@@ -93,15 +94,6 @@ export default function ProfileScreen() {
       soft: colors.purpleSoft,
       href: '/vehicle-details',
     },
-    {
-      key: 'bank',
-      label: t('profile.rows.bankInfo'),
-      icon: 'cash-outline',
-      color: colors.success,
-      soft: colors.successSoft,
-      trailing: stats ? formatCurrency(stats.cashCollectedTotal) : undefined,
-      href: '/bank-info',
-    },
   ];
 
   return (
@@ -113,9 +105,6 @@ export default function ProfileScreen() {
         <Text style={[Typography.pageTitle, { color: colors.text }]}>
           {t('profile.headerTitle')}
         </Text>
-        <GlassIconButton size={40} onPress={() => router.push('/settings')}>
-          <Ionicons name="settings-outline" size={20} color={colors.text} />
-        </GlassIconButton>
       </View>
 
       {!user || !stats ? (
@@ -178,10 +167,10 @@ export default function ProfileScreen() {
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.success }]}>
-                {stats.onTimeRate}%
+                {formatDecimal(stats.deliveryRate)}%
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.onTimeRate')}
+                {t('profile.stats.deliveryRate')}
               </Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
@@ -210,9 +199,7 @@ export default function ProfileScreen() {
                   key={row.key}
                   entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
                   <AnimatedPressable
-                    onPress={() =>
-                      row.href ? router.push(row.href) : showToast(t('common.comingSoon', { feature: row.label }))
-                    }
+                    onPress={() => router.push(row.href)}
                     style={[
                       styles.row,
                       i < accountRows.length - 1 && {
@@ -226,15 +213,81 @@ export default function ProfileScreen() {
                     <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                       {row.label}
                     </Text>
-                    {row.trailing && (
-                      <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]}>
-                        {row.trailing}
-                      </Text>
-                    )}
                     <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                   </AnimatedPressable>
                 </Animated.View>
               ))}
+            </View>
+          </View>
+
+          {/* Settings live inline here rather than behind their own screen —
+              there are few enough of them that a separate route was just an
+              extra tap. */}
+          <View>
+            <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
+              {t('settings.sectionLanguage')}
+            </Text>
+            <View
+              style={[styles.listCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+              {SUPPORTED_LANGUAGES.map((code: SupportedLanguage, i) => {
+                const selected = language === code;
+                return (
+                  <AnimatedPressable
+                    key={code}
+                    onPress={() => setLanguage(code)}
+                    style={[
+                      styles.row,
+                      i < SUPPORTED_LANGUAGES.length - 1 && {
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: colors.separator,
+                      },
+                    ]}>
+                    <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                      {t(`settings.languages.${code}`)}
+                    </Text>
+                    {selected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View>
+            <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
+              {t('settings.sectionSecurity')}
+            </Text>
+            <View
+              style={[styles.listCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+              <View
+                style={[
+                  styles.row,
+                  { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
+                ]}>
+                <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="finger-print-outline" size={16} color={colors.accent} />
+                </View>
+                <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                  {t('settings.biometricLogin')}
+                </Text>
+                <Switch
+                  value={biometricLogin}
+                  onValueChange={setBiometricLogin}
+                  trackColor={{ true: colors.accent }}
+                />
+              </View>
+              <View style={styles.row}>
+                <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="notifications-outline" size={15} color={colors.accent} />
+                </View>
+                <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                  {t('settings.newJobAlerts')}
+                </Text>
+                <Switch
+                  value={newJobAlerts}
+                  onValueChange={setNewJobAlerts}
+                  trackColor={{ true: colors.accent }}
+                />
+              </View>
             </View>
           </View>
 
@@ -248,69 +301,55 @@ export default function ProfileScreen() {
                 { backgroundColor: colors.bgElevated },
                 getCardShadow(scheme),
               ]}>
-              <Animated.View
-                entering={FadeInUp.delay(accountRows.length * STAGGER_MS)
-                  .springify(220)
-                  .dampingRatio(1)}>
-                <AnimatedPressable
-                  onPress={() => Linking.openURL(telUrl(DISPATCH_PHONE))}
+              <AnimatedPressable
+                onPress={() => router.push('/help-center')}
+                style={[
+                  styles.row,
+                  {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.separator,
+                  },
+                ]}>
+                <View style={[styles.rowIcon, { backgroundColor: colors.warningSoft }]}>
+                  <Ionicons name="help-circle-outline" size={15} color={colors.warning} />
+                </View>
+                <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                  {t('profile.rows.helpCenter')}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </AnimatedPressable>
+              <View
+                style={[
+                  styles.row,
+                  {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.separator,
+                  },
+                ]}>
+                <View style={[styles.rowIcon, { backgroundColor: colors.separator }]}>
+                  <Ionicons name="information-circle-outline" size={15} color={colors.textSecondary} />
+                </View>
+                <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                  {t('settings.appVersion')}
+                </Text>
+                <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+                  {Constants.expoConfig?.version ?? '1.0.0'}
+                </Text>
+              </View>
+              <AnimatedPressable onPress={handleLogOut} style={styles.row}>
+                <View style={[styles.rowIcon, { backgroundColor: colors.dangerSoft }]}>
+                  <Ionicons name="log-out-outline" size={15} color={colors.danger} />
+                </View>
+                <Text
                   style={[
-                    styles.row,
-                    {
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                      borderBottomColor: colors.separator,
-                    },
+                    Typography.body,
+                    styles.rowLabel,
+                    styles.logOutLabel,
+                    { color: colors.danger },
                   ]}>
-                  <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
-                    <Ionicons name="call-outline" size={15} color={colors.accent} />
-                  </View>
-                  <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                    {t('profile.rows.callDispatch')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </AnimatedPressable>
-              </Animated.View>
-              <Animated.View
-                entering={FadeInUp.delay((accountRows.length + 1) * STAGGER_MS)
-                  .springify(220)
-                  .dampingRatio(1)}>
-                <AnimatedPressable
-                  onPress={() => router.push('/help-center')}
-                  style={[
-                    styles.row,
-                    {
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                      borderBottomColor: colors.separator,
-                    },
-                  ]}>
-                  <View style={[styles.rowIcon, { backgroundColor: colors.warningSoft }]}>
-                    <Ionicons name="help-circle-outline" size={15} color={colors.warning} />
-                  </View>
-                  <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                    {t('profile.rows.helpCenter')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </AnimatedPressable>
-              </Animated.View>
-              <Animated.View
-                entering={FadeInUp.delay((accountRows.length + 2) * STAGGER_MS)
-                  .springify(220)
-                  .dampingRatio(1)}>
-                <AnimatedPressable onPress={handleLogOut} style={styles.row}>
-                  <View style={[styles.rowIcon, { backgroundColor: colors.dangerSoft }]}>
-                    <Ionicons name="log-out-outline" size={15} color={colors.danger} />
-                  </View>
-                  <Text
-                    style={[
-                      Typography.body,
-                      styles.rowLabel,
-                      styles.logOutLabel,
-                      { color: colors.danger },
-                    ]}>
-                    {t('profile.rows.logOut')}
-                  </Text>
-                </AnimatedPressable>
-              </Animated.View>
+                  {t('profile.rows.logOut')}
+                </Text>
+              </AnimatedPressable>
             </View>
           </View>
         </>
@@ -400,6 +439,7 @@ const styles = StyleSheet.create({
   statLabel: {
     ...monoLabelStyle(9, 0.1),
     marginTop: 2,
+    textAlign: 'center',
   },
   statDivider: {
     width: 1,

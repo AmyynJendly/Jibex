@@ -1,59 +1,43 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { FormField } from '../components/FormField';
 import { GlassIconButton } from '../components/GlassIconButton';
-import { PrimaryButton } from '../components/PrimaryButton';
+import { ReadOnlyField } from '../components/ReadOnlyField';
 import { SkeletonRow } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
-import { Spacing, Typography, useColors } from '../constants';
-import { getUser, updateUser } from '../services/mock-api';
+import { Fonts, Spacing, Typography, useColors } from '../constants';
+import { getUser } from '../services/mock-api';
+import type { User } from '../types';
 
+/**
+ * Read-only: the agency provisions and maintains driver records, so this
+ * screen displays them. Corrections go through dispatch, not the app.
+ */
 export default function PersonalInfoScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const { showToast } = useToast();
-  const [loaded, setLoaded] = useState(false);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    getUser().then((user) => {
-      setName(user.name);
-      setPhone(user.username);
-      setEmail(user.email);
-      setLoaded(true);
-    });
+    getUser().then(setUser);
   }, []);
 
-  async function handleSave() {
-    if (saving || !name.trim() || !phone.trim()) return;
-    setSaving(true);
-    await updateUser({ name: name.trim(), phone: phone.trim(), email: email.trim() });
-    setSaving(false);
-    showToast(t('personalInfo.savedToast'));
-    router.back();
-  }
-
   return (
-    <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>{t('personalInfo.headerTitle')}</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>
+          {t('personalInfo.headerTitle')}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {!loaded ? (
+      <ScrollView contentContainerStyle={styles.content}>
+        {!user ? (
           <View style={styles.skeletonGroup}>
             <SkeletonRow />
             <SkeletonRow />
@@ -61,41 +45,20 @@ export default function PersonalInfoScreen() {
           </View>
         ) : (
           <>
-            <FormField
-              label={t('personalInfo.fullNameLabel')}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              textContentType="name"
-            />
-            <FormField
-              label={t('personalInfo.phoneLabel')}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              textContentType="telephoneNumber"
-            />
-            <FormField
-              label={t('personalInfo.emailLabel')}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-            />
+            <View style={[styles.notice, { backgroundColor: colors.bgElevated }]}>
+              <Ionicons name="lock-closed-outline" size={15} color={colors.textSecondary} />
+              <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
+                {t('personalInfo.readOnlyNotice')}
+              </Text>
+            </View>
+            <ReadOnlyField label={t('personalInfo.fullNameLabel')} value={user.name} />
+            <ReadOnlyField label={t('personalInfo.usernameLabel')} value={user.username} />
+            <ReadOnlyField label={t('personalInfo.emailLabel')} value={user.email} />
+            <ReadOnlyField label={t('personalInfo.driverCodeLabel')} value={user.driverCode} />
           </>
         )}
       </ScrollView>
-
-      <View style={styles.footer}>
-        <PrimaryButton
-          label={t('personalInfo.saveChanges')}
-          height={54}
-          loading={saving}
-          disabled={!loaded}
-          onPress={handleSave}
-        />
-      </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -113,14 +76,24 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
+    paddingBottom: 40,
     gap: Spacing.md,
   },
   skeletonGroup: {
     gap: Spacing.md,
   },
-  footer: {
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: 30,
-    paddingTop: Spacing.md,
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderRadius: 14,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xs,
+  },
+  noticeText: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 13,
   },
 });

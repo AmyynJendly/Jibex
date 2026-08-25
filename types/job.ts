@@ -43,4 +43,12 @@ export interface Job {
   failureNote?: string;
   /** Set when delivery is confirmed via photo instead of OTP. */
   proofPhotoUri?: string;
+  /**
+   * How many times the driver has pressed Call for this parcel. A delivery
+   * can't be confirmed at zero — the driver must have tried to reach the
+   * customer first (see `logCallAttempt`).
+   */
+  callAttempts: number;
+  /** ISO timestamp of the most recent call attempt, if any. */
+  lastCallAt?: string;
 }

@@ -32,11 +32,10 @@ import {
   monoStyle,
   useColors,
 } from '../../../constants';
-import { formatCurrency } from '../../../lib/currency';
+import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import {
-  confirmCashHandoff,
   confirmRunsheetReceipt,
   getDriverStats,
   getJobDetail,
@@ -77,7 +76,6 @@ export default function HomeScreen() {
 
   const [data, setData] = useState<HomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [depositing, setDepositing] = useState(false);
   const [gpsLocation, setGpsLocation] = useState<string | null>(null);
   const liveCoords = useLiveCoords();
 
@@ -162,26 +160,6 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [load]);
 
-  async function handleDeposit() {
-    if (!data || data.stats.cashCollectedTotal <= 0 || depositing) return;
-
-    const confirmed = await confirm({
-      title: t('home.depositConfirmTitle'),
-      message: t('home.depositConfirmMessage', {
-        amount: formatCurrency(data.stats.cashCollectedTotal),
-      }),
-      confirmLabel: t('home.deposit'),
-      cancelLabel: t('common.cancel'),
-    });
-    if (!confirmed) return;
-
-    setDepositing(true);
-    await confirmCashHandoff();
-    await load();
-    setDepositing(false);
-    showToast(t('home.depositedToast'));
-  }
-
   async function handleConfirmReceipt(runsheet: Runsheet) {
     const confirmed = await confirm({
       title: t('runsheetDetail.confirmModalTitle'),
@@ -216,6 +194,7 @@ export default function HomeScreen() {
             <SkeletonBlock height={52} radius={Radii.xl} style={styles.compactWrapper} />
             <SkeletonBlock height={52} radius={Radii.xl} style={styles.compactWrapper} />
             <SkeletonBlock height={52} radius={Radii.xl} style={styles.compactWrapper} />
+            <SkeletonBlock height={52} radius={Radii.xl} style={styles.compactWrapper} />
           </View>
           <SkeletonBlock height={64} radius={Radii.xxl} />
         </ScrollView>
@@ -238,8 +217,16 @@ export default function HomeScreen() {
     icon: keyof typeof Ionicons.glyphMap;
     color: string;
     soft: ColorValue;
-    href: '/pickups' | '/transfers' | '/returns';
+    href: '/runsheets' | '/pickups' | '/transfers' | '/returns';
   }[] = [
+    {
+      key: 'runsheets',
+      label: t('common.nav.runsheets'),
+      icon: 'clipboard-outline',
+      color: colors.accent,
+      soft: colors.accentSoft,
+      href: '/runsheets',
+    },
     {
       key: 'pickups',
       label: t('common.nav.pickups'),
@@ -411,7 +398,7 @@ export default function HomeScreen() {
             </Text>
             <Text style={[monoStyle(11), { color: colors.textSecondary }]}>
               {t('home.nextStop.distanceEta', {
-                distance: nextStopDistanceKm.toFixed(1),
+                distance: formatDecimal(nextStopDistanceKm),
                 minutes: nextStopEtaMinutes,
               })}
             </Text>
@@ -485,18 +472,8 @@ export default function HomeScreen() {
             style={[monoStyle(22, 'medium'), styles.cashAmount]}
           />
         </View>
-        <AnimatedPressable
-          scaleTo={0.94}
-          disabled={stats.cashCollectedTotal <= 0 || depositing}
-          style={[
-            styles.depositPill,
-            { backgroundColor: colors.warning, opacity: stats.cashCollectedTotal <= 0 ? 0.5 : 1 },
-          ]}
-          onPress={handleDeposit}>
-          <Text style={[Typography.caption1, { color: '#2E3439' }]}>
-            {depositing ? t('home.depositing') : t('home.deposit')}
-          </Text>
-        </AnimatedPressable>
+        {/* Read-only: cash is reconciled with the agency at the depot, not
+            cleared from the driver's phone. */}
       </View>
       </ScrollView>
     </View>
@@ -716,14 +693,20 @@ const styles = StyleSheet.create({
   },
   compactRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.smd,
   },
+  // Two per row rather than four across: the French labels ("Ramassages",
+  // "Transferts") get clipped at quarter width.
   compactWrapper: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '46%',
   },
   compactAction: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    justifyContent: 'center',
+    gap: Spacing.sm,
     borderRadius: Radii.xl,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.xs,

@@ -8,11 +8,13 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import {
   Fonts,
   Radii,
@@ -27,7 +29,7 @@ import {
 import { formatCurrency } from '../lib/currency';
 import { enumLabel } from '../lib/enumLabel';
 import { telUrl } from '../lib/phone';
-import { getPickups } from '../services/mock-api';
+import { completeAllPickups, getPickups } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
 
 const STAGGER_MS = 40;
@@ -141,13 +143,34 @@ export default function PickupsScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const [pickups, setPickups] = useState<Pickup[] | null>(null);
   const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [completingAll, setCompletingAll] = useState(false);
 
   useEffect(() => {
     getPickups().then(setPickups);
   }, []);
+
+  async function handleDoneAll() {
+    const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
+    if (scheduled.length === 0 || completingAll) return;
+
+    const confirmed = await confirm({
+      title: t('pickups.doneAllConfirmTitle'),
+      message: t('pickups.doneAllConfirmMessage', { count: scheduled.length }),
+      confirmLabel: t('pickups.doneAll'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!confirmed) return;
+
+    setCompletingAll(true);
+    setPickups(await completeAllPickups());
+    setCompletingAll(false);
+    showToast(t('pickups.doneAllToast'));
+  }
 
   function toggleExpand(id: string) {
     setExpandedIds((prev) => {
@@ -197,6 +220,16 @@ export default function PickupsScreen() {
           value={segment}
           onChange={setSegment}
         />
+
+        {segment === 'SCHEDULED' && displayed.length > 0 && (
+          <AnimatedPressable
+            scaleTo={0.97}
+            style={[styles.doneAllButton, { backgroundColor: colors.success }]}
+            onPress={handleDoneAll}>
+            <Ionicons name="checkmark-done" size={18} color="#fff" />
+            <Text style={styles.doneAllButtonText}>{t('pickups.doneAll')}</Text>
+          </AnimatedPressable>
+        )}
 
         {!pickups ? (
           <View style={styles.skeletonGroup}>
@@ -287,6 +320,19 @@ const styles = StyleSheet.create({
   },
   skeletonGroup: {
     gap: Spacing.mlg,
+  },
+  doneAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    height: 48,
+    borderRadius: 24,
+  },
+  doneAllButtonText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 15,
+    color: '#fff',
   },
   startButtonLabel: {
     fontSize: 13,

@@ -60,7 +60,6 @@ export default function RootLayout() {
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="job/[id]" />
-              <Stack.Screen name="runsheet/[id]/index" />
               {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
               <Stack.Screen name="pickups" />
               <Stack.Screen name="transfers" />

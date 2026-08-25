@@ -8,9 +8,10 @@ import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from './AnimatedPressable';
 import { PrimaryButton } from './PrimaryButton';
+import { useToast } from './Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
-import { markDeliveryFailed } from '../services/mock-api';
+import { markDeliveryFailed, reopenParcel } from '../services/mock-api';
 import type { DeliveryFailureReason, Job } from '../types';
 
 /** The real 7 failure reasons — same list as the full-screen Can't Deliver flow. */
@@ -28,23 +29,29 @@ interface StatusUpdateSheetProps {
   /** The sheet is visible whenever this is non-null. */
   job: Job | null;
   onClose: () => void;
-  /** Called after a failure reason is successfully confirmed — parent refreshes and shows its own toast. */
-  onFailed: () => void;
+  /** Called after any status change lands — the parent refreshes its lists. */
+  onDone: () => void;
 }
 
 /**
- * Bottom sheet for quickly updating a parcel's status from the Runsheet
- * Detail list. "Delivered" routes into the existing OTP → Cash Collected
- * flow rather than marking delivered itself — OTP verification stays the
- * one way a delivery gets confirmed. The failure path is self-contained:
- * pick a reason, confirm, done.
+ * Bottom sheet for updating a parcel's status. "Delivered" routes into the
+ * existing OTP → Cash Collected flow rather than marking delivered itself —
+ * OTP verification stays the one way a delivery gets confirmed — and is
+ * gated on the driver having called the customer at least once.
+ *
+ * For a parcel that's already resolved, the sheet turns into a correction
+ * tool instead, so a wrongly-marked package can always be put back.
  */
-export function StatusUpdateSheet({ job, onClose, onFailed }: StatusUpdateSheetProps) {
+export function StatusUpdateSheet({ job, onClose, onDone }: StatusUpdateSheetProps) {
   const colors = useColors();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const isResolved = job?.status === 'DELIVERED' || job?.status === 'FAILED';
+  const canDeliver = (job?.callAttempts ?? 0) > 0;
 
   function handleClose() {
     setReason(null);
@@ -53,6 +60,10 @@ export function StatusUpdateSheet({ job, onClose, onFailed }: StatusUpdateSheetP
 
   function handleDelivered() {
     if (!job) return;
+    if (!canDeliver) {
+      showToast(t('statusUpdate.callRequired'));
+      return;
+    }
     const id = job.id;
     handleClose();
     router.push({ pathname: '/job/[id]/otp', params: { id } });
@@ -61,10 +72,25 @@ export function StatusUpdateSheet({ job, onClose, onFailed }: StatusUpdateSheetP
   async function handleConfirmFailed() {
     if (!job || !reason || submitting) return;
     setSubmitting(true);
-    await markDeliveryFailed(job.id, reason);
+    const result = await markDeliveryFailed(job.id, reason);
     setSubmitting(false);
     setReason(null);
-    onFailed();
+    if (!result.success) {
+      showToast(t(result.error ?? 'common.genericError'));
+      return;
+    }
+    showToast(t('statusUpdate.failedToast'));
+    onDone();
+  }
+
+  async function handleReopen() {
+    if (!job || submitting) return;
+    setSubmitting(true);
+    await reopenParcel(job.id);
+    setSubmitting(false);
+    setReason(null);
+    showToast(t('statusUpdate.reopenedToast'));
+    onDone();
   }
 
   return (
@@ -89,48 +115,78 @@ export function StatusUpdateSheet({ job, onClose, onFailed }: StatusUpdateSheetP
               {job.id} · {job.customerName}
             </Text>
 
-            <AnimatedPressable
-              scaleTo={0.97}
-              style={[styles.deliveredButton, { backgroundColor: colors.success }]}
-              onPress={handleDelivered}>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
-            </AnimatedPressable>
-
-            <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-              {t('statusUpdate.failedSection')}
-            </Text>
-            <View style={styles.chipRow}>
-              {REASONS.map((value) => {
-                const selected = reason === value;
-                return (
-                  <AnimatedPressable
-                    key={value}
-                    scaleTo={0.95}
-                    onPress={() => setReason(value)}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.danger : colors.dangerSoft,
-                        borderColor: selected ? colors.danger : 'transparent',
-                      },
-                    ]}>
-                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.danger }]}>
-                      {enumLabel(t, 'failureReason', value)}
+            {isResolved ? (
+              <>
+                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+                  {t('statusUpdate.correctSection')}
+                </Text>
+                <AnimatedPressable
+                  scaleTo={0.97}
+                  style={[styles.reopenButton, { borderColor: colors.accent }]}
+                  onPress={handleReopen}>
+                  <Ionicons name="arrow-undo-outline" size={18} color={colors.accent} />
+                  <Text style={[styles.reopenButtonText, { color: colors.accent }]}>
+                    {t('statusUpdate.markPending')}
+                  </Text>
+                </AnimatedPressable>
+              </>
+            ) : (
+              <>
+                <AnimatedPressable
+                  scaleTo={0.97}
+                  style={[
+                    styles.deliveredButton,
+                    { backgroundColor: colors.success, opacity: canDeliver ? 1 : 0.45 },
+                  ]}
+                  onPress={handleDelivered}>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
+                </AnimatedPressable>
+                {!canDeliver && (
+                  <View style={styles.callHintRow}>
+                    <Ionicons name="call-outline" size={14} color={colors.warning} />
+                    <Text style={[styles.callHintText, { color: colors.warning }]}>
+                      {t('statusUpdate.callHint')}
                     </Text>
-                  </AnimatedPressable>
-                );
-              })}
-            </View>
+                  </View>
+                )}
 
-            <PrimaryButton
-              label={t('statusUpdate.confirmFailed')}
-              height={52}
-              disabled={!reason}
-              loading={submitting}
-              onPress={handleConfirmFailed}
-              style={styles.confirmFailedButton}
-            />
+                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+                  {t('statusUpdate.failedSection')}
+                </Text>
+                <View style={styles.chipRow}>
+                  {REASONS.map((value) => {
+                    const selected = reason === value;
+                    return (
+                      <AnimatedPressable
+                        key={value}
+                        scaleTo={0.95}
+                        onPress={() => setReason(value)}
+                        style={[
+                          styles.chip,
+                          {
+                            backgroundColor: selected ? colors.danger : colors.dangerSoft,
+                            borderColor: selected ? colors.danger : 'transparent',
+                          },
+                        ]}>
+                        <Text style={[styles.chipText, { color: selected ? '#fff' : colors.danger }]}>
+                          {enumLabel(t, 'failureReason', value)}
+                        </Text>
+                      </AnimatedPressable>
+                    );
+                  })}
+                </View>
+
+                <PrimaryButton
+                  label={t('statusUpdate.confirmFailed')}
+                  height={52}
+                  disabled={!reason}
+                  loading={submitting}
+                  onPress={handleConfirmFailed}
+                  style={styles.confirmFailedButton}
+                />
+              </>
+            )}
           </Animated.View>
         )}
       </View>
@@ -171,6 +227,30 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.archivoBold,
     fontSize: 16,
     color: '#fff',
+  },
+  callHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: -Spacing.xs,
+  },
+  callHintText: {
+    flex: 1,
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 12,
+  },
+  reopenButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1.5,
+  },
+  reopenButtonText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 16,
   },
   sectionLabel: {
     fontFamily: Fonts.archivoSemiBold,

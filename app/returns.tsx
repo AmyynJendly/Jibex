@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
+import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import {
   Fonts,
@@ -19,30 +20,22 @@ import {
   monoLabelStyle,
   monoStyle,
   useColors,
-  type ColorPalette,
 } from '../constants';
+import { localeTag } from '../lib/date';
 import { enumLabel } from '../lib/enumLabel';
 import { getReturns } from '../services/mock-api';
-import type { Return, ReturnReason } from '../types';
+import type { Return } from '../types';
+
+type Toggle = 'current' | 'history';
 
 const STAGGER_MS = 40;
 
-function reasonColors(reason: ReturnReason, colors: ColorPalette) {
-  switch (reason) {
-    case 'REFUSED':
-      return { color: colors.danger, background: colors.dangerSoft };
-    case 'ADDRESS_ISSUE':
-      return { color: colors.neutral, background: colors.neutralSoft };
-    case 'DAMAGED':
-      return { color: colors.info, background: colors.warningSoft };
-  }
-}
-
 export default function ReturnsScreen() {
   const colors = useColors();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [returns, setReturns] = useState<Return[] | null>(null);
+  const [toggle, setToggle] = useState<Toggle>('current');
 
   useFocusEffect(
     useCallback(() => {
@@ -50,8 +43,18 @@ export default function ReturnsScreen() {
     }, [])
   );
 
-  const pendingIds = returns?.filter((r) => r.status === 'PENDING_PICKUP').map((r) => r.id) ?? [];
-  const inBagCount = pendingIds.length;
+  function formatTime(iso: string) {
+    return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
+
+  const pending = returns?.filter((r) => r.status === 'PENDING_PICKUP') ?? [];
+  const processed = returns?.filter((r) => r.status === 'PROCESSED') ?? [];
+  const isHistory = toggle === 'history';
+  const displayed = isHistory ? processed : pending;
+  const pendingParcelTotal = pending.reduce((sum, r) => sum + r.parcelCount, 0);
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -70,109 +73,121 @@ export default function ReturnsScreen() {
           </Text>
         </View>
         <View style={styles.headerCount}>
-          <Text style={[monoStyle(19, 'medium'), { color: colors.text }]}>{inBagCount}</Text>
+          <Text style={[monoStyle(19, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
           <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
-            {t('returns.inBagLabel')}
+            {t('returns.parcelsLabel')}
           </Text>
         </View>
       </View>
 
-      {!returns ? (
-        <ScrollView contentContainerStyle={styles.content}>
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-        </ScrollView>
-      ) : (
-        <>
-          <ScrollView contentContainerStyle={styles.content}>
-            {returns.length === 0 && (
-              <EmptyState icon="arrow-undo-outline" title={t('returns.empty')} />
-            )}
-            {returns.map((item, i) => {
-              const rc = reasonColors(item.reason, colors);
-              const processed = item.status === 'PROCESSED';
-              const pending = item.status === 'PENDING_PICKUP';
-              return (
-                <Animated.View
-                  key={item.id}
-                  entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
-                  style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
-                  <View style={[styles.accentBar, { backgroundColor: rc.color }]} />
-                  <View style={styles.cardTopRow}>
-                    <Text style={[styles.orderId, { color: colors.text }]} numberOfLines={1}>
-                      {t('returns.orderNumber', { id: item.relatedJobId })}
-                    </Text>
-                    <Text
-                      style={[styles.reasonChip, { color: rc.color, backgroundColor: rc.background }]}
-                      numberOfLines={1}>
-                      {enumLabel(t, 'returnReason', item.reason)}
-                    </Text>
-                  </View>
-                  <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-                    {item.customerName} · {item.address}
-                  </Text>
-                  <View style={styles.bottomRow}>
-                    <Text
-                      style={[
-                        styles.statusLabel,
-                        { color: processed ? colors.success : colors.textTertiary },
-                      ]}>
-                      {enumLabel(t, 'returnStatus', item.status)}
-                    </Text>
-                    {pending && item.reason === 'REFUSED' && (
-                      <AnimatedPressable
-                        scaleTo={0.95}
-                        style={[styles.scanButton, { backgroundColor: colors.accent }]}
-                        onPress={() => router.push('/scanner')}>
-                        <Text style={styles.scanButtonText}>{t('returns.scan')}</Text>
-                      </AnimatedPressable>
-                    )}
-                  </View>
-                  {pending && item.reason === 'DAMAGED' && (
-                    <View style={styles.photoRow}>
-                      {(item.photoUris ?? []).map((uri) => (
-                        <Image key={uri} source={{ uri }} style={styles.photoThumb} />
-                      ))}
-                      {(item.photoUris?.length ?? 0) < 2 && (
-                        <AnimatedPressable
-                          scaleTo={0.9}
-                          style={[styles.photoAdd, { borderColor: colors.separator }]}
-                          onPress={() => router.push({ pathname: '/return-photo', params: { id: item.id } })}>
-                          <Ionicons name="add" size={16} color={colors.textSecondary} />
-                        </AnimatedPressable>
-                      )}
-                    </View>
-                  )}
-                </Animated.View>
-              );
-            })}
-          </ScrollView>
+      <ScrollView contentContainerStyle={styles.content}>
+        <SegmentedControl
+          segments={[
+            { value: 'current', label: t('returns.toggleCurrent') },
+            { value: 'history', label: t('returns.toggleHistory') },
+          ]}
+          value={toggle}
+          onChange={setToggle}
+        />
 
-          {returns.length > 0 && (
-            <View
-              style={[
-                styles.footer,
-                { backgroundColor: colors.bgElevated, borderTopColor: colors.separator },
-              ]}>
-              <Text style={[styles.footerNote, { color: colors.textSecondary }]}>
-                {t('returns.scanNote')}
-              </Text>
-              <AnimatedPressable
-                scaleTo={0.95}
-                style={[styles.scanAllButton, { backgroundColor: colors.warning }]}
-                onPress={() =>
-                  router.push(
-                    pendingIds.length > 0
-                      ? { pathname: '/scanner', params: { batchIds: JSON.stringify(pendingIds) } }
-                      : '/scanner'
-                  )
-                }>
-                <Text style={styles.scanAllButtonText}>{t('returns.scanAll')}</Text>
-              </AnimatedPressable>
-            </View>
-          )}
-        </>
+        {!returns ? (
+          <>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </>
+        ) : displayed.length === 0 ? (
+          <EmptyState
+            icon="arrow-undo-outline"
+            title={isHistory ? t('returns.emptyHistory') : t('returns.empty')}
+          />
+        ) : (
+          displayed.map((item, i) => {
+            const accent = isHistory ? colors.success : colors.warning;
+            return (
+              <Animated.View
+                key={item.id}
+                entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
+                style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+                <View style={[styles.accentBar, { backgroundColor: accent }]} />
+                <View style={styles.cardTopRow}>
+                  <Text style={[styles.batchId, { color: colors.text }]} numberOfLines={1}>
+                    {t('returns.batchNumber', { id: item.id })}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.parcelChip,
+                      { color: accent, backgroundColor: isHistory ? colors.successSoft : colors.warningSoft },
+                    ]}
+                    numberOfLines={1}>
+                    {t('common.package', { count: item.parcelCount })}
+                  </Text>
+                </View>
+
+                <View style={styles.agencyRow}>
+                  <Text style={[styles.agencyText, { color: colors.text }]} numberOfLines={1}>
+                    {item.fromAgency}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
+                  <Text style={[styles.agencyText, { color: colors.text }]} numberOfLines={1}>
+                    {item.toAgency}
+                  </Text>
+                </View>
+
+                <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {item.location} · {formatTime(item.scheduledAt)}
+                </Text>
+                {item.relatedTransferId && (
+                  <Text style={[monoStyle(11), { color: colors.textTertiary }]}>
+                    {t('returns.relatedTransfer', { id: item.relatedTransferId })}
+                  </Text>
+                )}
+
+                <View style={styles.bottomRow}>
+                  <Text
+                    style={[
+                      styles.statusLabel,
+                      { color: isHistory ? colors.success : colors.textTertiary },
+                    ]}>
+                    {enumLabel(t, 'returnStatus', item.status)}
+                  </Text>
+                  {/* History is read-only — no scan action there. */}
+                  {!isHistory && (
+                    <AnimatedPressable
+                      scaleTo={0.95}
+                      style={[styles.scanButton, { backgroundColor: colors.accent }]}
+                      onPress={() => router.push('/scanner')}>
+                      <Text style={styles.scanButtonText}>{t('returns.scan')}</Text>
+                    </AnimatedPressable>
+                  )}
+                </View>
+              </Animated.View>
+            );
+          })
+        )}
+      </ScrollView>
+
+      {!isHistory && pending.length > 0 && (
+        <View
+          style={[
+            styles.footer,
+            { backgroundColor: colors.bgElevated, borderTopColor: colors.separator },
+          ]}>
+          <Text style={[styles.footerNote, { color: colors.textSecondary }]}>
+            {t('returns.scanNote')}
+          </Text>
+          <AnimatedPressable
+            scaleTo={0.95}
+            style={[styles.scanAllButton, { backgroundColor: colors.warning }]}
+            onPress={() =>
+              router.push({
+                pathname: '/scanner',
+                params: { batchIds: JSON.stringify(pending.map((r) => r.id)) },
+              })
+            }>
+            <Text style={styles.scanAllButtonText}>{t('returns.scanAll')}</Text>
+          </AnimatedPressable>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -209,7 +224,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.xxl,
     padding: Spacing.lg,
     paddingLeft: Spacing.lg + 6,
-    gap: Spacing.sm,
+    gap: Spacing.xs,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -225,17 +240,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  orderId: {
+  batchId: {
     ...monoStyle(15, 'medium'),
     flex: 1,
   },
-  reasonChip: {
+  parcelChip: {
     ...monoStyle(11),
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xxs,
     borderRadius: Radii.xs,
     overflow: 'hidden',
     flexShrink: 0,
+  },
+  agencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  agencyText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 14,
+    flexShrink: 1,
   },
   statusLabel: {
     fontFamily: Fonts.archivoSemiBold,
@@ -245,6 +270,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: Spacing.xs,
   },
   scanButton: {
     paddingHorizontal: Spacing.lg,
@@ -255,25 +281,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.archivoBold,
     fontSize: 12,
     color: '#fff',
-  },
-  photoRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: 2,
-  },
-  photoThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: Radii.sm,
-  },
-  photoAdd: {
-    width: 48,
-    height: 48,
-    borderRadius: Radii.sm,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   footer: {
     flexDirection: 'row',

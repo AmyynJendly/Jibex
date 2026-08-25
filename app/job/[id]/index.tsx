@@ -36,12 +36,12 @@ import {
   monoStyle,
   useColors,
 } from '../../../constants';
-import { formatCurrency } from '../../../lib/currency';
+import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { localeTag } from '../../../lib/date';
 import { telUrl } from '../../../lib/phone';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
-import { getJobDetail, getRunsheets } from '../../../services/mock-api';
+import { getJobDetail, getRunsheets, logCallAttempt } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
 /**
@@ -175,7 +175,7 @@ export default function JobDetailScreen() {
           </View>
           <Text style={styles.mapBadge}>
             {t('jobDetail.mapBadge', {
-              distance: distanceKm.toFixed(1),
+              distance: formatDecimal(distanceKm),
               minutes: etaMinutes,
             })}
           </Text>
@@ -190,7 +190,12 @@ export default function JobDetailScreen() {
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.iconButton, { backgroundColor: colors.accentSoft }]}
-                onPress={() => Linking.openURL(telUrl(job.customerPhone))}>
+                onPress={async () => {
+                  // Logged before dialling so the attempt is recorded even if
+                  // the dialler never opens — delivery is gated on this.
+                  setJob(await logCallAttempt(job.id));
+                  Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
+                }}>
                 <Ionicons name="call-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
               <AnimatedPressable
@@ -226,7 +231,7 @@ export default function JobDetailScreen() {
                 {t('jobDetail.parcelLabel')}
               </Text>
               <Text style={[monoStyle(13, 'medium'), { color: colors.text }]}>
-                {job.packageInfo.count} · {job.packageInfo.weightLbs} KG
+                {job.packageInfo.count} · {formatDecimal(job.packageInfo.weightLbs)} KG
               </Text>
             </View>
             <View style={[styles.metaDivider, { backgroundColor: colors.separator }]} />

@@ -11,6 +11,7 @@ import { AnimatedPressable } from '../components/AnimatedPressable';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import {
   Fonts,
@@ -23,22 +24,19 @@ import {
   useColors,
 } from '../constants';
 import { localeTag } from '../lib/date';
-import { getRunsheets, getTransfers } from '../services/mock-api';
+import { getTransfers } from '../services/mock-api';
 import type { Transfer } from '../types';
 
-const STAGGER_MS = 40;
+type Toggle = 'current' | 'history';
 
-/** "Route 12" → "R-12" — matches the design's abbreviated route labels. */
-function abbreviateRoute(label: string) {
-  return label.replace(/^Route\s*/i, 'R-');
-}
+const STAGGER_MS = 40;
 
 export default function TransfersScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [transfers, setTransfers] = useState<Transfer[] | null>(null);
-  const [myRoute, setMyRoute] = useState<string | null>(null);
+  const [toggle, setToggle] = useState<Toggle>('current');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
 
@@ -61,17 +59,17 @@ export default function TransfersScreen() {
     });
   }
 
-  function routeLabel(route: string) {
-    const abbreviated = abbreviateRoute(route);
-    return route === myRoute ? `${abbreviated} · ${t('transfers.you')}` : abbreviated;
-  }
-
   useFocusEffect(
     useCallback(() => {
       getTransfers().then(setTransfers);
-      getRunsheets().then((runsheets) => setMyRoute(runsheets[0]?.routeLabel ?? null));
     }, [])
   );
+
+  const current = transfers?.filter((tr) => tr.status === 'IN_PROGRESS') ?? [];
+  const history = transfers?.filter((tr) => tr.status === 'COMPLETED') ?? [];
+  const displayed = toggle === 'current' ? current : history;
+  // History is read-only: no expanding, no QR, no actions of any kind.
+  const isHistory = toggle === 'history';
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -90,23 +88,33 @@ export default function TransfersScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {!transfers ? (
-        <ScrollView contentContainerStyle={styles.content}>
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-        </ScrollView>
-      ) : (
-        <ScrollView contentContainerStyle={styles.content}>
-          {transfers.length === 0 && (
-            <EmptyState icon="swap-horizontal-outline" title={t('transfers.empty')} />
-          )}
+      <ScrollView contentContainerStyle={styles.content}>
+        <SegmentedControl
+          segments={[
+            { value: 'current', label: t('transfers.toggleCurrent') },
+            { value: 'history', label: t('transfers.toggleHistory') },
+          ]}
+          value={toggle}
+          onChange={setToggle}
+        />
 
-          {transfers.map((transfer, i) => {
+        {!transfers ? (
+          <>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </>
+        ) : displayed.length === 0 ? (
+          <EmptyState
+            icon="swap-horizontal-outline"
+            title={isHistory ? t('transfers.emptyHistory') : t('transfers.empty')}
+          />
+        ) : (
+          displayed.map((transfer, i) => {
             const completed = transfer.status === 'COMPLETED';
             const statusColor = completed ? colors.success : colors.accent;
             const statusSoft = completed ? colors.successSoft : colors.accentSoft;
-            const isExpanded = expandedIds.has(transfer.id);
+            const isExpanded = !isHistory && expandedIds.has(transfer.id);
             return (
               <Animated.View
                 key={transfer.id}
@@ -114,35 +122,54 @@ export default function TransfersScreen() {
                 <View
                   style={[
                     styles.card,
-                    { backgroundColor: colors.bgElevated, opacity: completed ? 0.7 : 1 },
+                    { backgroundColor: colors.bgElevated, opacity: completed ? 0.75 : 1 },
                     getCardShadow(scheme),
                   ]}>
-                  <AnimatedPressable
-                    scaleTo={0.98}
-                    onPress={() => toggleExpand(transfer.id)}
-                    style={styles.cardTopRow}>
-                    <Text style={[styles.routeLabel, { color: colors.text }]} numberOfLines={1}>
-                      {abbreviateRoute(transfer.origin)}
-                    </Text>
-                    <Ionicons name="arrow-forward" size={16} color={colors.textTertiary} />
-                    <Text style={[styles.routeLabel, { color: colors.text }]} numberOfLines={1}>
-                      {abbreviateRoute(transfer.destination)}
-                    </Text>
-                    <View style={styles.cardSpacer} />
-                    <Text
-                      style={[styles.statusChip, { color: statusColor, backgroundColor: statusSoft }]}
-                      numberOfLines={1}>
-                      {completed ? t('transfers.status.completed') : t('transfers.status.awaitingHandoff')}
-                    </Text>
-                    <Ionicons
-                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                      size={16}
-                      color={colors.textTertiary}
-                    />
-                  </AnimatedPressable>
+                  {isHistory ? (
+                    <View style={styles.cardTopRow}>
+                      <Text style={[styles.agencyLabel, { color: colors.text }]} numberOfLines={1}>
+                        {transfer.originAgency}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={16} color={colors.textTertiary} />
+                      <Text style={[styles.agencyLabel, { color: colors.text }]} numberOfLines={1}>
+                        {transfer.destinationAgency}
+                      </Text>
+                      <View style={styles.cardSpacer} />
+                      <Text
+                        style={[styles.statusChip, { color: statusColor, backgroundColor: statusSoft }]}
+                        numberOfLines={1}>
+                        {t('transfers.status.completed')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <AnimatedPressable
+                      scaleTo={0.98}
+                      onPress={() => toggleExpand(transfer.id)}
+                      style={styles.cardTopRow}>
+                      <Text style={[styles.agencyLabel, { color: colors.text }]} numberOfLines={1}>
+                        {transfer.originAgency}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={16} color={colors.textTertiary} />
+                      <Text style={[styles.agencyLabel, { color: colors.text }]} numberOfLines={1}>
+                        {transfer.destinationAgency}
+                      </Text>
+                      <View style={styles.cardSpacer} />
+                      <Text
+                        style={[styles.statusChip, { color: statusColor, backgroundColor: statusSoft }]}
+                        numberOfLines={1}>
+                        {t('transfers.status.awaitingHandoff')}
+                      </Text>
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={16}
+                        color={colors.textTertiary}
+                      />
+                    </AnimatedPressable>
+                  )}
+
                   <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
                     {t('transfers.detailLine', {
-                      count: t('common.package', { count: transfer.itemCount }),
+                      count: transfer.parcelCount,
                       location: transfer.location,
                       time: formatTime(transfer.scheduledAt),
                     })}
@@ -158,7 +185,7 @@ export default function TransfersScreen() {
                             {t('transfers.from')}
                           </Text>
                           <Text style={[styles.swapValue, { color: colors.text }]} numberOfLines={1}>
-                            {routeLabel(transfer.origin)}
+                            {transfer.originAgency}
                           </Text>
                         </View>
                         <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
@@ -167,62 +194,60 @@ export default function TransfersScreen() {
                             {t('transfers.to')}
                           </Text>
                           <Text style={[styles.swapValue, { color: colors.text }]} numberOfLines={1}>
-                            {routeLabel(transfer.destination)}
+                            {transfer.destinationAgency}
                           </Text>
                         </View>
                       </View>
-                      {!completed &&
-                        (qrTransferId === transfer.id ? (
-                          <View style={styles.qrBlock}>
-                            <View style={styles.qrCard}>
-                              <QRCode value={`JIBEX-TRANSFER:${transfer.id}`} size={140} />
-                            </View>
-                            <Text style={[monoStyle(11), { color: colors.textTertiary }]}>
-                              {transfer.id}
-                            </Text>
-                            <AnimatedPressable
-                              scaleTo={0.95}
-                              onPress={() => setQrTransferId(null)}>
-                              <Text style={[Typography.footnote, { color: colors.accent }]}>
-                                {t('transfers.hideQr')}
-                              </Text>
-                            </AnimatedPressable>
+
+                      {qrTransferId === transfer.id ? (
+                        <View style={styles.qrBlock}>
+                          <View style={styles.qrCard}>
+                            <QRCode value={`JIBEX-TRANSFER:${transfer.id}`} size={140} />
                           </View>
-                        ) : (
+                          <Text style={[monoStyle(11), { color: colors.textTertiary }]}>
+                            {transfer.id}
+                          </Text>
+                          <AnimatedPressable scaleTo={0.95} onPress={() => setQrTransferId(null)}>
+                            <Text style={[Typography.footnote, { color: colors.accent }]}>
+                              {t('transfers.hideQr')}
+                            </Text>
+                          </AnimatedPressable>
+                        </View>
+                      ) : (
+                        <>
                           <PrimaryButton
                             label={t('transfers.showQr')}
                             height={44}
                             onPress={() => setQrTransferId(transfer.id)}
                           />
-                        ))}
-                      {!completed && qrTransferId !== transfer.id && (
-                        <AnimatedPressable
-                          scaleTo={0.97}
-                          style={[styles.scanToConfirmButton, { borderColor: colors.separator }]}
-                          onPress={() => router.push('/scanner')}>
-                          <Ionicons name="scan-outline" size={16} color={colors.textSecondary} />
-                          <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
-                            {t('transfers.scanToConfirm')}
-                          </Text>
-                        </AnimatedPressable>
+                          <AnimatedPressable
+                            scaleTo={0.97}
+                            style={[styles.scanToConfirmButton, { borderColor: colors.separator }]}
+                            onPress={() => router.push('/scanner')}>
+                            <Ionicons name="scan-outline" size={16} color={colors.textSecondary} />
+                            <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
+                              {t('transfers.scanToConfirm')}
+                            </Text>
+                          </AnimatedPressable>
+                        </>
                       )}
                     </Animated.View>
                   )}
                 </View>
               </Animated.View>
             );
-          })}
+          })
+        )}
 
-          {transfers.length > 0 && (
-            <View style={[styles.infoNote, { backgroundColor: colors.bg }]}>
-              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-              <Text style={[styles.infoNoteText, { color: colors.textSecondary }]}>
-                {t('transfers.qrInfoNote')}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-      )}
+        {!isHistory && current.length > 0 && (
+          <View style={[styles.infoNote, { backgroundColor: colors.bg }]}>
+            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+            <Text style={[styles.infoNoteText, { color: colors.textSecondary }]}>
+              {t('transfers.qrInfoNote')}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -304,9 +329,10 @@ const styles = StyleSheet.create({
   cardSpacer: {
     flex: 1,
   },
-  routeLabel: {
+  agencyLabel: {
     fontFamily: Fonts.archivoSemiBold,
-    fontSize: 14,
+    fontSize: 13,
+    flexShrink: 1,
   },
   statusChip: {
     ...monoStyle(11),

@@ -132,6 +132,7 @@ const mockJobs: Job[] = [
     status: 'IN_TRANSIT',
     cashToCollect: 42.0,
     location: { lat: 35.8465, lng: 10.6015 },
+    callAttempts: 0,
     deliverBy: todayAt(14, 0),
   },
   {
@@ -143,6 +144,7 @@ const mockJobs: Job[] = [
     status: 'PENDING',
     cashToCollect: 28.5,
     location: { lat: 34.7398, lng: 10.76 },
+    callAttempts: 0,
   },
   {
     id: 'TRK-77F1E9AB',
@@ -153,6 +155,7 @@ const mockJobs: Job[] = [
     status: 'PENDING',
     cashToCollect: 65.0,
     location: { lat: 35.7643, lng: 10.8113 },
+    callAttempts: 0,
   },
   {
     id: 'TRK-3C4D8F21',
@@ -163,6 +166,7 @@ const mockJobs: Job[] = [
     status: 'PENDING',
     cashToCollect: 15.0,
     location: { lat: 34.735, lng: 10.765 },
+    callAttempts: 0,
     deliverBy: todayAt(15, 0),
   },
   {
@@ -174,6 +178,7 @@ const mockJobs: Job[] = [
     status: 'PENDING',
     cashToCollect: 22.0,
     location: { lat: 35.77, lng: 10.82 },
+    callAttempts: 0,
   },
   {
     id: 'TRK-B6F31C08',
@@ -185,6 +190,7 @@ const mockJobs: Job[] = [
     failureReason: 'INCORRECT_ADDRESS',
     cashToCollect: 0,
     location: { lat: 34.72, lng: 10.69 },
+    callAttempts: 0,
   },
   {
     id: 'TRK-1F4A7D93',
@@ -196,6 +202,7 @@ const mockJobs: Job[] = [
     cashToCollect: 55.0,
     cashCollected: 55.0,
     location: { lat: 35.8256, lng: 10.6084 },
+    callAttempts: 0,
   },
   {
     id: 'TRK-6C2E9F45',
@@ -207,6 +214,7 @@ const mockJobs: Job[] = [
     cashToCollect: 30.0,
     cashCollected: 30.0,
     location: { lat: 36.7992, lng: 10.1817 },
+    callAttempts: 0,
   },
   {
     id: 'TRK-7A2E4F19',
@@ -217,6 +225,7 @@ const mockJobs: Job[] = [
     status: 'PENDING',
     cashToCollect: 19.0,
     location: { lat: 34.728, lng: 10.702 },
+    callAttempts: 0,
   },
   /** Yesterday's already-wrapped-up stops — feed the one historical (VALIDE) runsheet. */
   {
@@ -229,6 +238,7 @@ const mockJobs: Job[] = [
     cashToCollect: 35.0,
     cashCollected: 35.0,
     location: { lat: 35.833, lng: 10.62 },
+    callAttempts: 0,
   },
   {
     id: 'TRK-88D4B716',
@@ -240,11 +250,18 @@ const mockJobs: Job[] = [
     cashToCollect: 47.5,
     cashCollected: 47.5,
     location: { lat: 35.845, lng: 10.63 },
+    callAttempts: 0,
   },
 ];
 
-/** Raw seed shape — `stopCount`/`deliveredCount`/`completionPercent` are never trusted from here, always recomputed live from `mockJobs` (see `toRunsheet`) so they can't drift out of sync as job statuses change. */
-type RunsheetSeed = Omit<Runsheet, 'stopCount' | 'deliveredCount' | 'completionPercent'>;
+/** Raw seed shape — `stopCount`/`deliveredCount`/`completionPercent`/`needsConfirmation` are never trusted from here, always recomputed live from `mockJobs` (see `toRunsheet`) so they can't drift out of sync as job statuses change. */
+type RunsheetSeed = Omit<
+  Runsheet,
+  'stopCount' | 'deliveredCount' | 'completionPercent' | 'needsConfirmation'
+> & {
+  /** Parcel count the driver last attested to. Null until first confirmation; a mismatch against the live count means dispatch added or pulled parcels and the driver must re-confirm. */
+  confirmedStopCount: number | null;
+};
 
 const mockRunsheets: RunsheetSeed[] = [
   {
@@ -253,6 +270,9 @@ const mockRunsheets: RunsheetSeed[] = [
     zone: 'Sousse, Sahloul',
     agency: 'Agence Sousse',
     status: 'EN_COURS',
+    // Confirmed at 4 this morning; dispatch added a 5th parcel since, so the
+    // driver is asked to re-confirm the new count.
+    confirmedStopCount: 4,
     stopIds: ['TRK-5DF3697E', 'TRK-A12BC034', 'TRK-77F1E9AB', 'TRK-1F4A7D93', 'TRK-B6F31C08'],
   },
   {
@@ -261,6 +281,7 @@ const mockRunsheets: RunsheetSeed[] = [
     zone: 'Sfax, Zone Industrielle',
     agency: 'Agence Sousse',
     status: 'A_CONFIRMER',
+    confirmedStopCount: null,
     stopIds: ['TRK-3C4D8F21', 'TRK-7A2E4F19'],
   },
   {
@@ -269,6 +290,7 @@ const mockRunsheets: RunsheetSeed[] = [
     zone: 'Monastir',
     agency: 'Agence Sousse',
     status: 'EN_COURS',
+    confirmedStopCount: 2,
     stopIds: ['TRK-9E0A2B6D', 'TRK-6C2E9F45'],
   },
   {
@@ -277,6 +299,7 @@ const mockRunsheets: RunsheetSeed[] = [
     zone: 'Sousse, Centre Ville',
     agency: 'Agence Sousse',
     status: 'VALIDE',
+    confirmedStopCount: 2,
     stopIds: ['TRK-99F0C3E2', 'TRK-88D4B716'],
   },
 ];
@@ -289,8 +312,19 @@ function toRunsheet(seed: RunsheetSeed): Runsheet {
   const stopCount = jobs.length;
   const deliveredCount = jobs.filter((j) => j.status === 'DELIVERED').length;
   const completionPercent = stopCount === 0 ? 0 : Math.round((deliveredCount / stopCount) * 100);
+  // Never confirmed, or confirmed against a count that has since changed —
+  // either way the driver has to attest to what's actually in the van now.
+  const needsConfirmation =
+    seed.status === 'A_CONFIRMER' || seed.confirmedStopCount !== stopCount;
 
-  return { ...seed, stopIds: [...seed.stopIds], stopCount, deliveredCount, completionPercent };
+  return {
+    ...seed,
+    stopIds: [...seed.stopIds],
+    stopCount,
+    deliveredCount,
+    completionPercent,
+    needsConfirmation,
+  };
 }
 
 /** Recipient names cycled across generated parcels — not tied to any Job, purely mock display data. */
@@ -391,91 +425,99 @@ const mockTransfers: Transfer[] = [
   {
     id: 'TR-9201',
     status: 'IN_PROGRESS',
-    origin: 'Route 12',
-    destination: 'Route 7',
-    itemCount: 6,
+    originAgency: 'Agence Sousse',
+    destinationAgency: 'Agence Sfax',
+    parcelCount: 500,
     location: 'Dépôt Sahloul',
     scheduledAt: todayAt(13, 45),
   },
   {
     id: 'TR-9198',
     status: 'COMPLETED',
-    origin: 'Route 4',
-    destination: 'Route 12',
-    itemCount: 3,
+    originAgency: 'Agence Tunis',
+    destinationAgency: 'Agence Sousse',
+    parcelCount: 320,
     location: 'Hub Centre Ville Sousse',
     scheduledAt: todayAt(9, 20),
   },
   {
     id: 'TR-9195',
     status: 'COMPLETED',
-    origin: 'Route 7',
-    destination: 'Route 4',
-    itemCount: 5,
+    originAgency: 'Agence Sfax',
+    destinationAgency: 'Agence Monastir',
+    parcelCount: 180,
     location: 'Dépôt Sfax',
     scheduledAt: daysAgoAt(1, 16, 10),
   },
   {
     id: 'TR-9190',
     status: 'IN_PROGRESS',
-    origin: 'Route 3',
-    destination: 'Route 12',
-    itemCount: 2,
+    originAgency: 'Agence Monastir',
+    destinationAgency: 'Agence Sousse',
+    parcelCount: 95,
     location: 'Hub Monastir',
     scheduledAt: todayAt(14, 30),
   },
   {
     id: 'TR-9187',
     status: 'COMPLETED',
-    origin: 'Route 12',
-    destination: 'Route 3',
-    itemCount: 8,
+    originAgency: 'Agence Sousse',
+    destinationAgency: 'Agence Tunis',
+    parcelCount: 410,
     location: 'Dépôt Sahloul',
     scheduledAt: daysAgoAt(2, 10, 0),
   },
 ];
 
-/** Historical parcel this return is tied to — predates the current active runsheet, so it won't resolve via `getJobDetail`, same as a real backend would return for a closed-out past delivery. */
+/** The undelivered remainder of an outbound transfer, travelling back to whoever shipped it. */
 const mockReturns: Return[] = [
   {
     id: 'RET-6601',
     status: 'PENDING_PICKUP',
-    reason: 'REFUSED',
-    relatedJobId: 'TRK-88C1E3AA',
-    customerName: 'Yassine Trabelsi',
-    address: 'Avenue Habib Bourguiba, Tunis',
+    fromAgency: 'Agence Sfax',
+    toAgency: 'Agence Sousse',
+    parcelCount: 50,
+    relatedTransferId: 'TR-9201',
+    location: 'Dépôt Sahloul',
+    scheduledAt: todayAt(16, 0),
   },
   {
     id: 'RET-6598',
     status: 'PROCESSED',
-    reason: 'ADDRESS_ISSUE',
-    relatedJobId: 'TRK-4B7D2E19',
-    customerName: 'Nour Chaabane',
-    address: 'Rue de Marseille, Sfax',
+    fromAgency: 'Agence Sousse',
+    toAgency: 'Agence Tunis',
+    parcelCount: 28,
+    relatedTransferId: 'TR-9198',
+    location: 'Hub Centre Ville Sousse',
+    scheduledAt: daysAgoAt(1, 11, 30),
   },
   {
     id: 'RET-6595',
     status: 'PENDING_PICKUP',
-    reason: 'DAMAGED',
-    relatedJobId: 'TRK-D2F80C56',
-    customerName: 'Wassim Jaziri',
-    address: 'Avenue de la République, Monastir',
+    fromAgency: 'Agence Monastir',
+    toAgency: 'Agence Sfax',
+    parcelCount: 12,
+    relatedTransferId: 'TR-9195',
+    location: 'Hub Monastir',
+    scheduledAt: todayAt(15, 15),
   },
   {
     id: 'RET-6592',
     status: 'PROCESSED',
-    reason: 'REFUSED',
-    relatedJobId: 'TRK-0AE93F71',
-    customerName: 'Salma Kort',
-    address: 'Rue Ibn Khaldoun, Monastir',
+    fromAgency: 'Agence Tunis',
+    toAgency: 'Agence Sousse',
+    parcelCount: 64,
+    location: 'Dépôt Sahloul',
+    scheduledAt: daysAgoAt(2, 9, 0),
   },
   {
     id: 'RET-6588',
     status: 'PENDING_PICKUP',
-    reason: 'ADDRESS_ISSUE',
-    relatedJobId: 'TRK-F13C6A28',
-    customerName: 'Hedi Bouzid',
-    address: 'Zone Industrielle, Sfax',
+    fromAgency: 'Agence Sfax',
+    toAgency: 'Agence Monastir',
+    parcelCount: 7,
+    location: 'Dépôt Sfax',
+    scheduledAt: todayAt(17, 45),
   },
 ];
 
@@ -547,17 +589,25 @@ let mockDriverStats: DriverStats = {
   completionPercent: 70,
   onPaceFinishTime: '5:30 PM',
   lifetimeDeliveries: 1204,
-  onTimeRate: 98.4,
+  deliveryRate: 98.4,
   weeklyCashCollected: 1284,
 };
 
-/** Backing count for `onTimeRate` — not itself exposed, only the derived percentage is. */
-let mockOnTimeCount = Math.round(mockDriverStats.lifetimeDeliveries * (mockDriverStats.onTimeRate / 100));
+/** Backing counts for `deliveryRate` — only the derived percentage is exposed. */
+let mockLifetimeAttempts = Math.round(
+  mockDriverStats.lifetimeDeliveries / (mockDriverStats.deliveryRate / 100)
+);
+
+/** Delivered / attempted, to one decimal — recomputed from the running counts rather than nudged. */
+function recomputeDeliveryRate(lifetimeDeliveries: number): number {
+  if (mockLifetimeAttempts === 0) return 0;
+  return Math.round((lifetimeDeliveries / mockLifetimeAttempts) * 1000) / 10;
+}
 
 /** Rolls a newly confirmed delivery into both today's stats and the lifetime/weekly ones. */
-function recordDeliveryCompletion(cashAmount: number, onTime: boolean) {
+function recordDeliveryCompletion(cashAmount: number) {
   const lifetimeDeliveries = mockDriverStats.lifetimeDeliveries + 1;
-  mockOnTimeCount += onTime ? 1 : 0;
+  mockLifetimeAttempts += 1;
 
   mockDriverStats = {
     ...mockDriverStats,
@@ -566,18 +616,29 @@ function recordDeliveryCompletion(cashAmount: number, onTime: boolean) {
     cashCollectedTotal: mockDriverStats.cashCollectedTotal + cashAmount,
     lifetimeDeliveries,
     weeklyCashCollected: mockDriverStats.weeklyCashCollected + cashAmount,
-    onTimeRate: Math.round((mockOnTimeCount / lifetimeDeliveries) * 1000) / 10,
+    deliveryRate: recomputeDeliveryRate(lifetimeDeliveries),
+  };
+}
+
+/** A failed attempt counts against the delivery rate without adding a delivery. */
+function recordDeliveryFailure() {
+  mockLifetimeAttempts += 1;
+  mockDriverStats = {
+    ...mockDriverStats,
+    failed: mockDriverStats.failed + 1,
+    pending: Math.max(0, mockDriverStats.pending - 1),
+    deliveryRate: recomputeDeliveryRate(mockDriverStats.lifetimeDeliveries),
   };
 }
 
 let mockUser: User = {
   id: 'u1',
-  name: 'Marcus Alden',
-  // Digits only — a real backend normalizes phone input the same way before
-  // comparing, and this keeps the value fully typeable on a phone-pad keyboard.
-  username: '21620456789',
-  email: 'marcus.alden@jibex.com',
-  avatarInitials: 'MA',
+  name: 'Amine Jendli',
+  // Agencies provision accounts with a username (or the driver's work email),
+  // not a phone number — matching is case-insensitive on either value.
+  username: 'amine.jendli',
+  email: 'amine.jendli@jibex.com',
+  avatarInitials: 'AJ',
   driverCode: 'DRV-2841',
 };
 
@@ -635,10 +696,15 @@ export interface ConfirmDeliveryResult {
   error?: string;
 }
 
+/** Accepts either the provisioned username or the driver's work email, case-insensitively — same as the real backend will. */
 export async function login(username: string, password: string): Promise<LoginResult> {
   await delay(undefined);
 
-  if (username !== mockUser.username || password !== mockPassword) {
+  const identifier = username.trim().toLowerCase();
+  const matchesIdentifier =
+    identifier === mockUser.username.toLowerCase() || identifier === mockUser.email.toLowerCase();
+
+  if (!matchesIdentifier || password !== mockPassword) {
     return { success: false, error: 'auth.login.errors.invalidCredentials' };
   }
 
@@ -734,13 +800,132 @@ export async function confirmRunsheetReceipt(id: string): Promise<Runsheet> {
   if (seed.status === 'A_CONFIRMER') {
     seed.status = 'EN_COURS';
   }
+  // Re-confirmation stamps whatever is actually in the van now, so a later
+  // addition by dispatch flips `needsConfirmation` back on by itself.
+  seed.confirmedStopCount = seed.stopIds.length;
   return toRunsheet(seed);
+}
+
+/**
+ * Driver-chosen parcel order. Drivers reorder their sheet by hand on paper
+ * today; this is the same thing, persisted so it survives navigation. Ids
+ * not listed here fall back to dispatch's original order.
+ */
+let mockParcelOrder: string[] = [];
+
+/** Sorts by the driver's saved order, leaving unranked parcels in their original relative order behind the ranked ones. */
+function applyDriverOrder(jobs: Job[]): Job[] {
+  const rank = new Map(mockParcelOrder.map((id, i) => [id, i] as const));
+  return [...jobs].sort((a, b) => {
+    const ra = rank.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const rb = rank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    return ra - rb;
+  });
+}
+
+/**
+ * Every parcel the driver still has to work, flattened across all their
+ * runsheets — the Runsheets tab shows these directly rather than a list of
+ * runsheets to drill into. Delivered and failed parcels drop out entirely
+ * and live in history instead.
+ */
+export async function getActiveParcels(): Promise<Job[]> {
+  await delay(undefined);
+  const ids = new Set(mockRunsheets.flatMap((r) => r.stopIds));
+  const jobs = mockJobs.filter(
+    (j) => ids.has(j.id) && j.status !== 'DELIVERED' && j.status !== 'FAILED'
+  );
+  return applyDriverOrder(jobs).map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+}
+
+/** Everything already resolved — the read-only history list. Most recent runsheets first. */
+export async function getHistoryParcels(): Promise<Job[]> {
+  await delay(undefined);
+  const ids = new Set(mockRunsheets.flatMap((r) => r.stopIds));
+  return mockJobs
+    .filter((j) => ids.has(j.id) && (j.status === 'DELIVERED' || j.status === 'FAILED'))
+    .map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+}
+
+/**
+ * Puts a resolved parcel back into the active list — the driver's escape
+ * hatch for marking the wrong package. Rolls back whatever the original
+ * resolution contributed to the running stats.
+ */
+export async function reopenParcel(id: string): Promise<Job> {
+  await delay(undefined);
+  const job = mockJobs.find((j) => j.id === id);
+  if (!job) {
+    throw new Error(`Job ${id} not found`);
+  }
+
+  if (job.status === 'DELIVERED') {
+    const refunded = job.cashCollected ?? 0;
+    mockLifetimeAttempts = Math.max(0, mockLifetimeAttempts - 1);
+    const lifetimeDeliveries = Math.max(0, mockDriverStats.lifetimeDeliveries - 1);
+    mockDriverStats = {
+      ...mockDriverStats,
+      delivered: Math.max(0, mockDriverStats.delivered - 1),
+      pending: mockDriverStats.pending + 1,
+      cashCollectedTotal: Math.max(0, mockDriverStats.cashCollectedTotal - refunded),
+      weeklyCashCollected: Math.max(0, mockDriverStats.weeklyCashCollected - refunded),
+      lifetimeDeliveries,
+      deliveryRate: recomputeDeliveryRate(lifetimeDeliveries),
+    };
+    job.cashCollected = undefined;
+    job.proofPhotoUri = undefined;
+  } else if (job.status === 'FAILED') {
+    mockLifetimeAttempts = Math.max(0, mockLifetimeAttempts - 1);
+    mockDriverStats = {
+      ...mockDriverStats,
+      failed: Math.max(0, mockDriverStats.failed - 1),
+      pending: mockDriverStats.pending + 1,
+      deliveryRate: recomputeDeliveryRate(mockDriverStats.lifetimeDeliveries),
+    };
+    job.failureReason = undefined;
+    job.failureNote = undefined;
+  }
+
+  job.status = 'PENDING';
+
+  // The runsheet is no longer finished, so it leaves history too.
+  const seed = mockRunsheets.find((r) => r.stopIds.includes(id));
+  if (seed && seed.status === 'VALIDE') {
+    seed.status = 'EN_COURS';
+  }
+
+  return { ...job, packageInfo: { ...job.packageInfo } };
+}
+
+/** Persists the driver's hand-sorted parcel order. */
+export async function setParcelOrder(orderedIds: string[]): Promise<void> {
+  mockParcelOrder = [...orderedIds];
+  await delay(undefined);
+}
+
+/**
+ * Records that the driver pressed Call for this parcel. Delivery is gated
+ * on at least one attempt, and the count/timestamp are what dispatch sees
+ * as proof the customer was contacted — no audio is captured.
+ */
+export async function logCallAttempt(id: string): Promise<Job> {
+  await delay(undefined);
+  const job = mockJobs.find((j) => j.id === id);
+  if (!job) {
+    throw new Error(`Job ${id} not found`);
+  }
+  job.callAttempts += 1;
+  job.lastCallAt = new Date().toISOString();
+  return { ...job, packageInfo: { ...job.packageInfo } };
 }
 
 /** True while `jobId`'s runsheet is still awaiting receipt confirmation — blocks delivery/failure updates. */
 function isJobBlockedByUnconfirmedRunsheet(jobId: string): boolean {
-  const runsheet = mockRunsheets.find((r) => r.stopIds.includes(jobId));
-  return runsheet?.status === 'A_CONFIRMER';
+  const seed = mockRunsheets.find((r) => r.stopIds.includes(jobId));
+  if (!seed) return false;
+  // Both cases block: never confirmed, and confirmed against a count that has
+  // since changed (dispatch added or pulled a parcel mid-day).
+  return seed.status === 'A_CONFIRMER' || seed.confirmedStopCount !== seed.stopIds.length;
 }
 
 /** Once every stop on a runsheet has been attempted (delivered or failed), the runsheet itself is done — flips it to VALIDE so it moves out of "current" into history. */
@@ -757,6 +942,21 @@ function maybeCompleteRunsheet(jobId: string) {
 
 export async function getPickups(): Promise<Pickup[]> {
   return delay(mockPickups.map((p) => ({ ...p })));
+}
+
+/**
+ * Marks every scheduled pickup collected in one go. A merchant hand-off can
+ * run to hundreds of parcels, and scanning each one at the counter isn't
+ * practical — the driver signs for the batch instead.
+ */
+export async function completeAllPickups(): Promise<Pickup[]> {
+  await delay(undefined);
+  mockPickups.forEach((p) => {
+    if (p.status === 'SCHEDULED') {
+      p.status = 'COMPLETED';
+    }
+  });
+  return mockPickups.map((p) => ({ ...p }));
 }
 
 export async function getTransfers(): Promise<Transfer[]> {
@@ -855,6 +1055,9 @@ export async function confirmDeliveryWithOTP(
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
     return { success: false, error: 'runsheetDetail.blockedNotice' };
   }
+  if (job.callAttempts === 0) {
+    return { success: false, error: 'statusUpdate.callRequired' };
+  }
 
   const expectedOtp = otpByJobId[id];
   if (!expectedOtp || otp !== expectedOtp) {
@@ -866,8 +1069,7 @@ export async function confirmDeliveryWithOTP(
   job.cashCollected = cashAmount;
 
   if (!wasAlreadyDelivered) {
-    const onTime = !job.deliverBy || Date.now() <= new Date(job.deliverBy).getTime();
-    recordDeliveryCompletion(cashAmount, onTime);
+    recordDeliveryCompletion(cashAmount);
   }
   maybeCompleteRunsheet(id);
 
@@ -889,6 +1091,9 @@ export async function confirmDeliveryWithPhoto(
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
     return { success: false, error: 'runsheetDetail.blockedNotice' };
   }
+  if (job.callAttempts === 0) {
+    return { success: false, error: 'statusUpdate.callRequired' };
+  }
 
   const wasAlreadyDelivered = job.status === 'DELIVERED';
   job.status = 'DELIVERED';
@@ -896,8 +1101,7 @@ export async function confirmDeliveryWithPhoto(
   job.proofPhotoUri = photoUri;
 
   if (!wasAlreadyDelivered) {
-    const onTime = !job.deliverBy || Date.now() <= new Date(job.deliverBy).getTime();
-    recordDeliveryCompletion(cashAmount, onTime);
+    recordDeliveryCompletion(cashAmount);
   }
   maybeCompleteRunsheet(id);
 
@@ -931,11 +1135,7 @@ export async function markDeliveryFailed(
   job.failureNote = note;
 
   if (!wasAlreadyFailed) {
-    mockDriverStats = {
-      ...mockDriverStats,
-      failed: mockDriverStats.failed + 1,
-      pending: Math.max(0, mockDriverStats.pending - 1),
-    };
+    recordDeliveryFailure();
   }
   maybeCompleteRunsheet(id);
 
@@ -972,17 +1172,18 @@ export async function confirmScan(code: string): Promise<ScanResult> {
     return { success: true, label: job.customerName, kind: 'job', id: job.id };
   }
 
-  // Returns are scanned by the tracking number printed on the parcel
-  // (`relatedJobId`), not the internal `RET-…` id — falls back to the
-  // internal id too, in case it's typed in manually.
-  const returned = mockReturns.find(
-    (r) => r.relatedJobId.toUpperCase() === trimmed || r.id.toUpperCase() === trimmed
-  );
+  // A return batch is scanned by the manifest id printed on its paperwork.
+  const returned = mockReturns.find((r) => r.id.toUpperCase() === trimmed);
   if (returned) {
     if (returned.status === 'PENDING_PICKUP') {
       returned.status = 'PROCESSED';
     }
-    return { success: true, label: returned.customerName, kind: 'return', id: returned.id };
+    return {
+      success: true,
+      label: `${returned.fromAgency} → ${returned.toAgency}`,
+      kind: 'return',
+      id: returned.id,
+    };
   }
 
   if (trimmed.startsWith(TRANSFER_CODE_PREFIX)) {
@@ -997,7 +1198,7 @@ export async function confirmScan(code: string): Promise<ScanResult> {
       }
       return {
         success: true,
-        label: `${transfer.origin} → ${transfer.destination}`,
+        label: `${transfer.originAgency} → ${transfer.destinationAgency}`,
         kind: 'transfer',
         id: transfer.id,
       };

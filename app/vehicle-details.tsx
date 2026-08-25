@@ -1,70 +1,45 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AnimatedPressable } from '../components/AnimatedPressable';
-import { FormField } from '../components/FormField';
 import { GlassIconButton } from '../components/GlassIconButton';
-import { PrimaryButton } from '../components/PrimaryButton';
+import { ReadOnlyField } from '../components/ReadOnlyField';
 import { SkeletonRow } from '../components/Skeleton';
-import { useToast } from '../components/Toast';
-import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
-import { getVehicle, updateVehicle } from '../services/mock-api';
-import type { VehicleType } from '../types';
+import { Fonts, Spacing, Typography, useColors } from '../constants';
+import { getUser, getVehicle } from '../services/mock-api';
+import type { User, Vehicle } from '../types';
 
-const VEHICLE_TYPES: { value: VehicleType; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'motorcycle', icon: 'bicycle-outline' },
-  { value: 'car', icon: 'car-outline' },
-  { value: 'van', icon: 'bus-outline' },
-  { value: 'bicycle', icon: 'bicycle-outline' },
-];
-
+/**
+ * Read-only: vehicle and driver records are maintained by the agency, so
+ * this screen displays them. Changes go through dispatch, not the app.
+ */
 export default function VehicleDetailsScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const { showToast } = useToast();
-  const [loaded, setLoaded] = useState(false);
-  const [type, setType] = useState<VehicleType>('motorcycle');
-  const [plate, setPlate] = useState('');
-  const [model, setModel] = useState('');
-  const [color, setColor] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    getVehicle().then((v) => {
-      setType(v.type);
-      setPlate(v.plate);
-      setModel(v.model);
-      setColor(v.color);
-      setLoaded(true);
-    });
+    getVehicle().then(setVehicle);
+    getUser().then(setUser);
   }, []);
 
-  async function handleSave() {
-    if (saving || !plate.trim()) return;
-    setSaving(true);
-    await updateVehicle({ type, plate: plate.trim(), model: model.trim(), color: color.trim() });
-    setSaving(false);
-    showToast(t('vehicleDetails.savedToast'));
-    router.back();
-  }
-
   return (
-    <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <GlassIconButton onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>{t('vehicleDetails.headerTitle')}</Text>
+        <Text style={[Typography.headline, { color: colors.text }]}>
+          {t('vehicleDetails.headerTitle')}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {!loaded ? (
+      <ScrollView contentContainerStyle={styles.content}>
+        {!vehicle || !user ? (
           <View style={styles.skeletonGroup}>
             <SkeletonRow />
             <SkeletonRow />
@@ -72,70 +47,25 @@ export default function VehicleDetailsScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.typeRow}>
-              {VEHICLE_TYPES.map((option) => {
-                const active = option.value === type;
-                return (
-                  <AnimatedPressable
-                    key={option.value}
-                    scaleTo={0.94}
-                    onPress={() => setType(option.value)}
-                    style={[
-                      styles.typeChip,
-                      {
-                        backgroundColor: active ? colors.accent : colors.bgElevated,
-                        borderColor: active ? colors.accent : colors.separator,
-                      },
-                    ]}>
-                    <Ionicons
-                      name={option.icon}
-                      size={18}
-                      color={active ? '#fff' : colors.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.typeChipText,
-                        { color: active ? '#fff' : colors.textSecondary },
-                      ]}>
-                      {t(`vehicleDetails.types.${option.value}`)}
-                    </Text>
-                  </AnimatedPressable>
-                );
-              })}
+            <View style={[styles.notice, { backgroundColor: colors.bgElevated }]}>
+              <Ionicons name="lock-closed-outline" size={15} color={colors.textSecondary} />
+              <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
+                {t('vehicleDetails.readOnlyNotice')}
+              </Text>
             </View>
-
-            <FormField
-              label={t('vehicleDetails.plateLabel')}
-              value={plate}
-              onChangeText={setPlate}
-              autoCapitalize="characters"
+            <ReadOnlyField label={t('vehicleDetails.driverLabel')} value={user.name} />
+            <ReadOnlyField label={t('vehicleDetails.driverCodeLabel')} value={user.driverCode} />
+            <ReadOnlyField
+              label={t('vehicleDetails.typeLabel')}
+              value={t(`vehicleDetails.types.${vehicle.type}`)}
             />
-            <FormField
-              label={t('vehicleDetails.modelLabel')}
-              value={model}
-              onChangeText={setModel}
-              autoCapitalize="words"
-            />
-            <FormField
-              label={t('vehicleDetails.colorLabel')}
-              value={color}
-              onChangeText={setColor}
-              autoCapitalize="words"
-            />
+            <ReadOnlyField label={t('vehicleDetails.plateLabel')} value={vehicle.plate} />
+            <ReadOnlyField label={t('vehicleDetails.modelLabel')} value={vehicle.model} />
+            <ReadOnlyField label={t('vehicleDetails.colorLabel')} value={vehicle.color} />
           </>
         )}
       </ScrollView>
-
-      <View style={styles.footer}>
-        <PrimaryButton
-          label={t('vehicleDetails.saveChanges')}
-          height={54}
-          loading={saving}
-          disabled={!loaded}
-          onPress={handleSave}
-        />
-      </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -153,33 +83,24 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
+    paddingBottom: 40,
     gap: Spacing.md,
   },
   skeletonGroup: {
     gap: Spacing.md,
   },
-  typeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  typeChip: {
+  notice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    borderRadius: Radii.full,
-    borderWidth: 1.5,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+    borderRadius: 14,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xs,
   },
-  typeChipText: {
-    fontFamily: Fonts.archivoBold,
+  noticeText: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
     fontSize: 13,
-  },
-  footer: {
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: 30,
-    paddingTop: Spacing.md,
   },
 });

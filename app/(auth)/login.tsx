@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { AmbientGlow } from '../../components/AmbientGlow';
 import { AnimatedPressable } from '../../components/AnimatedPressable';
 import { FormField } from '../../components/FormField';
+import { LanguageToggle } from '../../components/LanguageToggle';
 import { PackageCube } from '../../components/PackageCube';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { TickerMarquee } from '../../components/TickerMarquee';
@@ -20,9 +21,9 @@ import { login } from '../../services/mock-api';
 export default function LoginScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const [phone, setPhone] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [pinVisible, setPinVisible] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +32,7 @@ export default function LoginScreen() {
 
     setError(null);
     setLoading(true);
-    const result = await login(phone.trim(), password);
+    const result = await login(username.trim(), password);
     setLoading(false);
 
     if (!result.success || !result.token) {
@@ -69,26 +70,30 @@ export default function LoginScreen() {
             </Text>
           </View>
 
+          <LanguageToggle style={styles.languageToggle} />
+
           <View style={styles.form}>
             <FormField
-              label={t('auth.login.phoneLabel')}
-              placeholder={t('auth.login.phonePlaceholder')}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              textContentType="telephoneNumber"
+              label={t('auth.login.usernameLabel')}
+              placeholder={t('auth.login.usernamePlaceholder')}
+              value={username}
+              onChangeText={setUsername}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="username"
             />
             <FormField
-              label={t('auth.login.pinLabel')}
+              label={t('auth.login.passwordLabel')}
               value={password}
               onChangeText={setPassword}
-              secureTextEntry={!pinVisible}
+              secureTextEntry={!passwordVisible}
               textContentType="password"
               labelRight={
                 <Text
-                  onPress={() => setPinVisible((v) => !v)}
+                  onPress={() => setPasswordVisible((v) => !v)}
                   style={[monoLabelStyle(11, 0.08), { color: colors.accent }]}>
-                  {pinVisible ? t('auth.login.hide') : t('auth.login.reveal')}
+                  {passwordVisible ? t('auth.login.hide') : t('auth.login.reveal')}
                 </Text>
               }
             />
@@ -105,7 +110,7 @@ export default function LoginScreen() {
             ) : null}
 
             <PrimaryButton
-              label={t('auth.login.startRoute')}
+              label={t('auth.login.logIn')}
               onPress={handleLogin}
               loading={loading}
               style={styles.loginButton}
@@ -117,24 +122,17 @@ export default function LoginScreen() {
               onPress={() => Linking.openURL(telUrl(DISPATCH_PHONE))}>
               <Ionicons name="call-outline" size={14} color={colors.textSecondary} />
               <Text style={[styles.forgotPin, { color: colors.textSecondary }]}>
-                {t('auth.login.forgotPin')}
+                {t('auth.login.forgotPassword')}
               </Text>
             </AnimatedPressable>
           </View>
 
+          {/* No self-signup: agencies provision driver accounts, so there's
+              deliberately no route from here to the register screen. */}
           <TickerMarquee
             items={t('auth.login.ticker', { returnObjects: true, phone: DISPATCH_PHONE }) as string[]}
             style={styles.ticker}
           />
-
-          <Link href="/(auth)/register" style={styles.footer}>
-            <Text style={[Typography.callout, { color: colors.textSecondary }]}>
-              {t('auth.login.newDriver')}
-              <Text style={[Typography.headline, { color: colors.accent }]}>
-                {t('auth.login.createAccount')}
-              </Text>
-            </Text>
-          </Link>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -197,9 +195,8 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: -2,
   },
-  footer: {
-    alignItems: 'center',
-    paddingTop: Spacing.lg,
+  languageToggle: {
+    marginBottom: Spacing.xl,
   },
   ticker: {
     marginTop: Spacing.xxl,
