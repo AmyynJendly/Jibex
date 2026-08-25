@@ -9,7 +9,12 @@ export type RunsheetStatus = 'EN_COURS' | 'VALIDE' | 'A_CONFIRMER';
 
 export interface Runsheet {
   id: string;
-  routeLabel: string;
+  /**
+   * Delivery area the parcels fall in. There is deliberately no "route"
+   * label: the driver works one flat list of packages and orders it
+   * themselves, so grouping them into named routes only added a layer with
+   * nothing behind it.
+   */
   zone: string;
   /** Depot/branch this runsheet is dispatched from. Single-agency for now — no filtering/grouping by it yet. */
   agency: string;

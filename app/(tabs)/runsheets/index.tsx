@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
-import { DraggableList } from '../../../components/DraggableList';
+import { DragHandle, DraggableList, type DragBinding } from '../../../components/DraggableList';
 import { EmptyState } from '../../../components/EmptyState';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SegmentedControl } from '../../../components/SegmentedControl';
@@ -70,11 +70,15 @@ interface ParcelCardProps {
   stopNumber?: number;
   /** History cards drop the phone number, the call button and the drill-down. */
   readOnly?: boolean;
+  /** Parcels on a run the driver hasn't signed for yet: visible, but inert. */
+  locked?: boolean;
+  drag?: DragBinding;
   onOpen?: () => void;
   onCall?: () => void;
   onUpdate?: () => void;
   updateLabel: string;
   callLabel: string;
+  lockedLabel: string;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }
 
@@ -84,31 +88,41 @@ function ParcelCard({
   scheme,
   stopNumber,
   readOnly = false,
+  locked = false,
+  drag,
   onOpen,
   onCall,
   onUpdate,
   updateLabel,
   callLabel,
+  lockedLabel,
   t,
 }: ParcelCardProps) {
   const hasCod = job.cashToCollect > 0;
   const accent = stateColor(job.status, colors);
+  const inert = locked || readOnly;
 
   const body = (
     <>
       <CornerRibbon
         label={
           job.status === 'IN_TRANSIT'
-            ? t('runsheets.onRoute')
+            ? t('runsheets.inTransit')
             : enumLabel(t as never, 'jobStatus', job.status)
         }
         color={accent}
       />
-      {/* Colour repeated down the leading edge: the ribbon is clipped by the
-          grip when the row is mid-drag, this never is. */}
+      {/* Colour repeated down the leading edge: the ribbon is easy to miss
+          when the card is mid-drag, this never is. */}
       <View style={[styles.cardEdge, { backgroundColor: accent }]} />
 
       <View style={styles.cardHead}>
+        {drag && !locked && <DragHandle drag={drag} />}
+        {locked && (
+          <View style={styles.lockSlot}>
+            <Ionicons name="lock-closed" size={15} color={colors.textTertiary} />
+          </View>
+        )}
         {stopNumber !== undefined && (
           <View style={[styles.stopBadge, { backgroundColor: colors.bg }]}>
             <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]}>
@@ -133,7 +147,7 @@ function ParcelCard({
           numberOfLines={1}>
           {job.address}
         </Text>
-        {!readOnly && <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />}
+        {!inert && <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />}
       </View>
 
       {job.status === 'FAILED' && job.failureReason && (
@@ -154,41 +168,53 @@ function ParcelCard({
           {hasCod ? formatCurrency(job.cashToCollect) : t('runsheets.paidTag')}
         </Text>
 
-        <View style={styles.cardActions}>
-          {!readOnly && onCall && (
-            <AnimatedPressable
-              scaleTo={0.9}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel={callLabel}
-              style={[styles.callButton, { backgroundColor: colors.accentSoft }]}
-              onPress={onCall}>
-              <Ionicons name="call-outline" size={17} color={colors.accent} />
-              {job.callAttempts > 0 && (
-                <View style={[styles.callBadge, { backgroundColor: colors.accent }]}>
-                  <Text style={styles.callBadgeText}>{job.callAttempts}</Text>
-                </View>
-              )}
-            </AnimatedPressable>
-          )}
-          {onUpdate && (
-            <AnimatedPressable
-              scaleTo={0.95}
-              style={[styles.updateButton, { backgroundColor: colors.accent }]}
-              onPress={onUpdate}>
-              <Ionicons name="sync-outline" size={14} color="#fff" />
-              <Text style={styles.updateButtonText}>{updateLabel}</Text>
-            </AnimatedPressable>
-          )}
-        </View>
+        {locked ? (
+          <View style={styles.lockedRow}>
+            <Ionicons name="lock-closed-outline" size={13} color={colors.textTertiary} />
+            <Text style={[styles.lockedText, { color: colors.textTertiary }]}>{lockedLabel}</Text>
+          </View>
+        ) : (
+          <View style={styles.cardActions}>
+            {!readOnly && onCall && (
+              <AnimatedPressable
+                scaleTo={0.9}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={callLabel}
+                style={[styles.callButton, { backgroundColor: colors.accentSoft }]}
+                onPress={onCall}>
+                <Ionicons name="call-outline" size={17} color={colors.accent} />
+                {job.callAttempts > 0 && (
+                  <View style={[styles.callBadge, { backgroundColor: colors.accent }]}>
+                    <Text style={styles.callBadgeText}>{job.callAttempts}</Text>
+                  </View>
+                )}
+              </AnimatedPressable>
+            )}
+            {onUpdate && (
+              <AnimatedPressable
+                scaleTo={0.95}
+                style={[styles.updateButton, { backgroundColor: colors.accent }]}
+                onPress={onUpdate}>
+                <Ionicons name="sync-outline" size={14} color="#fff" />
+                <Text style={styles.updateButtonText}>{updateLabel}</Text>
+              </AnimatedPressable>
+            )}
+          </View>
+        )}
       </View>
     </>
   );
 
-  const cardStyle = [styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)];
+  const cardStyle = [
+    styles.card,
+    { backgroundColor: colors.bgElevated },
+    locked && styles.cardLocked,
+    getCardShadow(scheme),
+  ];
 
-  // History is read-only — the card is a display surface, not a control.
-  if (readOnly || !onOpen) {
+  // Locked and history cards are display surfaces, not controls.
+  if (inert || !onOpen) {
     return <View style={cardStyle}>{body}</View>;
   }
 
@@ -212,6 +238,8 @@ export default function RunsheetsScreen() {
   const [toggle, setToggle] = useState<Toggle>('current');
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sheetJob, setSheetJob] = useState<Job | null>(null);
+  // A drag and a scroll both follow the finger; only one of them may.
+  const [dragging, setDragging] = useState(false);
 
   const load = useCallback(async () => {
     const [a, h, r] = await Promise.all([getActiveParcels(), getHistoryParcels(), getRunsheets()]);
@@ -227,24 +255,26 @@ export default function RunsheetsScreen() {
   );
 
   const unconfirmed = runsheets.filter((r) => r.needsConfirmation && r.status !== 'VALIDE');
+  /** Parcels the driver hasn't signed for yet — inert until they do. */
+  const lockedIds = new Set(unconfirmed.flatMap((r) => r.stopIds));
 
   async function handleConfirmReceipt(runsheet: Runsheet) {
     const isRecount = runsheet.status !== 'A_CONFIRMER';
     const confirmed = await confirm({
-      title: isRecount ? t('runsheetDetail.recountTitle') : t('runsheetDetail.confirmModalTitle'),
-      message: isRecount
-        ? t('runsheetDetail.recountMessage', { count: runsheet.stopCount })
-        : t('runsheetDetail.confirmModalMessage', { count: runsheet.stopCount }),
+      title: isRecount
+        ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
+        : t('runsheets.confirm.title', { count: runsheet.stopCount }),
+      message: t('runsheets.confirm.dialogMessage', { count: runsheet.stopCount }),
       confirmLabel: isRecount
-        ? t('runsheetDetail.reconfirmReceipt')
-        : t('runsheetDetail.confirmReceipt'),
+        ? t('runsheets.confirm.recountAction')
+        : t('runsheets.confirm.action'),
       cancelLabel: t('common.cancel'),
     });
     if (!confirmed) return;
 
     await confirmRunsheetReceipt(runsheet.id);
     await load();
-    showToast(t('runsheetDetail.confirmedToast'));
+    showToast(t('runsheets.confirm.toast'));
   }
 
   async function handleCall(job: Job) {
@@ -275,6 +305,7 @@ export default function RunsheetsScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        scrollEnabled={!dragging}
         contentContainerStyle={styles.content}>
         <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
           {t('runsheets.headerTitle')}
@@ -301,45 +332,31 @@ export default function RunsheetsScreen() {
                     { backgroundColor: colors.bgElevated, borderColor: colors.warning },
                     getCardShadow(scheme),
                   ]}>
-                  <View style={[styles.confirmEdge, { backgroundColor: colors.warning }]} />
-
                   <View style={styles.confirmHead}>
                     <View style={[styles.confirmIcon, { backgroundColor: colors.warningSoft }]}>
                       <Ionicons name="lock-closed" size={16} color={colors.warning} />
                     </View>
                     <View style={styles.confirmHeadText}>
-                      <Text style={[monoLabelStyle(10, 0.1), { color: colors.warning }]}>
-                        {t('runsheets.lockedEyebrow')}
-                      </Text>
                       <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
                         {isRecount
-                          ? t('runsheetDetail.recountTitle')
-                          : t('runsheetDetail.confirmModalTitle')}
+                          ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
+                          : t('runsheets.confirm.title', { count: runsheet.stopCount })}
                       </Text>
-                    </View>
-                    <View style={[styles.confirmCount, { backgroundColor: colors.bg }]}>
-                      <Text style={[monoStyle(17, 'medium'), { color: colors.text }]}>
-                        {runsheet.stopCount}
+                      <Text
+                        style={[Typography.caption2, { color: colors.textSecondary }]}
+                        numberOfLines={1}>
+                        {runsheet.zone}
                       </Text>
                     </View>
                   </View>
 
-                  <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
-                    {runsheet.routeLabel} · {runsheet.agency}
-                  </Text>
-                  <Text style={[Typography.footnote, styles.confirmBody, { color: colors.text }]}>
-                    {isRecount
-                      ? t('runsheetDetail.recountMessage', { count: runsheet.stopCount })
-                      : t('runsheetDetail.blockedNotice')}
-                  </Text>
-
                   <PrimaryButton
                     label={
                       isRecount
-                        ? t('runsheetDetail.reconfirmReceipt')
-                        : t('runsheetDetail.confirmReceipt')
+                        ? t('runsheets.confirm.recountAction')
+                        : t('runsheets.confirm.action')
                     }
-                    height={48}
+                    height={46}
                     onPress={() => handleConfirmReceipt(runsheet)}
                   />
                 </View>
@@ -361,31 +378,29 @@ export default function RunsheetsScreen() {
                     {t('runsheets.parcelsTitle', { count: active.length })}
                   </Text>
                 </View>
-                <View style={styles.reorderHintRow}>
-                  <Ionicons name="reorder-two" size={16} color={colors.textTertiary} />
-                  <Text style={[Typography.caption2, { color: colors.textTertiary }]}>
-                    {t('runsheets.reorderHint')}
-                  </Text>
-                </View>
 
                 <DraggableList
                   data={active}
                   idOf={jobId}
                   itemHeight={ROW_HEIGHT}
                   onReorder={handleReorder}
-                  renderItem={(job, index) => (
+                  onDragStateChange={setDragging}
+                  renderItem={(job, index, drag) => (
                     <ParcelCard
                       job={job}
                       colors={colors}
                       scheme={scheme}
                       stopNumber={index + 1}
+                      locked={lockedIds.has(job.id)}
+                      drag={drag}
                       onOpen={() =>
                         router.push({ pathname: '/job/[id]', params: { id: job.id } })
                       }
                       onCall={() => handleCall(job)}
                       onUpdate={() => setSheetJob(job)}
-                      updateLabel={t('runsheetDetail.update')}
+                      updateLabel={t('runsheets.update')}
                       callLabel={t('runsheets.call')}
+                      lockedLabel={t('runsheets.confirm.lockedTag')}
                       t={t as never}
                     />
                   )}
@@ -442,8 +457,9 @@ export default function RunsheetsScreen() {
                     scheme={scheme}
                     readOnly
                     onUpdate={() => setSheetJob(job)}
-                    updateLabel={t('runsheetDetail.update')}
+                    updateLabel={t('runsheets.update')}
                     callLabel={t('runsheets.call')}
+                    lockedLabel={t('runsheets.confirm.lockedTag')}
                     t={t as never}
                   />
                 ))}
@@ -472,22 +488,12 @@ const styles = StyleSheet.create({
     borderRadius: Radii.card,
     borderWidth: 1.5,
     padding: Spacing.lg,
-    paddingLeft: Spacing.lg + 4,
-    gap: Spacing.xs,
-    overflow: 'hidden',
-  },
-  confirmEdge: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
+    gap: Spacing.md,
   },
   confirmHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    marginBottom: Spacing.xxs,
   },
   confirmIcon: {
     width: 34,
@@ -500,27 +506,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 1,
   },
-  confirmCount: {
-    minWidth: 40,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.sm,
-    alignItems: 'center',
-  },
-  confirmBody: {
-    marginBottom: Spacing.smd,
-  },
   listHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: -Spacing.sm,
-  },
-  reorderHintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: -Spacing.xs,
   },
   historyList: { gap: Spacing.md },
   card: {
@@ -530,6 +520,9 @@ const styles = StyleSheet.create({
     paddingLeft: Spacing.lg + 4,
     gap: Spacing.xs,
     overflow: 'hidden',
+  },
+  cardLocked: {
+    opacity: 0.55,
   },
   cardEdge: {
     position: 'absolute',
@@ -541,8 +534,14 @@ const styles = StyleSheet.create({
   cardHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.smd,
+    gap: Spacing.sm,
     paddingRight: 72,
+  },
+  lockSlot: {
+    width: 26,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stopBadge: {
     minWidth: 26,
@@ -588,6 +587,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Radii.xs,
     overflow: 'hidden',
+  },
+  lockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingRight: Spacing.xs,
+  },
+  lockedText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 12,
   },
   cardActions: {
     flexDirection: 'row',

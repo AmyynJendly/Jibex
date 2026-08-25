@@ -74,7 +74,7 @@ const fr: TranslationResource = {
       step2: {
         stepLabel: 'Étape 2 sur 3',
         title: 'Votre véhicule',
-        subtitle: 'Le dispatch dimensionne votre tournée avec cette info. Modifiable plus tard.',
+        subtitle: 'Le dispatch dimensionne votre charge avec cette info. Modifiable plus tard.',
         vehicleTypeLabel: 'Type de véhicule',
         vehicleTypes: { scooter: 'Scooter', car: 'Voiture', van: 'Camionnette' },
         plateLabel: 'Matricule',
@@ -90,7 +90,7 @@ const fr: TranslationResource = {
       step3: {
         stepLabel: 'Étape 3 sur 3',
         title: 'Vérification',
-        subtitle: 'Vérifiez vos informations avant de prendre la route.',
+        subtitle: 'Vérifiez vos informations avant de commencer.',
         sectionAccount: 'Compte',
         sectionVehicle: 'Véhicule',
         submit: 'Créer mon compte',
@@ -130,18 +130,27 @@ const fr: TranslationResource = {
 
   runsheets: {
     headerTitle: 'Tournées',
-    toggleCurrent: 'Tournée en cours',
+    toggleCurrent: 'En cours',
     toggleHistory: 'Historique',
     parcelsTitle: 'Colis ({{count}})',
-    reorderHint: 'Glissez la poignée à gauche pour réordonner vos arrêts',
     reorderedToast: 'Ordre enregistré',
-    lockedEyebrow: 'Colis verrouillés',
-    onRoute: 'En route',
-    codTag: 'COD',
+    inTransit: 'En transit',
     paidTag: 'Payé',
     call: 'Appeler',
-    callLogged_one: '{{count}} appel enregistré',
-    callLogged_other: '{{count}} appels enregistrés',
+    update: 'Maj',
+    confirm: {
+      title_one: '{{count}} colis à confirmer',
+      title_other: '{{count}} colis à confirmer',
+      recountTitle_one: 'Nombre modifié · {{count}} colis',
+      recountTitle_other: 'Nombre modifié · {{count}} colis',
+      dialogMessage_one: 'Vous avez bien ce colis en main ?',
+      dialogMessage_other: 'Vous avez bien les {{count}} colis en main ?',
+      action: 'Confirmer',
+      recountAction: 'Reconfirmer',
+      lockedTag: 'Verrouillé',
+      blockedError: "Confirmez d'abord vos colis.",
+      toast: 'Colis confirmés',
+    },
     empty: {
       current: 'Tous les colis sont traités',
       history: 'Aucun historique',
@@ -157,31 +166,12 @@ const fr: TranslationResource = {
   runsheetSchedule: {
     headerTitle: 'Calendrier',
     today: "Aujourd'hui",
-    viewingToday: "Affichage de la tournée d'aujourd'hui",
-    viewingTodayBody:
-      "Retournez pour voir les arrêts d'aujourd'hui, dans l'ordre d'itinéraire optimisé.",
-    backToRunsheet: 'Retour à la tournée',
-    emptyTitle: 'Aucune tournée chargée pour le {{date}}',
+    viewingToday: "Affichage des colis d'aujourd'hui",
+    viewingTodayBody: "Retournez pour voir les colis que vous avez aujourd'hui.",
+    backToRunsheet: 'Retour aux colis',
+    emptyTitle: 'Rien de chargé pour le {{date}}',
     emptyBody:
       'Les autres jours apparaîtront ici une fois Jibex connecté à votre système de répartition.',
-  },
-
-  runsheetDetail: {
-    stats: { delivered: 'Livrés', failed: 'Échoués', remaining: 'Restants' },
-    parcelsTitle: 'Colis à livrer ({{count}})',
-    confirmReceipt: 'Confirmer la réception',
-    confirmModalTitle: 'Confirmer la réception',
-    confirmModalMessage_one:
-      'Je confirme avoir reçu physiquement tous les colis de cette tournée ({{count}} colis)',
-    confirmModalMessage_other:
-      'Je confirme avoir reçu physiquement tous les colis de cette tournée ({{count}} colis)',
-    confirmedToast: 'Réception confirmée',
-    blockedNotice: 'Cette tournée doit être confirmée avant de pouvoir mettre à jour ses colis.',
-    recountTitle: 'Nombre de colis modifié',
-    recountMessage: 'Votre tournée contient maintenant {{count}} colis - confirmez le nouveau nombre pour continuer.',
-    reconfirmReceipt: 'Reconfirmer',
-    update: 'Maj',
-    empty: 'Aucun colis dans cette tournée',
   },
 
   statusUpdate: {
@@ -246,7 +236,7 @@ const fr: TranslationResource = {
     todaysTotal: 'Total sacoche',
     nextStopWithName: 'Arrêt suivant · {{name}}',
     nextStop: 'Prochain arrêt',
-    backToRunsheet: 'Retour à la feuille de route',
+    backToRunsheet: 'Retour aux colis',
   },
 
   photoProof: {
@@ -313,7 +303,6 @@ const fr: TranslationResource = {
     navigate: 'Naviguer',
     parcelsTitle: 'Colis',
     collected: 'Collecté',
-    reorderHint: "Glissez la poignée à gauche pour définir votre ordre de collecte",
     reorderedToast: 'Ordre enregistré',
     done: 'Terminer',
     doneWithCount: 'Terminer ({{count}})',
@@ -364,7 +353,7 @@ const fr: TranslationResource = {
       "Les retours sont l'inverse des transferts : ce que l'agence destinataire n'a pas pu livrer repart vers l'agence expéditrice.",
     scan: 'Scanner le lot',
     scanAllWithCount: 'Tout scanner ({{count}})',
-    scanNote: 'Les lots de retour doivent être scannés au dépôt avant la clôture de la tournée.',
+    scanNote: 'Les lots de retour doivent être scannés au dépôt avant la clôture de la journée.',
     empty: 'Aucun retour en attente',
     toggleCurrent: 'En cours',
     toggleHistory: 'Historique',
@@ -403,15 +392,15 @@ const fr: TranslationResource = {
   availability: {
     headerTitle: 'Disponibilité',
     intro:
-      'Sélectionnez une date pour marquer les créneaux où vous êtes disponible. La répartition utilise ceci pour planifier les prochaines tournées.',
+      'Sélectionnez une date pour marquer les créneaux où vous êtes disponible. La répartition utilise ceci pour planifier vos prochaines journées.',
     pastNote: 'Impossible de définir une disponibilité pour une date passée.',
     summary_one: '{{count}} jour marqué disponible ce mois-ci',
     summary_other: '{{count}} jours marqués disponibles ce mois-ci',
   },
 
   shiftSummary: {
-    wrappingUp: 'Clôture de votre tournée…',
-    title: 'Tournée terminée',
+    wrappingUp: 'Clôture de votre journée…',
+    title: 'Journée terminée',
     timeRange: '{{start}} – {{end}} · {{duration}}',
     stats: { delivered: 'Livrés', failed: 'Échoués', miles: 'Miles' },
     cashToHandOff: 'Espèces à remettre',
@@ -459,7 +448,7 @@ const fr: TranslationResource = {
       {
         question: 'Quand suis-je payé ?',
         answer:
-          "Les espèces collectées à la livraison sont à remettre en fin de tournée — voir Résumé de tournée. Votre salaire de base hebdomadaire et vos primes sont déposés sur le compte bancaire enregistré chaque vendredi.",
+          "Les espèces collectées à la livraison sont à remettre en fin de journée — voir Résumé de journée. Votre salaire de base hebdomadaire et vos primes sont déposés sur le compte bancaire enregistré chaque vendredi.",
       },
       {
         question: 'Que faire si un client refuse un colis ?',
@@ -467,9 +456,9 @@ const fr: TranslationResource = {
           'Ouvrez l\'arrêt, appuyez sur "Impossible de livrer", puis choisissez "Colis refusé". La répartition est notifiée automatiquement et l\'article est marqué pour retour.',
       },
       {
-        question: "Comment fonctionne l'ordre des tournées ?",
+        question: "Comment changer l'ordre de mes colis ?",
         answer:
-          "Les tournées sont automatiquement ordonnées par distance de conduite totale la plus courte depuis votre dépôt, recalculées à chaque arrêt complété ou échoué — vous n'avez pas besoin de planifier l'ordre vous-même.",
+          "Dans Tournées, faites glisser un colis par la poignée sur sa carte pour le monter ou le descendre. Votre ordre est enregistré et ne bouge plus jusqu'à ce que vous le changiez.",
       },
       {
         question: 'Mon scanner ne lit pas un code-barres',

@@ -1,7 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Platform, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  PanResponder,
+  Platform,
+  StyleSheet,
+  View,
+  type GestureResponderHandlers,
+} from 'react-native';
 
 import { Radii, Spacing, useColors } from '../constants';
 
@@ -12,7 +18,61 @@ function buzz() {
 }
 
 /** Browsers hand vertical drags to the scroller unless the target opts out. */
-const gripWebStyle = Platform.OS === 'web' ? ({ touchAction: 'none' } as object) : null;
+const handleWebStyle = Platform.OS === 'web' ? ({ touchAction: 'none' } as object) : null;
+
+/** What a row needs to become draggable, handed to `renderItem`. */
+export interface DragBinding {
+  handlers: GestureResponderHandlers;
+  isActive: boolean;
+}
+
+/**
+ * The grab affordance: six dots, the shape every list-reordering UI uses.
+ * Small on purpose — it lives inside the card rather than stealing a column
+ * beside it — with a touch target padded out well past its ink.
+ */
+export function DragHandle({ drag }: { drag: DragBinding }) {
+  const colors = useColors();
+  const color = drag.isActive ? colors.accent : colors.textTertiary;
+
+  return (
+    <View
+      accessibilityRole="adjustable"
+      style={[
+        handleStyles.target,
+        handleWebStyle,
+        drag.isActive && { backgroundColor: colors.accentSoft },
+      ]}
+      {...drag.handlers}>
+      <View style={handleStyles.dots}>
+        {Array.from({ length: 6 }, (_, i) => (
+          <View key={i} style={[handleStyles.dot, { backgroundColor: color }]} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const handleStyles = StyleSheet.create({
+  target: {
+    width: 26,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radii.xs,
+  },
+  dots: {
+    width: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+  },
+  dot: {
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 2,
+  },
+});
 
 interface DraggableListProps<T> {
   data: T[];
@@ -23,20 +83,29 @@ interface DraggableListProps<T> {
    * offsets instead of a single stride.
    */
   itemHeight: number | ((item: T) => number);
-  /** `index` is the row's live position in the driver's order, not in `data`. */
-  renderItem: (item: T, index: number) => React.ReactNode;
+  /**
+   * `index` is the row's live position in the driver's order, not in `data`.
+   * Spread `drag` onto a handle (usually via `DragHandle`) to make the row
+   * draggable; omit it and the row stays put.
+   */
+  renderItem: (item: T, index: number, drag: DragBinding) => React.ReactNode;
   /** Fires with the new id order once a drag settles. */
   onReorder: (orderedIds: string[]) => void;
+  /**
+   * Fires when a drag starts and ends. Parents must use it to switch off
+   * their ScrollView — otherwise the scroller and the drag both follow the
+   * finger and the row slides away under it.
+   */
+  onDragStateChange?: (dragging: boolean) => void;
 }
 
 /**
  * Hold-and-drag reorder list. Drivers sort their sheet by hand on paper, so
- * this mirrors that: grab the grip on the left of a card, drag up or down,
- * and the new order sticks.
+ * this mirrors that: grab the handle on a card, drag up or down, and the new
+ * order sticks.
  *
  * Built on core `PanResponder` rather than react-native-gesture-handler: the
- * gesture lives only on the narrow grip, so there's nothing to arbitrate
- * against the surrounding scroll view, and PanResponder behaves identically
+ * gesture lives only on the small handle, and PanResponder behaves identically
  * on device and in the browser (RNGH's web layer does not).
  *
  * Three details keep the motion honest. Responders are built once per row id
@@ -53,8 +122,8 @@ export function DraggableList<T>({
   itemHeight,
   renderItem,
   onReorder,
+  onDragStateChange,
 }: DraggableListProps<T>) {
-  const colors = useColors();
   const ids = useMemo(() => data.map(idOf), [data, idOf]);
   // Identity of the incoming set, so re-seeding keys off what actually
   // changed rather than off a fresh array reference every render.
@@ -66,6 +135,8 @@ export function DraggableList<T>({
   // Live mirrors for the PanResponder closures, which outlive any single render.
   const orderRef = useRef(order);
   const activeIdRef = useRef<string | null>(null);
+  const dragStateRef = useRef(onDragStateChange);
+  dragStateRef.current = onDragStateChange;
 
   const dragY = useRef(new Animated.Value(0)).current;
   /** Where the dragged row's top sat when the finger went down. */
@@ -154,9 +225,10 @@ export function DraggableList<T>({
     if (existing) return existing;
 
     const created = PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      // Once the grip has the gesture, the scroll view doesn't get to steal it.
+      // Capture variants: claim the touch before the surrounding scroll view
+      // can, rather than racing it for the same finger.
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
         grantTop.current = layoutRef.current.tops.get(id) ?? 0;
@@ -165,6 +237,7 @@ export function DraggableList<T>({
         offsetFor(id).setValue(0);
         activeIdRef.current = id;
         setActiveId(id);
+        dragStateRef.current?.(true);
         buzz();
       },
       onPanResponderMove: (_event, gesture) => {
@@ -213,12 +286,14 @@ export function DraggableList<T>({
         }).start();
         activeIdRef.current = null;
         setActiveId(null);
+        dragStateRef.current?.(false);
         if (didMove.current) onReorder(orderRef.current);
       },
       onPanResponderTerminate: () => {
         dragY.setValue(0);
         activeIdRef.current = null;
         setActiveId(null);
+        dragStateRef.current?.(false);
       },
     });
 
@@ -232,6 +307,7 @@ export function DraggableList<T>({
         const item = byId.get(id);
         if (!item) return null;
         const isActive = activeId === id;
+        const binding: DragBinding = { handlers: responderFor(id).panHandlers, isActive };
         return (
           <Animated.View
             key={id}
@@ -245,24 +321,7 @@ export function DraggableList<T>({
                 shadowOpacity: isActive ? 0.22 : 0,
               },
             ]}>
-            <View style={styles.rowInner}>
-              {/* The grip is the only drag target — the card body stays
-                  tappable and the list keeps scrolling normally. */}
-              <View
-                style={[
-                  styles.handle,
-                  gripWebStyle,
-                  isActive && { backgroundColor: colors.accentSoft },
-                ]}
-                {...responderFor(id).panHandlers}>
-                <Ionicons
-                  name="reorder-two"
-                  size={24}
-                  color={isActive ? colors.accent : colors.textTertiary}
-                />
-              </View>
-              <View style={styles.content}>{renderItem(item, slot)}</View>
-            </View>
+            <View style={styles.rowInner}>{renderItem(item, slot, binding)}</View>
           </Animated.View>
         );
       })}
@@ -281,19 +340,6 @@ const styles = StyleSheet.create({
   },
   rowInner: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: Spacing.xs,
     paddingBottom: Spacing.md,
-  },
-  content: {
-    flex: 1,
-  },
-  handle: {
-    width: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radii.sm,
-    marginBottom: Spacing.md,
   },
 });

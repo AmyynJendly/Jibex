@@ -87,11 +87,16 @@ export default function HomeScreen() {
       getNotifications(),
     ]);
 
-    const unconfirmedRunsheets = runsheets.filter((r) => r.status === 'A_CONFIRMER');
-    // A runsheet still awaiting receipt confirmation isn't deliverable yet —
-    // its stops can't be routed to or worked, so they're left out of the
-    // "what's next today" ordering entirely (see runsheetDetail's blocked flow).
-    const workableRunsheets = runsheets.filter((r) => r.status !== 'A_CONFIRMER');
+    // Awaiting a first signature, or holding a count the driver hasn't
+    // re-attested to since dispatch changed it — same standing either way.
+    const unconfirmedRunsheets = runsheets.filter(
+      (r) => r.needsConfirmation && r.status !== 'VALIDE'
+    );
+    // Parcels the driver hasn't signed for aren't deliverable yet, so they're
+    // left out of the "what's next today" ordering entirely — matching the
+    // locked cards in Runsheets.
+    const blocked = new Set(unconfirmedRunsheets.map((r) => r.id));
+    const workableRunsheets = runsheets.filter((r) => !blocked.has(r.id));
     const workableStopIds = workableRunsheets.flatMap((r) => r.stopIds);
     const orderedIds = await optimizeRouteOrder(workableStopIds);
 
@@ -161,17 +166,22 @@ export default function HomeScreen() {
   }, [load]);
 
   async function handleConfirmReceipt(runsheet: Runsheet) {
+    const isRecount = runsheet.status !== 'A_CONFIRMER';
     const confirmed = await confirm({
-      title: t('runsheetDetail.confirmModalTitle'),
-      message: t('runsheetDetail.confirmModalMessage', { count: runsheet.stopCount }),
-      confirmLabel: t('runsheetDetail.confirmReceipt'),
+      title: isRecount
+        ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
+        : t('runsheets.confirm.title', { count: runsheet.stopCount }),
+      message: t('runsheets.confirm.dialogMessage', { count: runsheet.stopCount }),
+      confirmLabel: isRecount
+        ? t('runsheets.confirm.recountAction')
+        : t('runsheets.confirm.action'),
       cancelLabel: t('common.cancel'),
     });
     if (!confirmed) return;
 
     await confirmRunsheetReceipt(runsheet.id);
     await load();
-    showToast(t('runsheetDetail.confirmedToast'));
+    showToast(t('runsheets.confirm.toast'));
   }
 
   if (!data) {
@@ -320,19 +330,26 @@ export default function HomeScreen() {
                 { backgroundColor: colors.bgElevated, borderColor: colors.warning },
                 getCardShadow(scheme),
               ]}>
+              <View style={[styles.toConfirmIcon, { backgroundColor: colors.warningSoft }]}>
+                <Ionicons name="lock-closed" size={16} color={colors.warning} />
+              </View>
               <View style={styles.toConfirmText}>
                 <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
-                  {runsheet.routeLabel}
+                  {t('common.package', { count: runsheet.stopCount })}
                 </Text>
-                <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {runsheet.agency} · {t('common.package', { count: runsheet.stopCount })}
+                <Text style={[Typography.caption2, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {runsheet.zone}
                 </Text>
               </View>
               <AnimatedPressable
                 scaleTo={0.95}
                 style={[styles.toConfirmButton, { backgroundColor: colors.warning }]}
                 onPress={() => handleConfirmReceipt(runsheet)}>
-                <Text style={styles.toConfirmButtonText}>{t('runsheetDetail.confirmReceipt')}</Text>
+                <Text style={styles.toConfirmButtonText}>
+                  {runsheet.status === 'A_CONFIRMER'
+                    ? t('runsheets.confirm.action')
+                    : t('runsheets.confirm.recountAction')}
+                </Text>
               </AnimatedPressable>
             </Animated.View>
           ))}
@@ -547,9 +564,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     padding: Spacing.lg,
   },
+  toConfirmIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   toConfirmText: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
   toConfirmButton: {
     paddingHorizontal: Spacing.lg,

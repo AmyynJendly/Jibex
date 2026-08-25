@@ -72,7 +72,7 @@ const en = {
       step2: {
         stepLabel: 'Step 2 of 3',
         title: 'Your Vehicle',
-        subtitle: 'Dispatch sizes your route using this info. Editable later.',
+        subtitle: 'Dispatch sizes your load using this info. Editable later.',
         vehicleTypeLabel: 'Vehicle Type',
         vehicleTypes: { scooter: 'Scooter', car: 'Car', van: 'Van' },
         plateLabel: 'Plate Number',
@@ -131,15 +131,26 @@ const en = {
     toggleCurrent: 'Current',
     toggleHistory: 'History',
     parcelsTitle: 'Packages ({{count}})',
-    reorderHint: 'Drag the grip on the left to reorder your stops',
     reorderedToast: 'Order saved',
-    lockedEyebrow: 'Packages locked',
-    onRoute: 'On Route',
-    codTag: 'COD',
+    inTransit: 'In Transit',
     paidTag: 'Paid',
     call: 'Call',
-    callLogged_one: '{{count}} call attempt logged',
-    callLogged_other: '{{count}} call attempts logged',
+    update: 'Update',
+    // Deliberately terse: the driver reads this standing in a van with the
+    // packages in front of them, not looking for an explanation.
+    confirm: {
+      title_one: '{{count}} package to confirm',
+      title_other: '{{count}} packages to confirm',
+      recountTitle_one: 'Count changed · {{count}} package',
+      recountTitle_other: 'Count changed · {{count}} packages',
+      dialogMessage_one: 'You have this package in hand?',
+      dialogMessage_other: 'You have all {{count}} packages in hand?',
+      action: 'Confirm',
+      recountAction: 'Re-confirm',
+      lockedTag: 'Locked',
+      blockedError: 'Confirm your packages first.',
+      toast: 'Packages confirmed',
+    },
     empty: {
       current: 'All packages done - nothing left to deliver',
       history: 'No history yet',
@@ -155,29 +166,11 @@ const en = {
   runsheetSchedule: {
     headerTitle: 'Schedule',
     today: 'Today',
-    viewingToday: "Viewing today's runsheet",
-    viewingTodayBody: "Go back to see today's stops, in optimized route order.",
-    backToRunsheet: 'Back to Runsheet',
-    emptyTitle: 'No runsheet loaded for {{date}}',
+    viewingToday: "Viewing today's packages",
+    viewingTodayBody: 'Go back to see the packages you have today.',
+    backToRunsheet: 'Back to Packages',
+    emptyTitle: 'Nothing loaded for {{date}}',
     emptyBody: 'Other days will show up here once Jibex is connected to your dispatch system.',
-  },
-
-  runsheetDetail: {
-    stats: { delivered: 'Delivered', failed: 'Failed', remaining: 'Remaining' },
-    parcelsTitle: 'Packages to Deliver ({{count}})',
-    confirmReceipt: 'Confirm Receipt',
-    confirmModalTitle: 'Confirm Receipt',
-    confirmModalMessage_one:
-      'I confirm I have physically received all packages on this run ({{count}} package)',
-    confirmModalMessage_other:
-      'I confirm I have physically received all packages on this run ({{count}} packages)',
-    confirmedToast: 'Receipt confirmed',
-    blockedNotice: 'This run must be confirmed before its packages can be updated.',
-    recountTitle: 'Package count changed',
-    recountMessage: 'Your run now holds {{count}} packages - confirm the new count before continuing.',
-    reconfirmReceipt: 'Re-confirm',
-    update: 'Update',
-    empty: 'No packages on this run',
   },
 
   statusUpdate: {
@@ -309,7 +302,6 @@ const en = {
     navigate: 'Navigate',
     parcelsTitle: 'Parcels',
     collected: 'Collected',
-    reorderHint: 'Drag the grip on the left to set your collection order',
     reorderedToast: 'Order saved',
     done: 'Done',
     doneWithCount: 'Done ({{count}})',
@@ -359,7 +351,7 @@ const en = {
       'Returns are transfers in reverse: whatever the receiving agency could not deliver comes back to the agency that sent it.',
     scan: 'Scan Batch',
     scanAllWithCount: 'Scan All ({{count}})',
-    scanNote: 'Return batches must be scanned at the depot before closing out the route.',
+    scanNote: 'Return batches must be scanned at the depot before you close out the day.',
     empty: 'No pending returns',
     toggleCurrent: 'Current',
     toggleHistory: 'History',
@@ -394,7 +386,7 @@ const en = {
   availability: {
     headerTitle: 'Availability',
     intro:
-      "Tap a date to mark the time blocks you're available to take routes. Dispatch uses this to plan upcoming assignments.",
+      "Tap a date to mark the time blocks you're available to work. Dispatch uses this to plan upcoming assignments.",
     pastNote: "Can't set availability for a past date.",
     summary_one: '{{count}} day marked available this month',
     summary_other: '{{count}} days marked available this month',
@@ -458,9 +450,9 @@ const en = {
           'Open the stop, tap "Can\'t Deliver", and choose "Parcel refused". Dispatch is notified automatically and the item is flagged for return.',
       },
       {
-        question: 'How does route order work?',
+        question: 'How do I change the order of my packages?',
         answer:
-          "Runsheets are automatically ordered by shortest total driving distance from your depot, recalculated every time you complete or fail a stop — you don't need to plan the order yourself.",
+          'In Runsheets, drag a package by the handle on its card to move it up or down. Your order is saved and stays put until you change it again.',
       },
       {
         question: "My scanner won't read a barcode",

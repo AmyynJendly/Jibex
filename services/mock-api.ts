@@ -220,7 +220,7 @@ const mockJobs: Job[] = [
     id: 'TRK-7A2E4F19',
     customerName: 'Amel Trabelsi',
     customerPhone: '+216 23 604 771',
-    address: 'Route de Gabès, Sfax',
+    address: 'Avenue de Gabès, Sfax',
     packageInfo: { count: 1, weightLbs: 1.8, fragile: false },
     status: 'PENDING',
     cashToCollect: 19.0,
@@ -266,7 +266,6 @@ type RunsheetSeed = Omit<
 const mockRunsheets: RunsheetSeed[] = [
   {
     id: formatRunsheetId(today, 1),
-    routeLabel: 'Route 12',
     zone: 'Sousse, Sahloul',
     agency: 'Agence Sousse',
     status: 'EN_COURS',
@@ -277,7 +276,6 @@ const mockRunsheets: RunsheetSeed[] = [
   },
   {
     id: formatRunsheetId(today, 2),
-    routeLabel: 'Route 7',
     zone: 'Sfax, Zone Industrielle',
     agency: 'Agence Sousse',
     status: 'A_CONFIRMER',
@@ -286,7 +284,6 @@ const mockRunsheets: RunsheetSeed[] = [
   },
   {
     id: formatRunsheetId(today, 3),
-    routeLabel: 'Route 4',
     zone: 'Monastir',
     agency: 'Agence Sousse',
     status: 'EN_COURS',
@@ -295,7 +292,6 @@ const mockRunsheets: RunsheetSeed[] = [
   },
   {
     id: formatRunsheetId(yesterday, 1),
-    routeLabel: 'Route 9',
     zone: 'Sousse, Centre Ville',
     agency: 'Agence Sousse',
     status: 'VALIDE',
@@ -550,7 +546,7 @@ const mockNotifications: Notification[] = [
     id: `TR-3-${toCompactDateKey(today)}-0003`,
     type: 'TRANSFER',
     title: 'Transfer awaiting handoff',
-    message: 'Route 12 → Route 7 at Dépôt Sahloul',
+    message: 'Agence Sousse → Agence Sfax at Dépôt Sahloul',
     timestamp: minutesAgo(40),
     read: true,
   },
@@ -1068,7 +1064,7 @@ export async function confirmDeliveryWithOTP(
     return { success: false, error: 'common.genericError' };
   }
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
-    return { success: false, error: 'runsheetDetail.blockedNotice' };
+    return { success: false, error: 'runsheets.confirm.blockedError' };
   }
   if (job.callAttempts === 0) {
     return { success: false, error: 'statusUpdate.callRequired' };
@@ -1104,7 +1100,7 @@ export async function confirmDeliveryWithPhoto(
     return { success: false, error: 'common.genericError' };
   }
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
-    return { success: false, error: 'runsheetDetail.blockedNotice' };
+    return { success: false, error: 'runsheets.confirm.blockedError' };
   }
   if (job.callAttempts === 0) {
     return { success: false, error: 'statusUpdate.callRequired' };
@@ -1141,7 +1137,7 @@ export async function markDeliveryFailed(
     return { success: false, error: 'common.genericError' };
   }
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
-    return { success: false, error: 'runsheetDetail.blockedNotice' };
+    return { success: false, error: 'runsheets.confirm.blockedError' };
   }
 
   const wasAlreadyFailed = job.status === 'FAILED';

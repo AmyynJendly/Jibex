@@ -9,7 +9,7 @@ import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useConfirm } from '../components/ConfirmDialog';
-import { DraggableList } from '../components/DraggableList';
+import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -78,6 +78,7 @@ interface PickupCardProps {
   /** Completed pickups are a record, not a worklist — no actions on them. */
   readOnly?: boolean;
   stopNumber?: number;
+  drag?: DragBinding;
   onToggle: () => void;
   t: TFunction;
 }
@@ -94,6 +95,7 @@ function PickupCard({
   expanded,
   readOnly = false,
   stopNumber,
+  drag,
   onToggle,
   t,
 }: PickupCardProps) {
@@ -107,7 +109,8 @@ function PickupCard({
         expanded && !readOnly && { borderColor: colors.success, borderWidth: 1.5 },
         getCardShadow(scheme),
       ]}>
-      <AnimatedPressable scaleTo={0.99} style={styles.cardHead} onPress={onToggle}>
+      <View style={styles.cardHead}>
+        {drag && <DragHandle drag={drag} />}
         <View style={[styles.cardIcon, { backgroundColor: colors.purpleSoft }]}>
           <Ionicons name="storefront-outline" size={19} color={colors.purple} />
           {stopNumber !== undefined && (
@@ -117,7 +120,8 @@ function PickupCard({
           )}
         </View>
 
-        <View style={styles.cardHeadText}>
+        {/* Only this block toggles: the handle beside it needs its own touches. */}
+        <AnimatedPressable scaleTo={0.99} style={styles.cardHeadText} onPress={onToggle}>
           <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
             {pickup.businessName}
           </Text>
@@ -127,14 +131,14 @@ function PickupCard({
           <Text style={[Typography.caption2, { color: colors.textTertiary }]} numberOfLines={1}>
             {pickup.address}
           </Text>
-        </View>
+        </AnimatedPressable>
 
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={18}
           color={colors.textTertiary}
         />
-      </AnimatedPressable>
+      </View>
 
       <View style={[styles.actionRow, { borderTopColor: colors.separator }]}>
         {readOnly ? (
@@ -205,6 +209,8 @@ export default function PickupsScreen() {
   const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
+  // A drag and a scroll both follow the finger; only one of them may.
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     getPickups().then(setPickups);
@@ -289,7 +295,7 @@ export default function PickupsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
         <SegmentedControl
           segments={[
             { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
@@ -314,24 +320,19 @@ export default function PickupsScreen() {
           />
         ) : segment === 'SCHEDULED' ? (
           <>
-            <View style={styles.hintRow}>
-              <Ionicons name="reorder-two" size={16} color={colors.textTertiary} />
-              <Text style={[Typography.caption2, styles.hintText, { color: colors.textTertiary }]}>
-                {t('pickups.reorderHint')}
-              </Text>
-            </View>
-
             <DraggableList
               data={scheduled}
               idOf={pickupId}
               itemHeight={(pickup) => pickupHeight(pickup, expandedIds.has(pickup.id))}
               onReorder={handleReorder}
-              renderItem={(pickup, index) => (
+              onDragStateChange={setDragging}
+              renderItem={(pickup, index, drag) => (
                 <PickupCard
                   pickup={pickup}
                   colors={colors}
                   scheme={scheme}
                   stopNumber={index + 1}
+                  drag={drag}
                   expanded={expandedIds.has(pickup.id)}
                   onToggle={() => toggleExpand(pickup.id)}
                   t={t}
@@ -422,15 +423,6 @@ const styles = StyleSheet.create({
   },
   skeletonGroup: {
     gap: Spacing.mlg,
-  },
-  hintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: -Spacing.xs,
-  },
-  hintText: {
-    flex: 1,
   },
   card: {
     flex: 1,
