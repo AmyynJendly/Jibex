@@ -127,6 +127,7 @@ const fr: TranslationResource = {
     depositConfirmTitle: 'Confirmer le dépôt',
     depositConfirmMessage:
       'Déposer {{amount}} ? Cela remet à zéro vos espèces en sacoche et ne peut pas être annulé.',
+    toConfirmTitle: 'À confirmer ({{count}})',
     nextStop: {
       label: 'Prochain arrêt',
       distanceEta: '{{distance}} km · {{minutes}} min',
@@ -136,21 +137,18 @@ const fr: TranslationResource = {
   },
 
   runsheets: {
-    headerTitle: 'Feuille de route',
-    headerEyebrow: '{{route}} · {{zone}}',
-    codToCollect: 'DT à encaisser',
-    segments: { all: 'Tout', pending: 'En file', delivered: 'Livrés' },
+    headerTitle: 'Tournées',
+    toggleCurrent: 'Tournée en cours',
+    toggleHistory: 'Historique',
+    currentLabel: 'Tournée en cours',
+    othersLabel: 'Autres tournées',
+    deliveredOf: '{{delivered}}/{{total}} livrés',
     onRoute: 'En route',
-    open: 'Ouvrir',
     codTag: 'COD',
     paidTag: 'Payé',
-    remainingFooter: '{{stops}} arrêts · {{cod}} COD',
-    optimize: 'Optimiser',
-    optimizedToast: 'Itinéraire réoptimisé',
     empty: {
-      all: 'Aucun arrêt pour le moment',
-      pending: 'Aucun arrêt en attente',
-      delivered: 'Aucun arrêt livré',
+      current: 'Aucune tournée en cours',
+      history: 'Aucun historique',
     },
   },
 
@@ -164,6 +162,29 @@ const fr: TranslationResource = {
     emptyTitle: 'Aucune tournée chargée pour le {{date}}',
     emptyBody:
       'Les autres jours apparaîtront ici une fois Jibex connecté à votre système de répartition.',
+  },
+
+  runsheetDetail: {
+    stats: { delivered: 'Livrés', failed: 'Échoués', remaining: 'Restants' },
+    parcelsTitle: 'Colis à livrer ({{count}})',
+    confirmReceipt: 'Confirmer la réception',
+    confirmModalTitle: 'Confirmer la réception',
+    confirmModalMessage_one:
+      'Je confirme avoir reçu physiquement tous les colis de cette tournée ({{count}} colis)',
+    confirmModalMessage_other:
+      'Je confirme avoir reçu physiquement tous les colis de cette tournée ({{count}} colis)',
+    confirmedToast: 'Réception confirmée',
+    blockedNotice: 'Cette tournée doit être confirmée avant de pouvoir mettre à jour ses colis.',
+    update: 'Maj',
+    empty: 'Aucun colis dans cette tournée',
+  },
+
+  statusUpdate: {
+    title: 'Mettre à jour le statut',
+    delivered: 'Colis livré',
+    failedSection: 'Tentative échouée',
+    confirmFailed: "Confirmer l'échec",
+    failedToast: 'Échec enregistré',
   },
 
   jobDetail: {
@@ -472,9 +493,9 @@ const fr: TranslationResource = {
       DAMAGED: 'Endommagé',
     },
     runsheetStatus: {
-      IN_PROGRESS: 'Tournée en cours',
-      CONFIRMED: 'Confirmée',
-      WAITING: 'En attente',
+      EN_COURS: 'En cours',
+      VALIDE: 'Validé',
+      A_CONFIRMER: 'À confirmer',
     },
     notificationType: {
       PICKUP: 'Collecte',

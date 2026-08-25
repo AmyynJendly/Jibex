@@ -123,6 +123,7 @@ const en = {
     depositedToast: 'Cash deposited',
     depositConfirmTitle: 'Confirm Deposit',
     depositConfirmMessage: 'Deposit {{amount}}? This clears your cash-on-hand total and can’t be undone.',
+    toConfirmTitle: 'To Confirm ({{count}})',
     nextStop: {
       label: 'Next Stop',
       distanceEta: '{{distance}} km · {{minutes}} min',
@@ -132,21 +133,18 @@ const en = {
   },
 
   runsheets: {
-    headerTitle: 'Runsheet',
-    headerEyebrow: '{{route}} · {{zone}}',
-    codToCollect: 'DT to collect',
-    segments: { all: 'All', pending: 'In Queue', delivered: 'Delivered' },
+    headerTitle: 'Runsheets',
+    toggleCurrent: 'Current',
+    toggleHistory: 'History',
+    currentLabel: 'Current Run',
+    othersLabel: 'Other Runs',
+    deliveredOf: '{{delivered}}/{{total}} delivered',
     onRoute: 'On Route',
-    open: 'Open',
     codTag: 'COD',
     paidTag: 'Paid',
-    remainingFooter: '{{stops}} stops · {{cod}} COD',
-    optimize: 'Optimize',
-    optimizedToast: 'Route re-optimized',
     empty: {
-      all: 'No stops yet',
-      pending: 'No pending stops',
-      delivered: 'No delivered stops',
+      current: 'No runs in progress',
+      history: 'No history yet',
     },
   },
 
@@ -158,6 +156,29 @@ const en = {
     backToRunsheet: 'Back to Runsheet',
     emptyTitle: 'No runsheet loaded for {{date}}',
     emptyBody: 'Other days will show up here once Jibex is connected to your dispatch system.',
+  },
+
+  runsheetDetail: {
+    stats: { delivered: 'Delivered', failed: 'Failed', remaining: 'Remaining' },
+    parcelsTitle: 'Packages to Deliver ({{count}})',
+    confirmReceipt: 'Confirm Receipt',
+    confirmModalTitle: 'Confirm Receipt',
+    confirmModalMessage_one:
+      'I confirm I have physically received all packages on this run ({{count}} package)',
+    confirmModalMessage_other:
+      'I confirm I have physically received all packages on this run ({{count}} packages)',
+    confirmedToast: 'Receipt confirmed',
+    blockedNotice: 'This run must be confirmed before its packages can be updated.',
+    update: 'Update',
+    empty: 'No packages on this run',
+  },
+
+  statusUpdate: {
+    title: 'Update Status',
+    delivered: 'Package Delivered',
+    failedSection: 'Failed Attempt',
+    confirmFailed: 'Confirm Failure',
+    failedToast: 'Failure recorded',
   },
 
   jobDetail: {
@@ -464,9 +485,9 @@ const en = {
       DAMAGED: 'Damaged',
     },
     runsheetStatus: {
-      IN_PROGRESS: 'In Progress',
-      CONFIRMED: 'Confirmed',
-      WAITING: 'Waiting',
+      EN_COURS: 'In Progress',
+      VALIDE: 'Completed',
+      A_CONFIRMER: 'To Confirm',
     },
     notificationType: {
       PICKUP: 'Pickup',

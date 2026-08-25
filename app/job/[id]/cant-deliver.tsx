@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
+import { useToast } from '../../../components/Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../../../constants';
 import { markDeliveryFailed } from '../../../services/mock-api';
 import type { DeliveryFailureReason } from '../../../types';
@@ -36,6 +37,7 @@ const REASONS: { value: DeliveryFailureReason; icon: keyof typeof Ionicons.glyph
 export default function CantDeliverScreen() {
   const colors = useColors();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
   const [note, setNote] = useState('');
@@ -49,6 +51,8 @@ export default function CantDeliverScreen() {
 
     if (result.success) {
       router.replace('/(tabs)/runsheets');
+    } else {
+      showToast(t(result.error ?? 'common.genericError'));
     }
   }
 

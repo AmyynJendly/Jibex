@@ -37,6 +37,7 @@ import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import {
   confirmCashHandoff,
+  confirmRunsheetReceipt,
   getDriverStats,
   getJobDetail,
   getNotifications,
@@ -44,7 +45,7 @@ import {
   getUser,
   optimizeRouteOrder,
 } from '../../../services/mock-api';
-import type { DriverStats, Job, User } from '../../../types';
+import type { DriverStats, Job, Runsheet, User } from '../../../types';
 
 const STAGGER_MS = 40;
 
@@ -56,6 +57,8 @@ interface HomeData {
   nextStopIndex: number;
   /** Fallback shown until (or unless) a real GPS fix resolves — the driver's assigned runsheet zone. */
   zone: string | null;
+  /** Runsheets still awaiting the driver's receipt confirmation — their parcels are excluded from `nextStop` since they're not deliverable yet. */
+  unconfirmedRunsheets: Runsheet[];
 }
 
 function getGreetingKey() {
@@ -86,20 +89,43 @@ export default function HomeScreen() {
       getNotifications(),
     ]);
 
-    const stopIds = runsheets.flatMap((r) => r.stopIds);
-    const orderedIds = await optimizeRouteOrder(stopIds);
-    const jobs = await Promise.all(orderedIds.map((id) => getJobDetail(id)));
+    const unconfirmedRunsheets = runsheets.filter((r) => r.status === 'A_CONFIRMER');
+    // A runsheet still awaiting receipt confirmation isn't deliverable yet —
+    // its stops can't be routed to or worked, so they're left out of the
+    // "what's next today" ordering entirely (see runsheetDetail's blocked flow).
+    const workableRunsheets = runsheets.filter((r) => r.status !== 'A_CONFIRMER');
+    const workableStopIds = workableRunsheets.flatMap((r) => r.stopIds);
+    const orderedIds = await optimizeRouteOrder(workableStopIds);
+
+    // "Today's Deliveries" reflects every stop across every runsheet the
+    // driver holds — including still-blocked ones, since those parcels are
+    // genuinely assigned even if not yet workable — so it visibly moves the
+    // moment a stop in Runsheets gets delivered or failed, instead of
+    // trailing a separate counter nothing else touches.
+    const allStopIds = runsheets.flatMap((r) => r.stopIds);
+    const allJobs = await Promise.all(allStopIds.map((id) => getJobDetail(id)));
+    const jobById = new Map(allJobs.map((j) => [j.id, j] as const));
+
+    const orderedWorkableJobs = orderedIds.map((id) => jobById.get(id)).filter((j): j is Job => !!j);
     const nextStop =
-      jobs.find((j) => j.status === 'IN_TRANSIT') ?? jobs.find((j) => j.status === 'PENDING') ?? null;
+      orderedWorkableJobs.find((j) => j.status === 'IN_TRANSIT') ??
+      orderedWorkableJobs.find((j) => j.status === 'PENDING') ??
+      null;
     const nextStopIndex = nextStop ? orderedIds.indexOf(nextStop.id) + 1 : 0;
+
+    const delivered = allJobs.filter((j) => j.status === 'DELIVERED').length;
+    const failed = allJobs.filter((j) => j.status === 'FAILED').length;
+    const pending = allJobs.length - delivered - failed;
+    const completionPercent = allJobs.length === 0 ? 0 : Math.round((delivered / allJobs.length) * 100);
 
     setData({
       user,
-      stats,
+      stats: { ...stats, delivered, pending, failed, completionPercent },
       hasUnreadNotifications: notifications.some((n) => !n.read),
       nextStop,
       nextStopIndex,
-      zone: runsheets[0]?.zone ?? null,
+      zone: workableRunsheets[0]?.zone ?? runsheets[0]?.zone ?? null,
+      unconfirmedRunsheets,
     });
   }, []);
 
@@ -156,6 +182,20 @@ export default function HomeScreen() {
     showToast(t('home.depositedToast'));
   }
 
+  async function handleConfirmReceipt(runsheet: Runsheet) {
+    const confirmed = await confirm({
+      title: t('runsheetDetail.confirmModalTitle'),
+      message: t('runsheetDetail.confirmModalMessage', { count: runsheet.stopCount }),
+      confirmLabel: t('runsheetDetail.confirmReceipt'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!confirmed) return;
+
+    await confirmRunsheetReceipt(runsheet.id);
+    await load();
+    showToast(t('runsheetDetail.confirmedToast'));
+  }
+
   if (!data) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -183,7 +223,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex, zone } = data;
+  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex, zone, unconfirmedRunsheets } = data;
   const locationLabel = gpsLocation ?? zone;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];
@@ -278,6 +318,39 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
+
+      {unconfirmedRunsheets.length > 0 && (
+        <View style={styles.toConfirmSection}>
+          <Text style={[monoStyle(11), styles.toConfirmTitle, { color: colors.warning }]}>
+            {t('home.toConfirmTitle', { count: unconfirmedRunsheets.length })}
+          </Text>
+          {unconfirmedRunsheets.map((runsheet, i) => (
+            <Animated.View
+              key={runsheet.id}
+              entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
+              style={[
+                styles.toConfirmCard,
+                { backgroundColor: colors.bgElevated, borderColor: colors.warning },
+                getCardShadow(scheme),
+              ]}>
+              <View style={styles.toConfirmText}>
+                <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
+                  {runsheet.routeLabel}
+                </Text>
+                <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {runsheet.agency} · {t('common.package', { count: runsheet.stopCount })}
+                </Text>
+              </View>
+              <AnimatedPressable
+                scaleTo={0.95}
+                style={[styles.toConfirmButton, { backgroundColor: colors.warning }]}
+                onPress={() => handleConfirmReceipt(runsheet)}>
+                <Text style={styles.toConfirmButtonText}>{t('runsheetDetail.confirmReceipt')}</Text>
+              </AnimatedPressable>
+            </Animated.View>
+          ))}
+        </View>
+      )}
 
       <View
         style={[
@@ -480,6 +553,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginTop: Spacing.sm,
+  },
+  toConfirmSection: {
+    gap: Spacing.sm,
+  },
+  toConfirmTitle: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.06 * 11,
+  },
+  toConfirmCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+    borderRadius: Radii.card,
+    borderWidth: 1.5,
+    padding: Spacing.lg,
+  },
+  toConfirmText: {
+    flex: 1,
+    gap: 2,
+  },
+  toConfirmButton: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.smd,
+    borderRadius: Radii.full,
+  },
+  toConfirmButtonText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 12,
+    color: '#2E3439',
   },
   card: {
     paddingTop: Spacing.lg,

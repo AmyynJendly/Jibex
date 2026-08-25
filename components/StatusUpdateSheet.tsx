@@ -1,0 +1,200 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+
+import { AnimatedPressable } from './AnimatedPressable';
+import { PrimaryButton } from './PrimaryButton';
+import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
+import { enumLabel } from '../lib/enumLabel';
+import { markDeliveryFailed } from '../services/mock-api';
+import type { DeliveryFailureReason, Job } from '../types';
+
+/** The real 7 failure reasons — same list as the full-screen Can't Deliver flow. */
+const REASONS: DeliveryFailureReason[] = [
+  'CUSTOMER_ABSENT',
+  'REFUSED',
+  'INCORRECT_ADDRESS',
+  'INCOMPLETE_ADDRESS',
+  'PHONE_UNREACHABLE',
+  'NO_ANSWER',
+  'OTHER',
+];
+
+interface StatusUpdateSheetProps {
+  /** The sheet is visible whenever this is non-null. */
+  job: Job | null;
+  onClose: () => void;
+  /** Called after a failure reason is successfully confirmed — parent refreshes and shows its own toast. */
+  onFailed: () => void;
+}
+
+/**
+ * Bottom sheet for quickly updating a parcel's status from the Runsheet
+ * Detail list. "Delivered" routes into the existing OTP → Cash Collected
+ * flow rather than marking delivered itself — OTP verification stays the
+ * one way a delivery gets confirmed. The failure path is self-contained:
+ * pick a reason, confirm, done.
+ */
+export function StatusUpdateSheet({ job, onClose, onFailed }: StatusUpdateSheetProps) {
+  const colors = useColors();
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  function handleClose() {
+    setReason(null);
+    onClose();
+  }
+
+  function handleDelivered() {
+    if (!job) return;
+    const id = job.id;
+    handleClose();
+    router.push({ pathname: '/job/[id]/otp', params: { id } });
+  }
+
+  async function handleConfirmFailed() {
+    if (!job || !reason || submitting) return;
+    setSubmitting(true);
+    await markDeliveryFailed(job.id, reason);
+    setSubmitting(false);
+    setReason(null);
+    onFailed();
+  }
+
+  return (
+    <Modal visible={!!job} transparent animationType="fade" onRequestClose={handleClose}>
+      <View style={styles.backdropWrap}>
+        <Animated.View
+          entering={FadeIn.duration(150)}
+          exiting={FadeOut.duration(120)}
+          style={StyleSheet.absoluteFill}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+        </Animated.View>
+        {job && (
+          <Animated.View
+            entering={FadeInUp.duration(220).springify(260).dampingRatio(1)}
+            style={[
+              styles.sheet,
+              { backgroundColor: colors.bgElevated, paddingBottom: insets.bottom + Spacing.lg },
+            ]}>
+            <View style={[styles.handle, { backgroundColor: colors.separator }]} />
+            <Text style={[Typography.title3, { color: colors.text }]}>{t('statusUpdate.title')}</Text>
+            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+              {job.id} · {job.customerName}
+            </Text>
+
+            <AnimatedPressable
+              scaleTo={0.97}
+              style={[styles.deliveredButton, { backgroundColor: colors.success }]}
+              onPress={handleDelivered}>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
+            </AnimatedPressable>
+
+            <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+              {t('statusUpdate.failedSection')}
+            </Text>
+            <View style={styles.chipRow}>
+              {REASONS.map((value) => {
+                const selected = reason === value;
+                return (
+                  <AnimatedPressable
+                    key={value}
+                    scaleTo={0.95}
+                    onPress={() => setReason(value)}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: selected ? colors.danger : colors.dangerSoft,
+                        borderColor: selected ? colors.danger : 'transparent',
+                      },
+                    ]}>
+                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.danger }]}>
+                      {enumLabel(t, 'failureReason', value)}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+
+            <PrimaryButton
+              label={t('statusUpdate.confirmFailed')}
+              height={52}
+              disabled={!reason}
+              loading={submitting}
+              onPress={handleConfirmFailed}
+              style={styles.confirmFailedButton}
+            />
+          </Animated.View>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdropWrap: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  sheet: {
+    borderTopLeftRadius: Radii.xxl,
+    borderTopRightRadius: Radii.xxl,
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.md,
+    gap: Spacing.md,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: Spacing.sm,
+  },
+  deliveredButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    height: 54,
+    borderRadius: 27,
+    marginTop: Spacing.xs,
+  },
+  deliveredButtonText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 16,
+    color: '#fff',
+  },
+  sectionLabel: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.04 * 12,
+    marginTop: Spacing.sm,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radii.full,
+    borderWidth: 1.5,
+  },
+  chipText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 13,
+  },
+  confirmFailedButton: {
+    marginTop: Spacing.sm,
+  },
+});

@@ -171,8 +171,7 @@ const mockJobs: Job[] = [
     customerPhone: '+216 27 683 052',
     address: 'Avenue de la République, Monastir',
     packageInfo: { count: 1, weightLbs: 0.8, fragile: true, note: 'Ring twice' },
-    status: 'FAILED',
-    failureReason: 'NO_ANSWER',
+    status: 'PENDING',
     cashToCollect: 22.0,
     location: { lat: 35.77, lng: 10.82 },
   },
@@ -209,40 +208,90 @@ const mockJobs: Job[] = [
     cashCollected: 30.0,
     location: { lat: 36.7992, lng: 10.1817 },
   },
+  {
+    id: 'TRK-7A2E4F19',
+    customerName: 'Amel Trabelsi',
+    customerPhone: '+216 23 604 771',
+    address: 'Route de Gabès, Sfax',
+    packageInfo: { count: 1, weightLbs: 1.8, fragile: false },
+    status: 'PENDING',
+    cashToCollect: 19.0,
+    location: { lat: 34.728, lng: 10.702 },
+  },
+  /** Yesterday's already-wrapped-up stops — feed the one historical (VALIDE) runsheet. */
+  {
+    id: 'TRK-99F0C3E2',
+    customerName: 'Sami Belhaj',
+    customerPhone: '+216 28 340 662',
+    address: 'Rue de la République, Sousse',
+    packageInfo: { count: 1, weightLbs: 2.0, fragile: false },
+    status: 'DELIVERED',
+    cashToCollect: 35.0,
+    cashCollected: 35.0,
+    location: { lat: 35.833, lng: 10.62 },
+  },
+  {
+    id: 'TRK-88D4B716',
+    customerName: 'Nadia Ferjani',
+    customerPhone: '+216 22 917 384',
+    address: 'Avenue Léopold Senghor, Sousse',
+    packageInfo: { count: 2, weightLbs: 4.2, fragile: false },
+    status: 'DELIVERED',
+    cashToCollect: 47.5,
+    cashCollected: 47.5,
+    location: { lat: 35.845, lng: 10.63 },
+  },
 ];
 
-const mockRunsheets: Runsheet[] = [
+/** Raw seed shape — `stopCount`/`deliveredCount`/`completionPercent` are never trusted from here, always recomputed live from `mockJobs` (see `toRunsheet`) so they can't drift out of sync as job statuses change. */
+type RunsheetSeed = Omit<Runsheet, 'stopCount' | 'deliveredCount' | 'completionPercent'>;
+
+const mockRunsheets: RunsheetSeed[] = [
   {
     id: formatRunsheetId(today, 1),
     routeLabel: 'Route 12',
     zone: 'Sousse, Sahloul',
     agency: 'Agence Sousse',
-    status: 'IN_PROGRESS',
-    stopCount: 4,
-    completionPercent: 25,
-    stopIds: ['TRK-5DF3697E', 'TRK-A12BC034', 'TRK-77F1E9AB', 'TRK-1F4A7D93'],
+    status: 'EN_COURS',
+    stopIds: ['TRK-5DF3697E', 'TRK-A12BC034', 'TRK-77F1E9AB', 'TRK-1F4A7D93', 'TRK-B6F31C08'],
   },
   {
     id: formatRunsheetId(today, 2),
     routeLabel: 'Route 7',
     zone: 'Sfax, Zone Industrielle',
     agency: 'Agence Sousse',
-    status: 'WAITING',
-    stopCount: 2,
-    completionPercent: 0,
-    stopIds: ['TRK-3C4D8F21', 'TRK-B6F31C08'],
+    status: 'A_CONFIRMER',
+    stopIds: ['TRK-3C4D8F21', 'TRK-7A2E4F19'],
   },
   {
     id: formatRunsheetId(today, 3),
     routeLabel: 'Route 4',
     zone: 'Monastir',
     agency: 'Agence Sousse',
-    status: 'CONFIRMED',
-    stopCount: 2,
-    completionPercent: 50,
+    status: 'EN_COURS',
     stopIds: ['TRK-9E0A2B6D', 'TRK-6C2E9F45'],
   },
+  {
+    id: formatRunsheetId(yesterday, 1),
+    routeLabel: 'Route 9',
+    zone: 'Sousse, Centre Ville',
+    agency: 'Agence Sousse',
+    status: 'VALIDE',
+    stopIds: ['TRK-99F0C3E2', 'TRK-88D4B716'],
+  },
 ];
+
+/** Fills in the live-computed fields a `RunsheetSeed` doesn't store. */
+function toRunsheet(seed: RunsheetSeed): Runsheet {
+  const jobs = seed.stopIds
+    .map((id) => mockJobs.find((j) => j.id === id))
+    .filter((j): j is Job => !!j);
+  const stopCount = jobs.length;
+  const deliveredCount = jobs.filter((j) => j.status === 'DELIVERED').length;
+  const completionPercent = stopCount === 0 ? 0 : Math.round((deliveredCount / stopCount) * 100);
+
+  return { ...seed, stopIds: [...seed.stopIds], stopCount, deliveredCount, completionPercent };
+}
 
 /** Recipient names cycled across generated parcels — not tied to any Job, purely mock display data. */
 const PARCEL_CONTACTS = [
@@ -645,7 +694,65 @@ export async function getDriverStats(): Promise<DriverStats> {
 }
 
 export async function getRunsheets(): Promise<Runsheet[]> {
-  return delay(mockRunsheets.map((r) => ({ ...r, stopIds: [...r.stopIds] })));
+  return delay(mockRunsheets.map(toRunsheet));
+}
+
+export async function getRunsheet(id: string): Promise<Runsheet> {
+  await delay(undefined);
+  const seed = mockRunsheets.find((r) => r.id === id);
+  if (!seed) {
+    throw new Error(`Runsheet ${id} not found`);
+  }
+  return toRunsheet(seed);
+}
+
+/** A runsheet's own parcels, in stop order — same shape `getJobDetail` returns for one. */
+export async function getRunsheetJobs(id: string): Promise<Job[]> {
+  await delay(undefined);
+  const seed = mockRunsheets.find((r) => r.id === id);
+  if (!seed) {
+    throw new Error(`Runsheet ${id} not found`);
+  }
+  return seed.stopIds
+    .map((jobId) => mockJobs.find((j) => j.id === jobId))
+    .filter((j): j is Job => !!j)
+    .map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+}
+
+/**
+ * Driver attests to having physically received every parcel on this
+ * runsheet — flips `A_CONFIRMER` to `EN_COURS`, which is what unblocks its
+ * parcels' status updates below. No-op (but still returns the current
+ * state) if it's already past `A_CONFIRMER`.
+ */
+export async function confirmRunsheetReceipt(id: string): Promise<Runsheet> {
+  await delay(undefined);
+  const seed = mockRunsheets.find((r) => r.id === id);
+  if (!seed) {
+    throw new Error(`Runsheet ${id} not found`);
+  }
+  if (seed.status === 'A_CONFIRMER') {
+    seed.status = 'EN_COURS';
+  }
+  return toRunsheet(seed);
+}
+
+/** True while `jobId`'s runsheet is still awaiting receipt confirmation — blocks delivery/failure updates. */
+function isJobBlockedByUnconfirmedRunsheet(jobId: string): boolean {
+  const runsheet = mockRunsheets.find((r) => r.stopIds.includes(jobId));
+  return runsheet?.status === 'A_CONFIRMER';
+}
+
+/** Once every stop on a runsheet has been attempted (delivered or failed), the runsheet itself is done — flips it to VALIDE so it moves out of "current" into history. */
+function maybeCompleteRunsheet(jobId: string) {
+  const seed = mockRunsheets.find((r) => r.stopIds.includes(jobId));
+  if (!seed || seed.status === 'VALIDE') return;
+
+  const jobs = seed.stopIds.map((id) => mockJobs.find((j) => j.id === id)).filter((j): j is Job => !!j);
+  const allAttempted = jobs.length > 0 && jobs.every((j) => j.status === 'DELIVERED' || j.status === 'FAILED');
+  if (allAttempted) {
+    seed.status = 'VALIDE';
+  }
 }
 
 export async function getPickups(): Promise<Pickup[]> {
@@ -745,6 +852,9 @@ export async function confirmDeliveryWithOTP(
   if (!job) {
     return { success: false, error: 'common.genericError' };
   }
+  if (isJobBlockedByUnconfirmedRunsheet(id)) {
+    return { success: false, error: 'runsheetDetail.blockedNotice' };
+  }
 
   const expectedOtp = otpByJobId[id];
   if (!expectedOtp || otp !== expectedOtp) {
@@ -759,6 +869,7 @@ export async function confirmDeliveryWithOTP(
     const onTime = !job.deliverBy || Date.now() <= new Date(job.deliverBy).getTime();
     recordDeliveryCompletion(cashAmount, onTime);
   }
+  maybeCompleteRunsheet(id);
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
@@ -775,6 +886,9 @@ export async function confirmDeliveryWithPhoto(
   if (!job) {
     return { success: false, error: 'common.genericError' };
   }
+  if (isJobBlockedByUnconfirmedRunsheet(id)) {
+    return { success: false, error: 'runsheetDetail.blockedNotice' };
+  }
 
   const wasAlreadyDelivered = job.status === 'DELIVERED';
   job.status = 'DELIVERED';
@@ -785,6 +899,7 @@ export async function confirmDeliveryWithPhoto(
     const onTime = !job.deliverBy || Date.now() <= new Date(job.deliverBy).getTime();
     recordDeliveryCompletion(cashAmount, onTime);
   }
+  maybeCompleteRunsheet(id);
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
@@ -806,6 +921,9 @@ export async function markDeliveryFailed(
   if (!job) {
     return { success: false, error: 'common.genericError' };
   }
+  if (isJobBlockedByUnconfirmedRunsheet(id)) {
+    return { success: false, error: 'runsheetDetail.blockedNotice' };
+  }
 
   const wasAlreadyFailed = job.status === 'FAILED';
   job.status = 'FAILED';
@@ -819,6 +937,7 @@ export async function markDeliveryFailed(
       pending: Math.max(0, mockDriverStats.pending - 1),
     };
   }
+  maybeCompleteRunsheet(id);
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
