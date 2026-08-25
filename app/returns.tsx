@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
@@ -54,7 +55,7 @@ export default function ReturnsScreen() {
   const processed = returns?.filter((r) => r.status === 'PROCESSED') ?? [];
   const isHistory = toggle === 'history';
   const displayed = isHistory ? processed : pending;
-  const pendingParcelTotal = pending.reduce((sum, r) => sum + r.parcelCount, 0);
+  const pendingParcelTotal = displayed.reduce((sum, r) => sum + r.parcelCount, 0);
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -73,7 +74,7 @@ export default function ReturnsScreen() {
           </Text>
         </View>
         <View style={styles.headerCount}>
-          <Text style={[monoStyle(19, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
+          <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
           <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
             {t('returns.parcelsLabel')}
           </Text>
@@ -89,6 +90,15 @@ export default function ReturnsScreen() {
           value={toggle}
           onChange={setToggle}
         />
+
+        {!isHistory && pending.length > 0 && (
+          <View style={[styles.inverseNote, { backgroundColor: colors.warningSoft }]}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.warning} />
+            <Text style={[styles.inverseNoteText, { color: colors.text }]}>
+              {t('returns.inverseNote')}
+            </Text>
+          </View>
+        )}
 
         {!returns ? (
           <>
@@ -109,58 +119,79 @@ export default function ReturnsScreen() {
                 key={item.id}
                 entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
                 style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
-                <View style={[styles.accentBar, { backgroundColor: accent }]} />
+                <View style={[styles.cardEdge, { backgroundColor: accent }]} />
+
                 <View style={styles.cardTopRow}>
-                  <Text style={[styles.batchId, { color: colors.text }]} numberOfLines={1}>
+                  <Text style={[monoStyle(13, 'medium'), { color: colors.textSecondary }]}>
                     {t('returns.batchNumber', { id: item.id })}
                   </Text>
                   <Text
                     style={[
-                      styles.parcelChip,
-                      { color: accent, backgroundColor: isHistory ? colors.successSoft : colors.warningSoft },
+                      styles.statusChip,
+                      {
+                        color: accent,
+                        backgroundColor: isHistory ? colors.successSoft : colors.warningSoft,
+                      },
                     ]}
                     numberOfLines={1}>
-                    {t('common.package', { count: item.parcelCount })}
-                  </Text>
-                </View>
-
-                <View style={styles.agencyRow}>
-                  <Text style={[styles.agencyText, { color: colors.text }]} numberOfLines={1}>
-                    {item.fromAgency}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
-                  <Text style={[styles.agencyText, { color: colors.text }]} numberOfLines={1}>
-                    {item.toAgency}
-                  </Text>
-                </View>
-
-                <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {item.location} · {formatTime(item.scheduledAt)}
-                </Text>
-                {item.relatedTransferId && (
-                  <Text style={[monoStyle(11), { color: colors.textTertiary }]}>
-                    {t('returns.relatedTransfer', { id: item.relatedTransferId })}
-                  </Text>
-                )}
-
-                <View style={styles.bottomRow}>
-                  <Text
-                    style={[
-                      styles.statusLabel,
-                      { color: isHistory ? colors.success : colors.textTertiary },
-                    ]}>
                     {enumLabel(t, 'returnStatus', item.status)}
                   </Text>
-                  {/* History is read-only — no scan action there. */}
-                  {!isHistory && (
+                </View>
+
+                <AgencyFlow
+                  fromLabel={t('returns.from')}
+                  from={item.fromAgency}
+                  toLabel={t('returns.to')}
+                  to={item.toAgency}
+                />
+
+                <View style={styles.metaRow}>
+                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
+                    <Ionicons name="arrow-undo-outline" size={13} color={colors.textSecondary} />
+                    <Text style={[styles.metaText, { color: colors.text }]}>
+                      {t('common.package', { count: item.parcelCount })}
+                    </Text>
+                  </View>
+                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
+                    <Ionicons name="business-outline" size={13} color={colors.textSecondary} />
+                    <Text style={[styles.metaText, { color: colors.text }]} numberOfLines={1}>
+                      {item.location}
+                    </Text>
+                  </View>
+                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
+                    <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                    <Text style={[styles.metaText, { color: colors.text }]}>
+                      {formatTime(item.scheduledAt)}
+                    </Text>
+                  </View>
+                </View>
+
+                {item.relatedTransferId && (
+                  <View style={styles.sourceRow}>
+                    <Ionicons name="git-branch-outline" size={13} color={colors.textTertiary} />
+                    <Text style={[monoStyle(11), { color: colors.textTertiary }]} numberOfLines={1}>
+                      {t('returns.relatedTransfer', { id: item.relatedTransferId })}
+                    </Text>
+                  </View>
+                )}
+
+                {/* History is read-only — no scan action there. */}
+                {!isHistory && (
+                  <View style={[styles.actions, { borderTopColor: colors.separator }]}>
                     <AnimatedPressable
-                      scaleTo={0.95}
+                      scaleTo={0.97}
                       style={[styles.scanButton, { backgroundColor: colors.accent }]}
-                      onPress={() => router.push('/scanner')}>
+                      onPress={() =>
+                        router.push({
+                          pathname: '/scanner',
+                          params: { batchIds: JSON.stringify([item.id]) },
+                        })
+                      }>
+                      <Ionicons name="scan-outline" size={16} color="#fff" />
                       <Text style={styles.scanButtonText}>{t('returns.scan')}</Text>
                     </AnimatedPressable>
-                  )}
-                </View>
+                  </View>
+                )}
               </Animated.View>
             );
           })
@@ -185,7 +216,10 @@ export default function ReturnsScreen() {
                 params: { batchIds: JSON.stringify(pending.map((r) => r.id)) },
               })
             }>
-            <Text style={styles.scanAllButtonText}>{t('returns.scanAll')}</Text>
+            <Ionicons name="scan" size={16} color="#2E3439" />
+            <Text style={styles.scanAllButtonText}>
+              {t('returns.scanAllWithCount', { count: pending.length })}
+            </Text>
           </AnimatedPressable>
         </View>
       )}
@@ -220,15 +254,27 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     gap: Spacing.md,
   },
+  inverseNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    borderRadius: Radii.lg,
+    padding: Spacing.md,
+  },
+  inverseNoteText: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   card: {
     borderRadius: Radii.xxl,
     padding: Spacing.lg,
-    paddingLeft: Spacing.lg + 6,
-    gap: Spacing.xs,
+    paddingLeft: Spacing.lg + 4,
+    gap: Spacing.md,
     overflow: 'hidden',
-    position: 'relative',
   },
-  accentBar: {
+  cardEdge: {
     position: 'absolute',
     left: 0,
     top: 0,
@@ -238,48 +284,56 @@ const styles = StyleSheet.create({
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: Spacing.sm,
   },
-  batchId: {
-    ...monoStyle(15, 'medium'),
-    flex: 1,
-  },
-  parcelChip: {
+  statusChip: {
     ...monoStyle(11),
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xxs,
     borderRadius: Radii.xs,
     overflow: 'hidden',
-    flexShrink: 0,
   },
-  agencyRow: {
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+  },
+  metaChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  agencyText: {
-    fontFamily: Fonts.archivoSemiBold,
-    fontSize: 14,
+    gap: 5,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radii.xs,
     flexShrink: 1,
   },
-  statusLabel: {
+  metaText: {
     fontFamily: Fonts.archivoSemiBold,
     fontSize: 12,
+    flexShrink: 1,
   },
-  bottomRow: {
+  sourceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.xs,
+    gap: Spacing.xs,
+    marginTop: -Spacing.xs,
+  },
+  actions: {
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   scanButton: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    height: 44,
     borderRadius: Radii.full,
   },
   scanButtonText: {
     fontFamily: Fonts.archivoBold,
-    fontSize: 12,
+    fontSize: 14,
     color: '#fff',
   },
   footer: {
@@ -297,6 +351,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   scanAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.smd,
     borderRadius: Radii.full,

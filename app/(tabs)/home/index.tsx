@@ -448,10 +448,10 @@ export default function HomeScreen() {
                 getCardShadow(scheme),
               ]}>
               <View style={[styles.compactActionIcon, { backgroundColor: action.soft }]}>
-                <Ionicons name={action.icon} size={16} color={action.color} />
+                <Ionicons name={action.icon} size={20} color={action.color} />
               </View>
               <Text
-                style={[Typography.caption2, { color: colors.text }]}
+                style={[styles.compactActionLabel, { color: colors.text }]}
                 numberOfLines={1}>
                 {action.label}
               </Text>
@@ -702,20 +702,28 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: '46%',
   },
+  // Gloved thumbs in a moving van: these are the app's most-tapped shortcuts,
+  // so the whole tile is the target and it clears Apple's 44pt minimum with
+  // room to spare.
   compactAction: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.smd,
+    minHeight: 64,
     borderRadius: Radii.xl,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
   compactActionIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: Radii.sm,
+    width: 40,
+    height: 40,
+    borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  compactActionLabel: {
+    flex: 1,
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 14,
   },
 });

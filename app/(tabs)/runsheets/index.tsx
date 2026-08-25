@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +42,10 @@ type Toggle = 'current' | 'history';
 type HistoryFilter = 'all' | 'DELIVERED' | 'FAILED';
 
 /** Card height + the gap beneath it — `DraggableList` needs a fixed row pitch. */
-const ROW_HEIGHT = 150;
+const ROW_HEIGHT = 158;
+
+/** Stable across renders so `DraggableList` doesn't re-seat on every pass. */
+const jobId = (job: Job) => job.id;
 
 /** One colour per parcel state, drawn from the Sunlit palette. */
 function stateColor(status: JobStatus, colors: ColorPalette) {
@@ -63,8 +66,11 @@ interface ParcelCardProps {
   job: Job;
   colors: ColorPalette;
   scheme: 'light' | 'dark';
-  /** History cards drop the phone number and the call button. */
+  /** Position in the driver's own order — blank in history, where order is meaningless. */
+  stopNumber?: number;
+  /** History cards drop the phone number, the call button and the drill-down. */
   readOnly?: boolean;
+  onOpen?: () => void;
   onCall?: () => void;
   onUpdate?: () => void;
   updateLabel: string;
@@ -76,7 +82,9 @@ function ParcelCard({
   job,
   colors,
   scheme,
+  stopNumber,
   readOnly = false,
+  onOpen,
   onCall,
   onUpdate,
   updateLabel,
@@ -84,26 +92,50 @@ function ParcelCard({
   t,
 }: ParcelCardProps) {
   const hasCod = job.cashToCollect > 0;
+  const accent = stateColor(job.status, colors);
 
-  return (
-    <View
-      style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+  const body = (
+    <>
       <CornerRibbon
         label={
           job.status === 'IN_TRANSIT'
             ? t('runsheets.onRoute')
             : enumLabel(t as never, 'jobStatus', job.status)
         }
-        color={stateColor(job.status, colors)}
+        color={accent}
       />
+      {/* Colour repeated down the leading edge: the ribbon is clipped by the
+          grip when the row is mid-drag, this never is. */}
+      <View style={[styles.cardEdge, { backgroundColor: accent }]} />
 
-      <Text style={[monoStyle(11, 'medium'), { color: colors.textTertiary }]}>{job.id}</Text>
-      <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
-        {job.customerName}
-      </Text>
-      <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
-        {job.address}
-      </Text>
+      <View style={styles.cardHead}>
+        {stopNumber !== undefined && (
+          <View style={[styles.stopBadge, { backgroundColor: colors.bg }]}>
+            <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]}>
+              {stopNumber}
+            </Text>
+          </View>
+        )}
+        <View style={styles.cardHeadText}>
+          <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
+            {job.customerName}
+          </Text>
+          <Text style={[monoStyle(11, 'medium'), { color: colors.textTertiary }]} numberOfLines={1}>
+            {job.id}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.addressRow}>
+        <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+        <Text
+          style={[Typography.footnote, styles.addressText, { color: colors.textSecondary }]}
+          numberOfLines={1}>
+          {job.address}
+        </Text>
+        {!readOnly && <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />}
+      </View>
+
       {job.status === 'FAILED' && job.failureReason && (
         <Text style={[styles.failureText, { color: colors.danger }]} numberOfLines={1}>
           {enumLabel(t as never, 'failureReason', job.failureReason)}
@@ -126,9 +158,12 @@ function ParcelCard({
           {!readOnly && onCall && (
             <AnimatedPressable
               scaleTo={0.9}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={callLabel}
               style={[styles.callButton, { backgroundColor: colors.accentSoft }]}
               onPress={onCall}>
-              <Ionicons name="call-outline" size={15} color={colors.accent} />
+              <Ionicons name="call-outline" size={17} color={colors.accent} />
               {job.callAttempts > 0 && (
                 <View style={[styles.callBadge, { backgroundColor: colors.accent }]}>
                   <Text style={styles.callBadgeText}>{job.callAttempts}</Text>
@@ -141,14 +176,26 @@ function ParcelCard({
               scaleTo={0.95}
               style={[styles.updateButton, { backgroundColor: colors.accent }]}
               onPress={onUpdate}>
-              <Ionicons name="sync-outline" size={13} color="#fff" />
+              <Ionicons name="sync-outline" size={14} color="#fff" />
               <Text style={styles.updateButtonText}>{updateLabel}</Text>
             </AnimatedPressable>
           )}
         </View>
       </View>
-      {!readOnly && <Text style={styles.srOnly}>{callLabel}</Text>}
-    </View>
+    </>
+  );
+
+  const cardStyle = [styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)];
+
+  // History is read-only — the card is a display surface, not a control.
+  if (readOnly || !onOpen) {
+    return <View style={cardStyle}>{body}</View>;
+  }
+
+  return (
+    <AnimatedPressable scaleTo={0.985} style={cardStyle} onPress={onOpen}>
+      {body}
+    </AnimatedPressable>
   );
 }
 
@@ -209,9 +256,10 @@ export default function RunsheetsScreen() {
   }
 
   async function handleReorder(orderedIds: string[]) {
+    // Deliberately no reload: the list already shows the new order, and
+    // swapping the array out from under a just-settled drag makes it jump.
     await setParcelOrder(orderedIds);
     showToast(t('runsheets.reorderedToast'));
-    await load();
   }
 
   async function handleSheetDone() {
@@ -243,29 +291,60 @@ export default function RunsheetsScreen() {
 
         {toggle === 'current' ? (
           <>
-            {unconfirmed.map((runsheet) => (
-              <View
-                key={runsheet.id}
-                style={[styles.confirmCard, { backgroundColor: colors.warningSoft }]}>
-                <View style={styles.confirmTextRow}>
-                  <Ionicons name="lock-closed-outline" size={18} color={colors.warning} />
-                  <Text style={[Typography.footnote, styles.confirmText, { color: colors.text }]}>
-                    {runsheet.status === 'A_CONFIRMER'
-                      ? t('runsheetDetail.blockedNotice')
-                      : t('runsheetDetail.recountMessage', { count: runsheet.stopCount })}
+            {unconfirmed.map((runsheet) => {
+              const isRecount = runsheet.status !== 'A_CONFIRMER';
+              return (
+                <View
+                  key={runsheet.id}
+                  style={[
+                    styles.confirmCard,
+                    { backgroundColor: colors.bgElevated, borderColor: colors.warning },
+                    getCardShadow(scheme),
+                  ]}>
+                  <View style={[styles.confirmEdge, { backgroundColor: colors.warning }]} />
+
+                  <View style={styles.confirmHead}>
+                    <View style={[styles.confirmIcon, { backgroundColor: colors.warningSoft }]}>
+                      <Ionicons name="lock-closed" size={16} color={colors.warning} />
+                    </View>
+                    <View style={styles.confirmHeadText}>
+                      <Text style={[monoLabelStyle(10, 0.1), { color: colors.warning }]}>
+                        {t('runsheets.lockedEyebrow')}
+                      </Text>
+                      <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
+                        {isRecount
+                          ? t('runsheetDetail.recountTitle')
+                          : t('runsheetDetail.confirmModalTitle')}
+                      </Text>
+                    </View>
+                    <View style={[styles.confirmCount, { backgroundColor: colors.bg }]}>
+                      <Text style={[monoStyle(17, 'medium'), { color: colors.text }]}>
+                        {runsheet.stopCount}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
+                    {runsheet.routeLabel} · {runsheet.agency}
                   </Text>
+                  <Text style={[Typography.footnote, styles.confirmBody, { color: colors.text }]}>
+                    {isRecount
+                      ? t('runsheetDetail.recountMessage', { count: runsheet.stopCount })
+                      : t('runsheetDetail.blockedNotice')}
+                  </Text>
+
+                  <PrimaryButton
+                    label={
+                      isRecount
+                        ? t('runsheetDetail.reconfirmReceipt')
+                        : t('runsheetDetail.confirmReceipt')
+                    }
+                    height={48}
+                    onPress={() => handleConfirmReceipt(runsheet)}
+                  />
                 </View>
-                <PrimaryButton
-                  label={
-                    runsheet.status === 'A_CONFIRMER'
-                      ? t('runsheetDetail.confirmReceipt')
-                      : t('runsheetDetail.reconfirmReceipt')
-                  }
-                  height={46}
-                  onPress={() => handleConfirmReceipt(runsheet)}
-                />
-              </View>
-            ))}
+              );
+            })}
 
             {!active ? (
               <View style={styles.skeletonGroup}>
@@ -291,14 +370,18 @@ export default function RunsheetsScreen() {
 
                 <DraggableList
                   data={active}
-                  idOf={(job) => job.id}
+                  idOf={jobId}
                   itemHeight={ROW_HEIGHT}
                   onReorder={handleReorder}
-                  renderItem={(job) => (
+                  renderItem={(job, index) => (
                     <ParcelCard
                       job={job}
                       colors={colors}
                       scheme={scheme}
+                      stopNumber={index + 1}
+                      onOpen={() =>
+                        router.push({ pathname: '/job/[id]', params: { id: job.id } })
+                      }
                       onCall={() => handleCall(job)}
                       onUpdate={() => setSheetJob(job)}
                       updateLabel={t('runsheetDetail.update')}
@@ -387,15 +470,46 @@ const styles = StyleSheet.create({
   skeletonGroup: { gap: Spacing.md },
   confirmCard: {
     borderRadius: Radii.card,
+    borderWidth: 1.5,
     padding: Spacing.lg,
-    gap: Spacing.md,
+    paddingLeft: Spacing.lg + 4,
+    gap: Spacing.xs,
+    overflow: 'hidden',
   },
-  confirmTextRow: {
+  confirmEdge: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  confirmHead: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginBottom: Spacing.xxs,
   },
-  confirmText: { flex: 1 },
+  confirmIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmHeadText: {
+    flex: 1,
+    gap: 1,
+  },
+  confirmCount: {
+    minWidth: 40,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radii.sm,
+    alignItems: 'center',
+  },
+  confirmBody: {
+    marginBottom: Spacing.smd,
+  },
   listHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -413,14 +527,46 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Radii.xxl,
     padding: Spacing.lg,
-    gap: 2,
+    paddingLeft: Spacing.lg + 4,
+    gap: Spacing.xs,
     overflow: 'hidden',
+  },
+  cardEdge: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.smd,
+    paddingRight: 72,
+  },
+  stopBadge: {
+    minWidth: 26,
+    height: 26,
+    borderRadius: Radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cardHeadText: {
+    flex: 1,
   },
   customerName: {
     fontFamily: Fonts.archivoBold,
     fontSize: 16,
-    marginTop: 1,
-    paddingRight: 70,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  addressText: {
+    flex: 1,
   },
   failureText: {
     fontFamily: Fonts.archivoSemiBold,
@@ -433,7 +579,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: Spacing.sm,
+    marginTop: 'auto',
     paddingTop: Spacing.md,
   },
   codBadge: {
@@ -449,8 +595,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   callButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -475,8 +621,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    height: 40,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
     borderRadius: Radii.full,
   },
   updateButtonText: {
@@ -497,12 +643,5 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-  },
-  // Keeps the call action labelled for screen readers without adding visible chrome.
-  srOnly: {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
   },
 });

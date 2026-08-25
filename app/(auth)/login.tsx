@@ -89,12 +89,22 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               secureTextEntry={!passwordVisible}
               textContentType="password"
-              labelRight={
-                <Text
-                  onPress={() => setPasswordVisible((v) => !v)}
-                  style={[monoLabelStyle(11, 0.08), { color: colors.accent }]}>
-                  {passwordVisible ? t('auth.login.hide') : t('auth.login.reveal')}
-                </Text>
+              inputAccessory={
+                <AnimatedPressable
+                  scaleTo={0.88}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    passwordVisible ? t('auth.login.hide') : t('auth.login.reveal')
+                  }
+                  style={styles.eyeButton}
+                  onPress={() => setPasswordVisible((v) => !v)}>
+                  <Ionicons
+                    name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={passwordVisible ? colors.accent : colors.textTertiary}
+                  />
+                </AnimatedPressable>
               }
             />
 
@@ -180,6 +190,12 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: Spacing.smd,
+  },
+  eyeButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   forgotPinRow: {
     flexDirection: 'row',

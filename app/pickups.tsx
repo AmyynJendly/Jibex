@@ -3,15 +3,15 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useConfirm } from '../components/ConfirmDialog';
+import { DraggableList } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
-import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -27,12 +27,23 @@ import {
   type ColorPalette,
 } from '../constants';
 import { formatCurrency } from '../lib/currency';
-import { enumLabel } from '../lib/enumLabel';
 import { telUrl } from '../lib/phone';
-import { completeAllPickups, getPickups } from '../services/mock-api';
+import { completePickups, getPickups, setPickupOrder } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
 
 const STAGGER_MS = 40;
+
+/** Card height plus the gap under it — the drag list lays rows out from these. */
+const COLLAPSED_HEIGHT = 168;
+const PARCEL_ROW_HEIGHT = 40;
+const PARCELS_HEADER_HEIGHT = 30;
+
+function pickupHeight(pickup: Pickup, expanded: boolean) {
+  if (!expanded) return COLLAPSED_HEIGHT;
+  return COLLAPSED_HEIGHT + PARCELS_HEADER_HEIGHT + pickup.parcels.length * PARCEL_ROW_HEIGHT;
+}
+
+const pickupId = (pickup: Pickup) => pickup.id;
 
 /**
  * Pickup addresses only have text, not coordinates, so this navigates by
@@ -59,83 +70,128 @@ async function openInMaps(address: string) {
   Linking.openURL(webUrl);
 }
 
-interface PickupDetailsProps {
+interface PickupCardProps {
   pickup: Pickup;
   colors: ColorPalette;
+  scheme: 'light' | 'dark';
+  expanded: boolean;
+  /** Completed pickups are a record, not a worklist — no actions on them. */
+  readOnly?: boolean;
+  stopNumber?: number;
+  onToggle: () => void;
   t: TFunction;
 }
 
-/** Expanded content shown under a pickup card/row — status, contact, navigate action, nested parcels. */
-function PickupDetails({ pickup, colors, t }: PickupDetailsProps) {
-  return (
-    <Animated.View entering={FadeInDown.duration(180)} style={styles.details}>
-      <View style={[styles.detailsDivider, { backgroundColor: colors.separator }]} />
+/**
+ * One merchant stop. Call and Navigate act on the stop itself — a driver
+ * ringing ahead is ringing the shop, not one parcel inside it — so they sit
+ * on the card, above the parcel list rather than inside it.
+ */
+function PickupCard({
+  pickup,
+  colors,
+  scheme,
+  expanded,
+  readOnly = false,
+  stopNumber,
+  onToggle,
+  t,
+}: PickupCardProps) {
+  const codTotal = pickup.parcels.reduce((sum, p) => sum + p.codAmount, 0);
 
-      <View style={styles.detailStatusRow}>
-        <Ionicons name="ellipse" size={8} color={colors.accent} />
-        <Text style={[styles.detailStatusText, { color: colors.text }]}>
-          {enumLabel(t, 'pickupStatus', pickup.status)}
+  return (
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: colors.bgElevated },
+        expanded && !readOnly && { borderColor: colors.success, borderWidth: 1.5 },
+        getCardShadow(scheme),
+      ]}>
+      <AnimatedPressable scaleTo={0.99} style={styles.cardHead} onPress={onToggle}>
+        <View style={[styles.cardIcon, { backgroundColor: colors.purpleSoft }]}>
+          <Ionicons name="storefront-outline" size={19} color={colors.purple} />
+          {stopNumber !== undefined && (
+            <View style={[styles.stopBadge, { backgroundColor: colors.purple }]}>
+              <Text style={styles.stopBadgeText}>{stopNumber}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.cardHeadText}>
+          <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
+            {pickup.businessName}
+          </Text>
+          <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
+            {pickup.timeWindow} · {t('common.package', { count: pickup.packageCount })}
+          </Text>
+          <Text style={[Typography.caption2, { color: colors.textTertiary }]} numberOfLines={1}>
+            {pickup.address}
+          </Text>
+        </View>
+
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={colors.textTertiary}
+        />
+      </AnimatedPressable>
+
+      <View style={[styles.actionRow, { borderTopColor: colors.separator }]}>
+        {readOnly ? (
+          <View style={styles.collectedRow}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            <Text style={[styles.collectedText, { color: colors.success }]}>
+              {t('pickups.collected')}
+            </Text>
+          </View>
+        ) : (
+          <>
+            <AnimatedPressable
+              scaleTo={0.95}
+              style={[styles.actionButton, { backgroundColor: colors.accentSoft }]}
+              onPress={() => Linking.openURL(telUrl(pickup.contactPhone)).catch(() => {})}>
+              <Ionicons name="call-outline" size={16} color={colors.accent} />
+              <Text style={[styles.actionButtonText, { color: colors.accent }]}>
+                {t('pickups.call')}
+              </Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              scaleTo={0.95}
+              style={[styles.actionButton, { backgroundColor: colors.accent }]}
+              onPress={() => openInMaps(pickup.address)}>
+              <Ionicons name="navigate-outline" size={16} color="#fff" />
+              <Text style={[styles.actionButtonText, styles.actionButtonTextOn]}>
+                {t('pickups.navigate')}
+              </Text>
+            </AnimatedPressable>
+          </>
+        )}
+        <View style={styles.actionSpacer} />
+        <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]} numberOfLines={1}>
+          {formatCurrency(codTotal)}
         </Text>
       </View>
 
-      <View style={styles.contactRow}>
-        <View style={styles.contactInfo}>
-          <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
-          <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-            {pickup.contactName} · {pickup.contactPhone}
+      {expanded && (
+        <View style={styles.parcels}>
+          <Text style={[styles.parcelsTitle, { color: colors.textTertiary }]}>
+            {t('pickups.parcelsTitle')} · {pickup.contactName}
           </Text>
+          {pickup.parcels.map((parcel) => (
+            <View
+              key={parcel.trackingNumber}
+              style={[styles.parcelRow, { borderTopColor: colors.separator }]}>
+              <Text style={[styles.parcelTracking, { color: colors.text }]} numberOfLines={1}>
+                {parcel.trackingNumber}
+              </Text>
+              <Text style={[styles.parcelCod, { color: colors.accent }]} numberOfLines={1}>
+                {formatCurrency(parcel.codAmount)}
+              </Text>
+            </View>
+          ))}
         </View>
-        <View style={styles.detailActions}>
-          <AnimatedPressable
-            scaleTo={0.88}
-            style={[
-              styles.detailActionButton,
-              { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-            ]}
-            onPress={() => Linking.openURL(telUrl(pickup.contactPhone))}>
-            <Ionicons name="call-outline" size={16} color={colors.accent} />
-          </AnimatedPressable>
-          <AnimatedPressable
-            scaleTo={0.95}
-            style={[styles.navigateChip, { backgroundColor: colors.accent }]}
-            onPress={() => openInMaps(pickup.address)}>
-            <Ionicons name="navigate-outline" size={14} color="#fff" />
-            <Text style={styles.navigateChipText}>{t('pickups.navigate')}</Text>
-          </AnimatedPressable>
-        </View>
-      </View>
-
-      {pickup.status === 'SCHEDULED' && (
-        <PrimaryButton
-          label={t('pickups.startPickup')}
-          onPress={() => router.push('/scanner')}
-          height={42}
-          labelStyle={styles.startButtonLabel}
-        />
       )}
-
-      <Text style={[styles.parcelsTitle, { color: colors.textTertiary }]}>
-        {t('pickups.parcelsTitle')}
-      </Text>
-
-      {pickup.parcels.map((parcel) => (
-        <View
-          key={parcel.trackingNumber}
-          style={[styles.parcelRow, { borderColor: colors.separator }]}>
-          <View style={styles.parcelInfo}>
-            <Text style={[styles.parcelTracking, { color: colors.text }]}>
-              {parcel.trackingNumber}
-            </Text>
-            <Text style={[styles.parcelContact, { color: colors.textSecondary }]}>
-              {parcel.contactName}
-            </Text>
-          </View>
-          <Text style={[styles.parcelCod, { color: colors.accent }]}>
-            {formatCurrency(parcel.codAmount)}
-          </Text>
-        </View>
-      ))}
-    </Animated.View>
+    </View>
   );
 }
 
@@ -148,28 +204,44 @@ export default function PickupsScreen() {
   const [pickups, setPickups] = useState<Pickup[] | null>(null);
   const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [completingAll, setCompletingAll] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     getPickups().then(setPickups);
   }, []);
 
-  async function handleDoneAll() {
-    const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
-    if (scheduled.length === 0 || completingAll) return;
+  const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
+  const completed = pickups?.filter((p) => p.status === 'COMPLETED') ?? [];
+  const displayed = segment === 'SCHEDULED' ? scheduled : completed;
+
+  // Expanding a stop is how the driver picks which ones they've actually
+  // collected — "Done" then closes out exactly those, not the whole list.
+  const selected = scheduled.filter((p) => expandedIds.has(p.id));
+
+  async function handleDoneSelected() {
+    if (selected.length === 0 || completing) return;
 
     const confirmed = await confirm({
-      title: t('pickups.doneAllConfirmTitle'),
-      message: t('pickups.doneAllConfirmMessage', { count: scheduled.length }),
-      confirmLabel: t('pickups.doneAll'),
+      title: t('pickups.doneConfirmTitle'),
+      message: t('pickups.doneConfirmMessage', {
+        count: selected.length,
+        names: selected.map((p) => p.businessName).join(', '),
+      }),
+      confirmLabel: t('pickups.doneConfirmAction'),
       cancelLabel: t('common.cancel'),
     });
     if (!confirmed) return;
 
-    setCompletingAll(true);
-    setPickups(await completeAllPickups());
-    setCompletingAll(false);
-    showToast(t('pickups.doneAllToast'));
+    setCompleting(true);
+    const ids = selected.map((p) => p.id);
+    setPickups(await completePickups(ids));
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+    setCompleting(false);
+    showToast(t('pickups.doneToast', { count: ids.length }));
   }
 
   function toggleExpand(id: string) {
@@ -184,8 +256,14 @@ export default function PickupsScreen() {
     });
   }
 
-  const displayed = pickups?.filter((p) => p.status === segment) ?? [];
-  const totalPackages = pickups?.reduce((sum, p) => sum + p.packageCount, 0) ?? 0;
+  async function handleReorder(orderedIds: string[]) {
+    // No reload here: the list already shows the new order, and swapping the
+    // array out from under a just-settled drag makes it jump.
+    await setPickupOrder(orderedIds);
+    showToast(t('pickups.reorderedToast'));
+  }
+
+  const totalPackages = displayed.reduce((sum, p) => sum + p.packageCount, 0);
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -221,72 +299,96 @@ export default function PickupsScreen() {
           onChange={setSegment}
         />
 
-        {segment === 'SCHEDULED' && displayed.length > 0 && (
-          <AnimatedPressable
-            scaleTo={0.97}
-            style={[styles.doneAllButton, { backgroundColor: colors.success }]}
-            onPress={handleDoneAll}>
-            <Ionicons name="checkmark-done" size={18} color="#fff" />
-            <Text style={styles.doneAllButtonText}>{t('pickups.doneAll')}</Text>
-          </AnimatedPressable>
-        )}
-
         {!pickups ? (
           <View style={styles.skeletonGroup}>
             <SkeletonBlock height={140} radius={Radii.card} />
             <SkeletonRow />
             <SkeletonRow />
           </View>
-        ) : (
+        ) : displayed.length === 0 ? (
+          <EmptyState
+            icon={segment === 'SCHEDULED' ? 'cube-outline' : 'checkmark-done-outline'}
+            title={
+              segment === 'SCHEDULED' ? t('pickups.empty.scheduled') : t('pickups.empty.completed')
+            }
+          />
+        ) : segment === 'SCHEDULED' ? (
           <>
-            {displayed.length === 0 ? (
-              <EmptyState
-                icon={segment === 'SCHEDULED' ? 'cube-outline' : 'checkmark-done-outline'}
-                title={segment === 'SCHEDULED' ? t('pickups.empty.scheduled') : t('pickups.empty.completed')}
-              />
-            ) : (
-              displayed.map((pickup, i) => {
-                const isExpanded = expandedIds.has(pickup.id);
-                return (
-                  <Animated.View
-                    key={pickup.id}
-                    entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
-                    style={[
-                      styles.row,
-                      { backgroundColor: colors.bgElevated },
-                      getCardShadow(scheme),
-                    ]}>
-                    <View style={styles.rowTopLine}>
-                      <View style={[styles.rowIcon, { backgroundColor: colors.separator }]}>
-                        <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />
-                      </View>
-                      <View style={styles.rowText}>
-                        <Text style={[Typography.title3, styles.rowTitle, { color: colors.text }]}>
-                          {pickup.businessName}
-                        </Text>
-                        <Text style={[Typography.subhead, { color: colors.textSecondary }]} numberOfLines={1}>
-                          {pickup.timeWindow} · {t('common.package', { count: pickup.packageCount })}
-                        </Text>
-                      </View>
-                      <AnimatedPressable
-                        scaleTo={0.85}
-                        hitSlop={10}
-                        onPress={() => toggleExpand(pickup.id)}>
-                        <Ionicons
-                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                          size={18}
-                          color={colors.textTertiary}
-                        />
-                      </AnimatedPressable>
-                    </View>
-                    {isExpanded && <PickupDetails pickup={pickup} colors={colors} t={t} />}
-                  </Animated.View>
-                );
-              })
-            )}
+            <View style={styles.hintRow}>
+              <Ionicons name="reorder-two" size={16} color={colors.textTertiary} />
+              <Text style={[Typography.caption2, styles.hintText, { color: colors.textTertiary }]}>
+                {t('pickups.reorderHint')}
+              </Text>
+            </View>
+
+            <DraggableList
+              data={scheduled}
+              idOf={pickupId}
+              itemHeight={(pickup) => pickupHeight(pickup, expandedIds.has(pickup.id))}
+              onReorder={handleReorder}
+              renderItem={(pickup, index) => (
+                <PickupCard
+                  pickup={pickup}
+                  colors={colors}
+                  scheme={scheme}
+                  stopNumber={index + 1}
+                  expanded={expandedIds.has(pickup.id)}
+                  onToggle={() => toggleExpand(pickup.id)}
+                  t={t}
+                />
+              )}
+            />
           </>
+        ) : (
+          completed.map((pickup, i) => (
+            <Animated.View
+              key={pickup.id}
+              entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
+              <PickupCard
+                pickup={pickup}
+                colors={colors}
+                scheme={scheme}
+                readOnly
+                expanded={expandedIds.has(pickup.id)}
+                onToggle={() => toggleExpand(pickup.id)}
+                t={t}
+              />
+            </Animated.View>
+          ))
         )}
       </ScrollView>
+
+      {segment === 'SCHEDULED' && scheduled.length > 0 && (
+        <View
+          style={[
+            styles.footer,
+            { backgroundColor: colors.bgElevated, borderTopColor: colors.separator },
+          ]}>
+          <Text style={[styles.footerNote, { color: colors.textSecondary }]}>
+            {selected.length === 0
+              ? t('pickups.doneHint')
+              : t('pickups.doneSelectedNote', { count: selected.length })}
+          </Text>
+          <AnimatedPressable
+            scaleTo={0.95}
+            disabled={selected.length === 0 || completing}
+            style={[
+              styles.doneButton,
+              {
+                backgroundColor: colors.success,
+                opacity: selected.length === 0 || completing ? 0.4 : 1,
+              },
+            ]}
+            onPress={handleDoneSelected}>
+            <Ionicons name="checkmark-done" size={17} color="#fff" />
+            <Text style={styles.doneButtonText}>
+              {selected.length > 0
+                ? t('pickups.doneWithCount', { count: selected.length })
+                : t('pickups.done')}
+            </Text>
+          </AnimatedPressable>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -321,128 +423,142 @@ const styles = StyleSheet.create({
   skeletonGroup: {
     gap: Spacing.mlg,
   },
-  doneAllButton: {
+  hintRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    height: 48,
-    borderRadius: 24,
+    gap: Spacing.xs,
+    marginBottom: -Spacing.xs,
   },
-  doneAllButtonText: {
-    fontFamily: Fonts.archivoBold,
-    fontSize: 15,
-    color: '#fff',
+  hintText: {
+    flex: 1,
   },
-  startButtonLabel: {
-    fontSize: 13,
-  },
-  row: {
+  card: {
+    flex: 1,
     borderRadius: Radii.xxl,
     padding: Spacing.lg,
+    overflow: 'hidden',
   },
-  rowTopLine: {
+  cardHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
-  rowIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: Radii.sm,
+  cardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowText: {
-    flex: 1,
+  stopBadge: {
+    position: 'absolute',
+    top: -5,
+    left: -5,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  rowTitle: {
+  stopBadgeText: {
     fontFamily: Fonts.archivoBold,
-    fontSize: 15,
-  },
-  details: {
-    gap: Spacing.smd,
-  },
-  detailsDivider: {
-    height: 1,
-    marginTop: Spacing.smd,
-  },
-  detailStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  detailStatusText: {
-    fontFamily: Fonts.archivoSemiBold,
-    fontSize: 13,
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  contactInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
-  contactText: {
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 13,
-    flexShrink: 1,
-  },
-  detailActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  detailActionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: Radii.sm,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navigateChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radii.sm,
-  },
-  navigateChipText: {
-    fontFamily: Fonts.archivoSemiBold,
-    fontSize: 12,
+    fontSize: 10,
     color: '#fff',
   },
+  cardHeadText: {
+    flex: 1,
+    gap: 1,
+  },
+  businessName: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 16,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    height: 40,
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 36,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radii.md,
+  },
+  actionButtonText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 13,
+  },
+  actionButtonTextOn: {
+    color: '#fff',
+  },
+  actionSpacer: {
+    flex: 1,
+  },
+  collectedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  collectedText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 13,
+  },
+  parcels: {
+    marginTop: Spacing.sm,
+  },
   parcelsTitle: {
-    ...monoLabelStyle(11, 0.04),
+    ...monoLabelStyle(10, 0.04),
     textTransform: 'uppercase',
-    marginTop: 2,
+    height: PARCELS_HEADER_HEIGHT,
+    lineHeight: PARCELS_HEADER_HEIGHT,
   },
   parcelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+    height: PARCEL_ROW_HEIGHT,
     borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  parcelInfo: {
-    flex: 1,
   },
   parcelTracking: {
     ...monoStyle(13, 'medium'),
-  },
-  parcelContact: {
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 12,
-    marginTop: 1,
+    flexShrink: 1,
   },
   parcelCod: {
     ...monoStyle(13, 'medium'),
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.md,
+    paddingBottom: 30,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  footerNote: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+  },
+  doneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    height: 46,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: 23,
+  },
+  doneButtonText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 15,
+    color: '#fff',
   },
 });

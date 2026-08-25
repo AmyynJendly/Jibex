@@ -5,12 +5,23 @@ import { Radii, Spacing, monoLabelStyle, useColors, Typography } from '../consta
 
 interface FormFieldProps extends TextInputProps {
   label: string;
-  /** Right-aligned accessory in the label row (e.g. the "View" PIN-reveal toggle). */
+  /** Right-aligned accessory in the label row. */
   labelRight?: ReactNode;
+  /**
+   * Accessory pinned inside the input box itself (e.g. the password eye
+   * toggle). Sits over the trailing edge, so the text is inset to clear it.
+   */
+  inputAccessory?: ReactNode;
 }
 
 /** Labeled 52pt input box — the field style repeated for every credential/form input in the design. */
-export function FormField({ label, labelRight, style, ...inputProps }: FormFieldProps) {
+export function FormField({
+  label,
+  labelRight,
+  inputAccessory,
+  style,
+  ...inputProps
+}: FormFieldProps) {
   const colors = useColors();
 
   return (
@@ -23,18 +34,22 @@ export function FormField({ label, labelRight, style, ...inputProps }: FormField
         </Text>
         {labelRight}
       </View>
-      <TextInput
-        placeholderTextColor={colors.textTertiary}
-        autoCapitalize="none"
-        autoCorrect={false}
-        style={[
-          Typography.input,
-          styles.input,
-          { backgroundColor: colors.bgElevated, borderColor: colors.separator, color: colors.text },
-          style,
-        ]}
-        {...inputProps}
-      />
+      <View>
+        <TextInput
+          placeholderTextColor={colors.textTertiary}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={[
+            Typography.input,
+            styles.input,
+            { backgroundColor: colors.bgElevated, borderColor: colors.separator, color: colors.text },
+            inputAccessory ? styles.inputWithAccessory : null,
+            style,
+          ]}
+          {...inputProps}
+        />
+        {inputAccessory && <View style={styles.accessory}>{inputAccessory}</View>}
+      </View>
     </View>
   );
 }
@@ -59,5 +74,15 @@ const styles = StyleSheet.create({
     borderRadius: Radii.input,
     borderWidth: 1,
     paddingHorizontal: Spacing.lg,
+  },
+  inputWithAccessory: {
+    paddingRight: 52,
+  },
+  accessory: {
+    position: 'absolute',
+    right: Spacing.xs,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
 });

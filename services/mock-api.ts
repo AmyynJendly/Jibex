@@ -945,18 +945,33 @@ export async function getPickups(): Promise<Pickup[]> {
 }
 
 /**
- * Marks every scheduled pickup collected in one go. A merchant hand-off can
+ * Marks the given pickups collected, parcels and all. A merchant hand-off can
  * run to hundreds of parcels, and scanning each one at the counter isn't
- * practical — the driver signs for the batch instead.
+ * practical — the driver signs for the whole stop instead.
  */
-export async function completeAllPickups(): Promise<Pickup[]> {
+export async function completePickups(ids: string[]): Promise<Pickup[]> {
   await delay(undefined);
+  const wanted = new Set(ids);
   mockPickups.forEach((p) => {
-    if (p.status === 'SCHEDULED') {
+    if (wanted.has(p.id) && p.status === 'SCHEDULED') {
       p.status = 'COMPLETED';
     }
   });
   return mockPickups.map((p) => ({ ...p }));
+}
+
+/**
+ * Persists the driver's chosen collection order, mirroring the parcel
+ * ordering in Runsheets. Reordering the seed array is what makes the choice
+ * survive leaving the screen and coming back.
+ */
+export async function setPickupOrder(orderedIds: string[]): Promise<void> {
+  await delay(undefined);
+
+  const rank = new Map(orderedIds.map((id, i) => [id, i] as const));
+  mockPickups.sort(
+    (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+  );
 }
 
 export async function getTransfers(): Promise<Transfer[]> {
