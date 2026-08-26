@@ -12,6 +12,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
+import { MetaChip } from '../components/MetaChip';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -34,7 +35,7 @@ import type { Pickup, PickupStatus } from '../types';
 const STAGGER_MS = 40;
 
 /** Card height plus the gap under it — the drag list lays rows out from these. */
-const COLLAPSED_HEIGHT = 168;
+const COLLAPSED_HEIGHT = 190;
 const PARCEL_ROW_HEIGHT = 40;
 const PARCELS_HEADER_HEIGHT = 30;
 
@@ -87,6 +88,9 @@ interface PickupCardProps {
  * One merchant stop. Call and Navigate act on the stop itself — a driver
  * ringing ahead is ringing the shop, not one parcel inside it — so they sit
  * on the card, above the parcel list rather than inside it.
+ *
+ * Everything in the header row is one press target, chevron included: a
+ * driver aiming for the arrow shouldn't have to hit a 20pt glyph.
  */
 function PickupCard({
   pickup,
@@ -100,6 +104,7 @@ function PickupCard({
   t,
 }: PickupCardProps) {
   const codTotal = pickup.parcels.reduce((sum, p) => sum + p.codAmount, 0);
+  const accent = readOnly ? colors.success : colors.purple;
 
   return (
     <View
@@ -109,41 +114,56 @@ function PickupCard({
         expanded && !readOnly && { borderColor: colors.success, borderWidth: 1.5 },
         getCardShadow(scheme),
       ]}>
-      <View style={styles.cardHead}>
+      <View style={[styles.cardEdge, { backgroundColor: accent }]} />
+
+      <View style={styles.headRow}>
         {drag && <DragHandle drag={drag} />}
-        <View style={[styles.cardIcon, { backgroundColor: colors.purpleSoft }]}>
-          <Ionicons name="storefront-outline" size={19} color={colors.purple} />
-          {stopNumber !== undefined && (
-            <View style={[styles.stopBadge, { backgroundColor: colors.purple }]}>
-              <Text style={styles.stopBadgeText}>{stopNumber}</Text>
-            </View>
-          )}
-        </View>
+        <AnimatedPressable
+          scaleTo={0.99}
+          accessibilityRole="button"
+          style={styles.headPress}
+          onPress={onToggle}>
+          <View style={[styles.cardIcon, { backgroundColor: colors.purpleSoft }]}>
+            <Ionicons name="storefront-outline" size={20} color={colors.purple} />
+            {stopNumber !== undefined && (
+              <View style={[styles.stopBadge, { backgroundColor: colors.purple }]}>
+                <Text style={styles.stopBadgeText}>{stopNumber}</Text>
+              </View>
+            )}
+          </View>
 
-        {/* Only this block toggles: the handle beside it needs its own touches. */}
-        <AnimatedPressable scaleTo={0.99} style={styles.cardHeadText} onPress={onToggle}>
-          <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
-            {pickup.businessName}
-          </Text>
-          <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
-            {pickup.timeWindow} · {t('common.package', { count: pickup.packageCount })}
-          </Text>
-          <Text style={[Typography.caption2, { color: colors.textTertiary }]} numberOfLines={1}>
-            {pickup.address}
-          </Text>
+          <View style={styles.headText}>
+            <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
+              {pickup.businessName}
+            </Text>
+            <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
+              {pickup.address}
+            </Text>
+          </View>
+
+          <View style={[styles.chevronWell, { backgroundColor: colors.bg }]}>
+            <Ionicons
+              name={expanded ? 'chevron-up' : 'chevron-down'}
+              size={17}
+              color={colors.textSecondary}
+            />
+          </View>
         </AnimatedPressable>
+      </View>
 
-        <Ionicons
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={colors.textTertiary}
+      <View style={styles.metaRow}>
+        <MetaChip icon="time-outline" label={pickup.timeWindow} />
+        <MetaChip
+          icon="cube-outline"
+          label={t('common.package', { count: pickup.packageCount })}
         />
+        <MetaChip icon="cash-outline" label={formatCurrency(codTotal)} tone="accent" />
       </View>
 
       <View style={[styles.actionRow, { borderTopColor: colors.separator }]}>
         {readOnly ? (
           <View style={styles.collectedRow}>
-            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={17} color={colors.success} />
             <Text style={[styles.collectedText, { color: colors.success }]}>
               {t('pickups.collected')}
             </Text>
@@ -154,31 +174,27 @@ function PickupCard({
               scaleTo={0.95}
               style={[styles.actionButton, { backgroundColor: colors.accentSoft }]}
               onPress={() => Linking.openURL(telUrl(pickup.contactPhone)).catch(() => {})}>
-              <Ionicons name="call-outline" size={16} color={colors.accent} />
+              <Ionicons name="call-outline" size={17} color={colors.accent} />
               <Text style={[styles.actionButtonText, { color: colors.accent }]}>
                 {t('pickups.call')}
               </Text>
             </AnimatedPressable>
             <AnimatedPressable
               scaleTo={0.95}
-              style={[styles.actionButton, { backgroundColor: colors.accent }]}
+              style={[styles.actionButton, styles.actionButtonWide, { backgroundColor: colors.accent }]}
               onPress={() => openInMaps(pickup.address)}>
-              <Ionicons name="navigate-outline" size={16} color="#fff" />
+              <Ionicons name="navigate" size={16} color="#fff" />
               <Text style={[styles.actionButtonText, styles.actionButtonTextOn]}>
                 {t('pickups.navigate')}
               </Text>
             </AnimatedPressable>
           </>
         )}
-        <View style={styles.actionSpacer} />
-        <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]} numberOfLines={1}>
-          {formatCurrency(codTotal)}
-        </Text>
       </View>
 
       {expanded && (
         <View style={styles.parcels}>
-          <Text style={[styles.parcelsTitle, { color: colors.textTertiary }]}>
+          <Text style={[styles.parcelsTitle, { color: colors.textTertiary }]} numberOfLines={1}>
             {t('pickups.parcelsTitle')} · {pickup.contactName}
           </Text>
           {pickup.parcels.map((parcel) => (
@@ -319,27 +335,25 @@ export default function PickupsScreen() {
             }
           />
         ) : segment === 'SCHEDULED' ? (
-          <>
-            <DraggableList
-              data={scheduled}
-              idOf={pickupId}
-              itemHeight={(pickup) => pickupHeight(pickup, expandedIds.has(pickup.id))}
-              onReorder={handleReorder}
-              onDragStateChange={setDragging}
-              renderItem={(pickup, index, drag) => (
-                <PickupCard
-                  pickup={pickup}
-                  colors={colors}
-                  scheme={scheme}
-                  stopNumber={index + 1}
-                  drag={drag}
-                  expanded={expandedIds.has(pickup.id)}
-                  onToggle={() => toggleExpand(pickup.id)}
-                  t={t}
-                />
-              )}
-            />
-          </>
+          <DraggableList
+            data={scheduled}
+            idOf={pickupId}
+            itemHeight={(pickup) => pickupHeight(pickup, expandedIds.has(pickup.id))}
+            onReorder={handleReorder}
+            onDragStateChange={setDragging}
+            renderItem={(pickup, index, drag) => (
+              <PickupCard
+                pickup={pickup}
+                colors={colors}
+                scheme={scheme}
+                stopNumber={index + 1}
+                drag={drag}
+                expanded={expandedIds.has(pickup.id)}
+                onToggle={() => toggleExpand(pickup.id)}
+                t={t}
+              />
+            )}
+          />
         ) : (
           completed.map((pickup, i) => (
             <Animated.View
@@ -428,16 +442,32 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Radii.xxl,
     padding: Spacing.lg,
+    paddingLeft: Spacing.lg + 4,
     overflow: 'hidden',
   },
-  cardHead: {
+  cardEdge: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  // The whole row is the toggle — icon, text and chevron alike.
+  headPress: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
+    minHeight: 44,
   },
   cardIcon: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -458,52 +488,66 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#fff',
   },
-  cardHeadText: {
+  headText: {
     flex: 1,
-    gap: 1,
+    gap: 2,
   },
   businessName: {
     fontFamily: Fonts.archivoBold,
     fontSize: 16,
   },
+  chevronWell: {
+    width: 32,
+    height: 32,
+    borderRadius: Radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+    marginTop: Spacing.smd,
+  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    height: 40,
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
+    marginTop: Spacing.smd,
+    paddingTop: Spacing.smd,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    height: 36,
-    paddingHorizontal: Spacing.md,
+    justifyContent: 'center',
+    gap: 6,
+    height: 42,
+    flex: 1,
     borderRadius: Radii.md,
+  },
+  actionButtonWide: {
+    flex: 1.4,
   },
   actionButtonText: {
     fontFamily: Fonts.archivoSemiBold,
-    fontSize: 13,
+    fontSize: 14,
   },
   actionButtonTextOn: {
     color: '#fff',
-  },
-  actionSpacer: {
-    flex: 1,
   },
   collectedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+    height: 42,
   },
   collectedText: {
     fontFamily: Fonts.archivoSemiBold,
-    fontSize: 13,
+    fontSize: 14,
   },
   parcels: {
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   parcelsTitle: {
     ...monoLabelStyle(10, 0.04),

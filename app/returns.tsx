@@ -8,10 +8,13 @@ import { useTranslation } from 'react-i18next';
 
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
+import { MetaChip } from '../components/MetaChip';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import {
   Fonts,
   Radii,
@@ -24,7 +27,7 @@ import {
 } from '../constants';
 import { localeTag } from '../lib/date';
 import { enumLabel } from '../lib/enumLabel';
-import { getReturns } from '../services/mock-api';
+import { confirmReturns, getReturns } from '../services/mock-api';
 import type { Return } from '../types';
 
 type Toggle = 'current' | 'history';
@@ -35,8 +38,11 @@ export default function ReturnsScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const [returns, setReturns] = useState<Return[] | null>(null);
   const [toggle, setToggle] = useState<Toggle>('current');
+  const [confirming, setConfirming] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -56,6 +62,29 @@ export default function ReturnsScreen() {
   const isHistory = toggle === 'history';
   const displayed = isHistory ? processed : pending;
   const pendingParcelTotal = displayed.reduce((sum, r) => sum + r.parcelCount, 0);
+
+  /**
+   * Signs for return batches without scanning. The depot counts a hand-back
+   * against the manifest at the counter; scanning each batch is the fallback
+   * for when the paperwork and the pallet disagree, not the normal path.
+   */
+  async function handleConfirm(batches: Return[]) {
+    if (batches.length === 0 || confirming) return;
+    const parcels = batches.reduce((sum, r) => sum + r.parcelCount, 0);
+
+    const accepted = await confirm({
+      title: t('returns.confirmTitle'),
+      message: t('returns.confirmMessage', { count: batches.length, parcels }),
+      confirmLabel: t('returns.confirmAction'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!accepted) return;
+
+    setConfirming(true);
+    setReturns(await confirmReturns(batches.map((r) => r.id)));
+    setConfirming(false);
+    showToast(t('returns.confirmToast', { count: batches.length }));
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -146,24 +175,13 @@ export default function ReturnsScreen() {
                 />
 
                 <View style={styles.metaRow}>
-                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
-                    <Ionicons name="arrow-undo-outline" size={13} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.text }]}>
-                      {t('common.package', { count: item.parcelCount })}
-                    </Text>
-                  </View>
-                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
-                    <Ionicons name="business-outline" size={13} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.text }]} numberOfLines={1}>
-                      {item.location}
-                    </Text>
-                  </View>
-                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
-                    <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.text }]}>
-                      {formatTime(item.scheduledAt)}
-                    </Text>
-                  </View>
+                  <MetaChip
+                    icon="arrow-undo-outline"
+                    tone={isHistory ? 'success' : 'warning'}
+                    label={t('common.package', { count: item.parcelCount })}
+                  />
+                  <MetaChip icon="business-outline" label={item.location} />
+                  <MetaChip icon="time-outline" label={formatTime(item.scheduledAt)} />
                 </View>
 
                 {item.relatedTransferId && (
@@ -175,20 +193,28 @@ export default function ReturnsScreen() {
                   </View>
                 )}
 
-                {/* History is read-only — no scan action there. */}
+                {/* History is read-only — no actions there. */}
                 {!isHistory && (
                   <View style={[styles.actions, { borderTopColor: colors.separator }]}>
                     <AnimatedPressable
-                      scaleTo={0.97}
-                      style={[styles.scanButton, { backgroundColor: colors.accent }]}
+                      scaleTo={0.96}
+                      style={[styles.confirmButton, { backgroundColor: colors.success }]}
+                      onPress={() => handleConfirm([item])}>
+                      <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />
+                      <Text style={styles.confirmButtonText}>{t('returns.confirmOne')}</Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      scaleTo={0.94}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('returns.scan')}
+                      style={[styles.scanIconButton, { borderColor: colors.separator }]}
                       onPress={() =>
                         router.push({
                           pathname: '/scanner',
                           params: { batchIds: JSON.stringify([item.id]) },
                         })
                       }>
-                      <Ionicons name="scan-outline" size={16} color="#fff" />
-                      <Text style={styles.scanButtonText}>{t('returns.scan')}</Text>
+                      <Ionicons name="scan-outline" size={18} color={colors.textSecondary} />
                     </AnimatedPressable>
                   </View>
                 )}
@@ -204,22 +230,33 @@ export default function ReturnsScreen() {
             styles.footer,
             { backgroundColor: colors.bgElevated, borderTopColor: colors.separator },
           ]}>
-          <Text style={[styles.footerNote, { color: colors.textSecondary }]}>
-            {t('returns.scanNote')}
-          </Text>
+          {/* Signing for the lot is the common case, so it leads; scanning
+              stays one tap away for when the count has to be proven. */}
           <AnimatedPressable
-            scaleTo={0.95}
-            style={[styles.scanAllButton, { backgroundColor: colors.warning }]}
+            scaleTo={0.96}
+            disabled={confirming}
+            style={[
+              styles.confirmAllButton,
+              { backgroundColor: colors.success, opacity: confirming ? 0.5 : 1 },
+            ]}
+            onPress={() => handleConfirm(pending)}>
+            <Ionicons name="checkmark-done" size={18} color="#fff" />
+            <Text style={styles.confirmAllButtonText}>
+              {t('returns.confirmAllWithCount', { count: pending.length })}
+            </Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            scaleTo={0.94}
+            accessibilityRole="button"
+            accessibilityLabel={t('returns.scanAllWithCount', { count: pending.length })}
+            style={[styles.scanAllButton, { backgroundColor: colors.warningSoft }]}
             onPress={() =>
               router.push({
                 pathname: '/scanner',
                 params: { batchIds: JSON.stringify(pending.map((r) => r.id)) },
               })
             }>
-            <Ionicons name="scan" size={16} color="#2E3439" />
-            <Text style={styles.scanAllButtonText}>
-              {t('returns.scanAllWithCount', { count: pending.length })}
-            </Text>
+            <Ionicons name="scan" size={19} color={colors.warning} />
           </AnimatedPressable>
         </View>
       )}
@@ -299,20 +336,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.xs,
   },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.xs,
-    flexShrink: 1,
-  },
-  metaText: {
-    fontFamily: Fonts.archivoSemiBold,
-    fontSize: 12,
-    flexShrink: 1,
-  },
   sourceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -320,10 +343,14 @@ const styles = StyleSheet.create({
     marginTop: -Spacing.xs,
   },
   actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  scanButton: {
+  confirmButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -331,10 +358,18 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: Radii.full,
   },
-  scanButtonText: {
+  confirmButtonText: {
     fontFamily: Fonts.archivoBold,
     fontSize: 14,
     color: '#fff',
+  },
+  scanIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     flexDirection: 'row',
@@ -345,22 +380,25 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  footerNote: {
+  confirmAllButton: {
     flex: 1,
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 12,
-  },
-  scanAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.smd,
-    borderRadius: Radii.full,
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    height: 48,
+    borderRadius: 24,
   },
-  scanAllButtonText: {
+  confirmAllButtonText: {
     fontFamily: Fonts.archivoBold,
-    fontSize: 13,
-    color: '#2E3439',
+    fontSize: 15,
+    color: '#fff',
+  },
+  scanAllButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -974,6 +974,22 @@ export async function getTransfers(): Promise<Transfer[]> {
   return delay(mockTransfers.map((t) => ({ ...t })));
 }
 
+/**
+ * Signs for return batches without scanning each one. A depot hand-back is
+ * counted against the manifest at the counter, the same way a merchant pickup
+ * is — scanning every batch individually is the exception, not the rule.
+ */
+export async function confirmReturns(ids: string[]): Promise<Return[]> {
+  await delay(undefined);
+  const wanted = new Set(ids);
+  mockReturns.forEach((r) => {
+    if (wanted.has(r.id) && r.status === 'PENDING_PICKUP') {
+      r.status = 'PROCESSED';
+    }
+  });
+  return mockReturns.map((r) => ({ ...r }));
+}
+
 export async function getReturns(): Promise<Return[]> {
   return delay(mockReturns.map((r) => ({ ...r })));
 }

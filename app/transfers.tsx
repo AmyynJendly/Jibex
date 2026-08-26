@@ -11,6 +11,7 @@ import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
+import { MetaChip } from '../components/MetaChip';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
@@ -149,24 +150,13 @@ export default function TransfersScreen() {
                 />
 
                 <View style={styles.metaRow}>
-                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
-                    <Ionicons name="cube-outline" size={13} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.text }]}>
-                      {t('common.package', { count: transfer.parcelCount })}
-                    </Text>
-                  </View>
-                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
-                    <Ionicons name="business-outline" size={13} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.text }]} numberOfLines={1}>
-                      {transfer.location}
-                    </Text>
-                  </View>
-                  <View style={[styles.metaChip, { backgroundColor: colors.bg }]}>
-                    <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.text }]}>
-                      {formatTime(transfer.scheduledAt)}
-                    </Text>
-                  </View>
+                  <MetaChip
+                    icon="cube-outline"
+                    tone="accent"
+                    label={t('common.package', { count: transfer.parcelCount })}
+                  />
+                  <MetaChip icon="business-outline" label={transfer.location} />
+                  <MetaChip icon="time-outline" label={formatTime(transfer.scheduledAt)} />
                 </View>
 
                 {!isHistory && (
@@ -273,20 +263,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
-  },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.xs,
-    flexShrink: 1,
-  },
-  metaText: {
-    fontFamily: Fonts.archivoSemiBold,
-    fontSize: 12,
-    flexShrink: 1,
   },
   actions: {
     gap: Spacing.sm,

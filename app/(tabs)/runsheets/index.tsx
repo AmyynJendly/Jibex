@@ -9,6 +9,7 @@ import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
 import { DragHandle, DraggableList, type DragBinding } from '../../../components/DraggableList';
 import { EmptyState } from '../../../components/EmptyState';
+import { MetaChip } from '../../../components/MetaChip';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SegmentedControl } from '../../../components/SegmentedControl';
 import { SkeletonRow } from '../../../components/Skeleton';
@@ -42,7 +43,7 @@ type Toggle = 'current' | 'history';
 type HistoryFilter = 'all' | 'DELIVERED' | 'FAILED';
 
 /** Card height + the gap beneath it — `DraggableList` needs a fixed row pitch. */
-const ROW_HEIGHT = 158;
+const ROW_HEIGHT = 176;
 
 /** Stable across renders so `DraggableList` doesn't re-seat on every pass. */
 const jobId = (job: Job) => job.id;
@@ -141,13 +142,17 @@ function ParcelCard({
       </View>
 
       <View style={styles.addressRow}>
-        <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+        <Ionicons name="location-outline" size={15} color={colors.textSecondary} />
         <Text
           style={[Typography.footnote, styles.addressText, { color: colors.textSecondary }]}
           numberOfLines={1}>
           {job.address}
         </Text>
-        {!inert && <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />}
+        {!inert && (
+          <View style={[styles.openWell, { backgroundColor: colors.bg }]}>
+            <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
+          </View>
+        )}
       </View>
 
       {job.status === 'FAILED' && job.failureReason && (
@@ -157,16 +162,11 @@ function ParcelCard({
       )}
 
       <View style={[styles.cardFooter, { borderTopColor: colors.separator }]}>
-        <Text
-          style={[
-            styles.codBadge,
-            hasCod
-              ? { color: colors.accent, backgroundColor: colors.accentSoft }
-              : { color: colors.success, backgroundColor: colors.successSoft },
-          ]}
-          numberOfLines={1}>
-          {hasCod ? formatCurrency(job.cashToCollect) : t('runsheets.paidTag')}
-        </Text>
+        <MetaChip
+          icon={hasCod ? 'cash-outline' : 'checkmark-circle-outline'}
+          tone={hasCod ? 'accent' : 'success'}
+          label={hasCod ? formatCurrency(job.cashToCollect) : t('runsheets.paidTag')}
+        />
 
         {locked ? (
           <View style={styles.lockedRow}>
@@ -535,7 +535,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    paddingRight: 72,
+    minHeight: 40,
+    // Clears the corner ribbon so a long name never runs under it.
+    paddingRight: 64,
   },
   lockSlot: {
     width: 26,
@@ -544,25 +546,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stopBadge: {
-    minWidth: 26,
-    height: 26,
+    minWidth: 28,
+    height: 28,
     borderRadius: Radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
   },
   cardHeadText: {
     flex: 1,
   },
   customerName: {
     fontFamily: Fonts.archivoBold,
-    fontSize: 16,
+    fontSize: 17,
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    marginTop: Spacing.xs,
+    marginTop: Spacing.smd,
+    minHeight: 32,
+  },
+  openWell: {
+    width: 32,
+    height: 32,
+    borderRadius: Radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addressText: {
     flex: 1,
@@ -579,14 +589,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     marginTop: 'auto',
-    paddingTop: Spacing.md,
-  },
-  codBadge: {
-    ...monoStyle(12, 'medium'),
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.xs,
-    overflow: 'hidden',
+    paddingTop: Spacing.smd,
   },
   lockedRow: {
     flexDirection: 'row',
@@ -604,8 +607,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   callButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -629,14 +632,14 @@ const styles = StyleSheet.create({
   updateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    height: 40,
+    gap: 6,
+    height: 42,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radii.full,
   },
   updateButtonText: {
     fontFamily: Fonts.archivoBold,
-    fontSize: 13,
+    fontSize: 14,
     color: '#fff',
   },
   filterRow: {

@@ -11,6 +11,12 @@ import {
 
 import { Radii, Spacing, useColors } from '../constants';
 
+/** Web has no native animation driver; asking for one only earns a warning. */
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+
+/** Settling motion — quick enough to feel responsive, damped enough not to wobble. */
+const SETTLE = { damping: 26, stiffness: 320, mass: 0.7 } as const;
+
 function buzz() {
   if (Platform.OS !== 'web') {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -55,8 +61,8 @@ export function DragHandle({ drag }: { drag: DragBinding }) {
 
 const handleStyles = StyleSheet.create({
   target: {
-    width: 26,
-    height: 30,
+    width: 28,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radii.xs,
@@ -108,13 +114,17 @@ interface DraggableListProps<T> {
  * gesture lives only on the small handle, and PanResponder behaves identically
  * on device and in the browser (RNGH's web layer does not).
  *
- * Three details keep the motion honest. Responders are built once per row id
- * and read live state through refs — rebuilding them mid-gesture used to hand
- * the drag stale indices. The dragged row is positioned from where the finger
- * actually is rather than from its slot, so re-slotting mid-drag can't make it
- * jump. And displaced rows animate with a FLIP: their slot changes instantly,
- * then they're offset back to where they were and sprung to zero, so they
- * slide instead of teleporting.
+ * Smoothness comes from never letting a row's slot drive its pixels mid-drag:
+ *
+ * - The dragged row is laid out at `top: 0` and positioned entirely by one
+ *   animated value holding its absolute offset. Re-slotting changes the array
+ *   but moves nothing on screen, so the row simply keeps tracking the finger.
+ * - Displaced rows animate with a FLIP that starts from where they *visually*
+ *   are, not from their last slot — so a row bumped twice in quick succession
+ *   continues from mid-flight instead of snapping back and re-running.
+ * - On release the row springs to its final slot and only then rejoins normal
+ *   layout, at which point its animated offset already matches, so the handoff
+ *   is invisible.
  */
 export function DraggableList<T>({
   data,
@@ -138,6 +148,7 @@ export function DraggableList<T>({
   const dragStateRef = useRef(onDragStateChange);
   dragStateRef.current = onDragStateChange;
 
+  /** Absolute offset of the dragged row within the list, in pixels. */
   const dragY = useRef(new Animated.Value(0)).current;
   /** Where the dragged row's top sat when the finger went down. */
   const grantTop = useRef(0);
@@ -207,18 +218,33 @@ export function DraggableList<T>({
       prevTops.set(id, top);
       if (previous === undefined || previous === top || id === activeIdRef.current) return;
 
+      // Continue from where the row actually is on screen. Reading the live
+      // value (rather than assuming it settled at 0) is what stops a row
+      // that's bumped twice from snapping backwards between bumps.
       const value = offsetFor(id);
-      value.setValue(previous - top);
-      Animated.spring(value, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 24,
-        stiffness: 280,
-      }).start();
+      value.stopAnimation((current) => {
+        value.setValue(current + (previous - top));
+        Animated.spring(value, {
+          toValue: 0,
+          useNativeDriver: USE_NATIVE_DRIVER,
+          ...SETTLE,
+        }).start();
+      });
     });
   });
 
   const responders = useRef(new Map<string, ReturnType<typeof PanResponder.create>>()).current;
+
+  /** Stacked offset of `id` within `list`, measured from the current heights. */
+  function topWithin(list: string[], id: string) {
+    const { heights } = layoutRef.current;
+    let top = 0;
+    for (const other of list) {
+      if (other === id) break;
+      top += heights.get(other) ?? 0;
+    }
+    return top;
+  }
 
   function responderFor(id: string) {
     const existing = responders.get(id);
@@ -233,7 +259,10 @@ export function DraggableList<T>({
       onPanResponderGrant: () => {
         grantTop.current = layoutRef.current.tops.get(id) ?? 0;
         didMove.current = false;
-        dragY.setValue(0);
+        // The row switches from slot-based to offset-based positioning in the
+        // very next render; seeding the offset with its current top means it
+        // doesn't move a pixel as that happens.
+        dragY.setValue(grantTop.current);
         offsetFor(id).setValue(0);
         activeIdRef.current = id;
         setActiveId(id);
@@ -243,6 +272,9 @@ export function DraggableList<T>({
       onPanResponderMove: (_event, gesture) => {
         const { heights } = layoutRef.current;
         const draggedTop = grantTop.current + gesture.dy;
+        // The row follows the finger and nothing else. No slot compensation,
+        // so re-slotting below can't jolt it.
+        dragY.setValue(draggedTop);
 
         // Where this row now belongs among the others. Inserting at slot k
         // would put its top at the k-th other's stacked offset, so compare
@@ -258,41 +290,40 @@ export function DraggableList<T>({
           target += 1;
         }
 
-        let next = orderRef.current;
-        if (next.indexOf(id) !== target) {
-          next = [...others];
-          next.splice(target, 0, id);
-          orderRef.current = next;
-          didMove.current = true;
-          setOrder(next);
-          buzz();
-        }
-
-        // Position from the finger, not from the slot: the slot may have just
-        // changed under it, and this render hasn't happened yet.
-        let myTop = 0;
-        for (const other of next) {
-          if (other === id) break;
-          myTop += heights.get(other) ?? 0;
-        }
-        dragY.setValue(draggedTop - myTop);
+        if (orderRef.current.indexOf(id) === target) return;
+        const next = [...others];
+        next.splice(target, 0, id);
+        orderRef.current = next;
+        didMove.current = true;
+        setOrder(next);
+        buzz();
       },
       onPanResponderRelease: () => {
+        const settled = orderRef.current;
+        // Measured from the live order rather than `layoutRef`, which may not
+        // have caught up with the final re-slot yet.
         Animated.spring(dragY, {
-          toValue: 0,
-          useNativeDriver: true,
-          damping: 22,
-          stiffness: 240,
-        }).start();
-        activeIdRef.current = null;
-        setActiveId(null);
+          toValue: topWithin(settled, id),
+          useNativeDriver: USE_NATIVE_DRIVER,
+          ...SETTLE,
+        }).start(() => {
+          // Hand back to slot-based layout only once the row is already in
+          // place, so the swap is invisible.
+          activeIdRef.current = null;
+          setActiveId(null);
+        });
         dragStateRef.current?.(false);
-        if (didMove.current) onReorder(orderRef.current);
+        if (didMove.current) onReorder(settled);
       },
       onPanResponderTerminate: () => {
-        dragY.setValue(0);
-        activeIdRef.current = null;
-        setActiveId(null);
+        Animated.spring(dragY, {
+          toValue: topWithin(orderRef.current, id),
+          useNativeDriver: USE_NATIVE_DRIVER,
+          ...SETTLE,
+        }).start(() => {
+          activeIdRef.current = null;
+          setActiveId(null);
+        });
         dragStateRef.current?.(false);
       },
     });
@@ -315,7 +346,9 @@ export function DraggableList<T>({
               styles.row,
               {
                 height: layout.heights.get(id) ?? 0,
-                top: layout.tops.get(id) ?? 0,
+                // Active rows are placed entirely by `dragY`; everything else
+                // sits in its slot and only animates the difference.
+                top: isActive ? 0 : (layout.tops.get(id) ?? 0),
                 zIndex: isActive ? 10 : 1,
                 transform: [{ translateY: isActive ? dragY : offsetFor(id) }],
                 shadowOpacity: isActive ? 0.22 : 0,
