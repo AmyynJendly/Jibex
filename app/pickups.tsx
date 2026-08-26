@@ -34,16 +34,6 @@ import type { Pickup, PickupStatus } from '../types';
 
 const STAGGER_MS = 40;
 
-/** Card height plus the gap under it — the drag list lays rows out from these. */
-const COLLAPSED_HEIGHT = 190;
-const PARCEL_ROW_HEIGHT = 40;
-const PARCELS_HEADER_HEIGHT = 30;
-
-function pickupHeight(pickup: Pickup, expanded: boolean) {
-  if (!expanded) return COLLAPSED_HEIGHT;
-  return COLLAPSED_HEIGHT + PARCELS_HEADER_HEIGHT + pickup.parcels.length * PARCEL_ROW_HEIGHT;
-}
-
 const pickupId = (pickup: Pickup) => pickup.id;
 
 /**
@@ -78,9 +68,10 @@ interface PickupCardProps {
   expanded: boolean;
   /** Completed pickups are a record, not a worklist — no actions on them. */
   readOnly?: boolean;
-  stopNumber?: number;
+  selected?: boolean;
   drag?: DragBinding;
   onToggle: () => void;
+  onSelect?: () => void;
   t: TFunction;
 }
 
@@ -98,9 +89,10 @@ function PickupCard({
   scheme,
   expanded,
   readOnly = false,
-  stopNumber,
+  selected = false,
   drag,
   onToggle,
+  onSelect,
   t,
 }: PickupCardProps) {
   const codTotal = pickup.parcels.reduce((sum, p) => sum + p.codAmount, 0);
@@ -111,27 +103,37 @@ function PickupCard({
       style={[
         styles.card,
         { backgroundColor: colors.bgElevated },
-        expanded && !readOnly && { borderColor: colors.success, borderWidth: 1.5 },
+        selected && { borderColor: colors.success, borderWidth: 1.5 },
         getCardShadow(scheme),
       ]}>
       <View style={[styles.cardEdge, { backgroundColor: accent }]} />
 
       <View style={styles.headRow}>
         {drag && <DragHandle drag={drag} />}
+        {/* Ticking a stop is what marks it collected — deliberately its own
+            control, so expanding to check the parcels never commits anything. */}
+        {onSelect && (
+          <AnimatedPressable
+            scaleTo={0.88}
+            hitSlop={8}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: selected }}
+            accessibilityLabel={t('pickups.selectLabel')}
+            style={[
+              styles.checkbox,
+              selected
+                ? { backgroundColor: colors.success, borderColor: colors.success }
+                : { borderColor: colors.separator },
+            ]}
+            onPress={onSelect}>
+            {selected && <Ionicons name="checkmark" size={17} color="#fff" />}
+          </AnimatedPressable>
+        )}
         <AnimatedPressable
           scaleTo={0.99}
           accessibilityRole="button"
           style={styles.headPress}
           onPress={onToggle}>
-          <View style={[styles.cardIcon, { backgroundColor: colors.purpleSoft }]}>
-            <Ionicons name="storefront-outline" size={20} color={colors.purple} />
-            {stopNumber !== undefined && (
-              <View style={[styles.stopBadge, { backgroundColor: colors.purple }]}>
-                <Text style={styles.stopBadgeText}>{stopNumber}</Text>
-              </View>
-            )}
-          </View>
-
           <View style={styles.headText}>
             <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
               {pickup.businessName}
@@ -224,6 +226,7 @@ export default function PickupsScreen() {
   const [pickups, setPickups] = useState<Pickup[] | null>(null);
   const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
   // A drag and a scroll both follow the finger; only one of them may.
   const [dragging, setDragging] = useState(false);
@@ -236,9 +239,9 @@ export default function PickupsScreen() {
   const completed = pickups?.filter((p) => p.status === 'COMPLETED') ?? [];
   const displayed = segment === 'SCHEDULED' ? scheduled : completed;
 
-  // Expanding a stop is how the driver picks which ones they've actually
+  // Ticking a stop is how the driver picks which ones they've actually
   // collected — "Done" then closes out exactly those, not the whole list.
-  const selected = scheduled.filter((p) => expandedIds.has(p.id));
+  const selected = scheduled.filter((p) => selectedIds.has(p.id));
 
   async function handleDoneSelected() {
     if (selected.length === 0 || completing) return;
@@ -257,17 +260,19 @@ export default function PickupsScreen() {
     setCompleting(true);
     const ids = selected.map((p) => p.id);
     setPickups(await completePickups(ids));
-    setExpandedIds((prev) => {
+    const forget = (prev: Set<string>) => {
       const next = new Set(prev);
       ids.forEach((id) => next.delete(id));
       return next;
-    });
+    };
+    setSelectedIds(forget);
+    setExpandedIds(forget);
     setCompleting(false);
     showToast(t('pickups.doneToast', { count: ids.length }));
   }
 
-  function toggleExpand(id: string) {
-    setExpandedIds((prev) => {
+  function toggleIn(setter: typeof setExpandedIds, id: string) {
+    setter((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -338,18 +343,18 @@ export default function PickupsScreen() {
           <DraggableList
             data={scheduled}
             idOf={pickupId}
-            itemHeight={(pickup) => pickupHeight(pickup, expandedIds.has(pickup.id))}
             onReorder={handleReorder}
             onDragStateChange={setDragging}
-            renderItem={(pickup, index, drag) => (
+            renderItem={(pickup, _index, drag) => (
               <PickupCard
                 pickup={pickup}
                 colors={colors}
                 scheme={scheme}
-                stopNumber={index + 1}
                 drag={drag}
                 expanded={expandedIds.has(pickup.id)}
-                onToggle={() => toggleExpand(pickup.id)}
+                selected={selectedIds.has(pickup.id)}
+                onToggle={() => toggleIn(setExpandedIds, pickup.id)}
+                onSelect={() => toggleIn(setSelectedIds, pickup.id)}
                 t={t}
               />
             )}
@@ -365,7 +370,7 @@ export default function PickupsScreen() {
                 scheme={scheme}
                 readOnly
                 expanded={expandedIds.has(pickup.id)}
-                onToggle={() => toggleExpand(pickup.id)}
+                onToggle={() => toggleIn(setExpandedIds, pickup.id)}
                 t={t}
               />
             </Animated.View>
@@ -439,10 +444,10 @@ const styles = StyleSheet.create({
     gap: Spacing.mlg,
   },
   card: {
-    flex: 1,
     borderRadius: Radii.xxl,
-    padding: Spacing.lg,
-    paddingLeft: Spacing.lg + 4,
+    paddingVertical: Spacing.md,
+    paddingRight: Spacing.md,
+    paddingLeft: Spacing.md + 4,
     overflow: 'hidden',
   },
   cardEdge: {
@@ -462,31 +467,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.smd,
     minHeight: 44,
   },
-  cardIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: Radii.md,
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: Radii.sm,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  stopBadge: {
-    position: 'absolute',
-    top: -5,
-    left: -5,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopBadgeText: {
-    fontFamily: Fonts.archivoBold,
-    fontSize: 10,
-    color: '#fff',
   },
   headText: {
     flex: 1,
@@ -497,8 +487,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   chevronWell: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: Radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -507,14 +497,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
-    marginTop: Spacing.smd,
+    marginTop: Spacing.sm,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginTop: Spacing.smd,
-    paddingTop: Spacing.smd,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   actionButton: {
@@ -522,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 42,
+    height: 40,
     flex: 1,
     borderRadius: Radii.md,
   },
@@ -540,7 +530,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    height: 42,
+    height: 40,
   },
   collectedText: {
     fontFamily: Fonts.archivoSemiBold,
@@ -552,15 +542,14 @@ const styles = StyleSheet.create({
   parcelsTitle: {
     ...monoLabelStyle(10, 0.04),
     textTransform: 'uppercase',
-    height: PARCELS_HEADER_HEIGHT,
-    lineHeight: PARCELS_HEADER_HEIGHT,
+    paddingVertical: Spacing.sm,
   },
   parcelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.sm,
-    height: PARCEL_ROW_HEIGHT,
+    paddingVertical: Spacing.smd,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   parcelTracking: {

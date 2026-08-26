@@ -42,9 +42,6 @@ import type { Job, JobStatus, Runsheet } from '../../../types';
 type Toggle = 'current' | 'history';
 type HistoryFilter = 'all' | 'DELIVERED' | 'FAILED';
 
-/** Card height + the gap beneath it — `DraggableList` needs a fixed row pitch. */
-const ROW_HEIGHT = 176;
-
 /** Stable across renders so `DraggableList` doesn't re-seat on every pass. */
 const jobId = (job: Job) => job.id;
 
@@ -131,12 +128,16 @@ function ParcelCard({
             </Text>
           </View>
         )}
+        {/* The tracking number leads: it is the one field the driver reads
+            off the parcel in their hand and matches against the screen. */}
         <View style={styles.cardHeadText}>
-          <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
-            {job.customerName}
-          </Text>
-          <Text style={[monoStyle(11, 'medium'), { color: colors.textTertiary }]} numberOfLines={1}>
+          <Text
+            style={[styles.trackingId, { color: colors.text, backgroundColor: colors.bg }]}
+            numberOfLines={1}>
             {job.id}
+          </Text>
+          <Text style={[styles.customerName, { color: colors.textSecondary }]} numberOfLines={1}>
+            {job.customerName}
           </Text>
         </View>
       </View>
@@ -300,6 +301,7 @@ export default function RunsheetsScreen() {
   const filteredHistory = (history ?? []).filter((j) =>
     filter === 'all' ? true : j.status === filter
   );
+  const codTotal = (active ?? []).reduce((sum, j) => sum + j.cashToCollect, 0);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -373,16 +375,29 @@ export default function RunsheetsScreen() {
               <EmptyState icon="checkmark-done-outline" title={t('runsheets.empty.current')} />
             ) : (
               <>
-                <View style={styles.listHeader}>
-                  <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-                    {t('runsheets.parcelsTitle', { count: active.length })}
-                  </Text>
+                {/* Where the driver stands, before the list of what's left. */}
+                <View style={styles.summaryRow}>
+                  <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
+                    <Text style={[monoStyle(20, 'medium'), { color: colors.text }]}>
+                      {active.length}
+                    </Text>
+                    <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
+                      {t('runsheets.summary.toDeliver')}
+                    </Text>
+                  </View>
+                  <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
+                    <Text style={[monoStyle(20, 'medium'), { color: colors.accent }]}>
+                      {formatCurrency(codTotal)}
+                    </Text>
+                    <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
+                      {t('runsheets.summary.toCollect')}
+                    </Text>
+                  </View>
                 </View>
 
                 <DraggableList
                   data={active}
                   idOf={jobId}
-                  itemHeight={ROW_HEIGHT}
                   onReorder={handleReorder}
                   onDragStateChange={setDragging}
                   renderItem={(job, index, drag) => (
@@ -506,11 +521,17 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 1,
   },
-  listHeader: {
+  summaryRow: {
     flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: -Spacing.xs,
+  },
+  summaryCell: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: -Spacing.sm,
+    gap: 2,
+    paddingVertical: Spacing.smd,
+    borderRadius: Radii.lg,
   },
   historyList: { gap: Spacing.md },
   card: {
@@ -556,9 +577,19 @@ const styles = StyleSheet.create({
   cardHeadText: {
     flex: 1,
   },
+  trackingId: {
+    ...monoStyle(15, 'medium'),
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radii.xs,
+    overflow: 'hidden',
+    letterSpacing: 0.5,
+  },
   customerName: {
-    fontFamily: Fonts.archivoBold,
-    fontSize: 17,
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 14,
+    marginTop: 3,
   },
   addressRow: {
     flexDirection: 'row',
