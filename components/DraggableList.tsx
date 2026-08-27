@@ -1,23 +1,32 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import {
-  Gesture,
-  GestureDetector,
-  type PanGesture,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, type PanGesture } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
+  ReduceMotion,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { Radii, Spacing, useColors } from '../constants';
 
-/** Settling motion — quick enough to feel responsive, damped enough not to wobble. */
-const SPRING = { damping: 22, stiffness: 260, mass: 0.6 } as const;
+/**
+ * Apple's two designer parameters, not mass/stiffness/damping.
+ *
+ * The dropped card carried a finger, so it gets a little overshoot. The rows
+ * it displaced did not — and several move at once — so they settle flat.
+ */
+const DROP_SPRING = { duration: 400, dampingRatio: 0.8, reduceMotion: ReduceMotion.System } as const;
+const SHIFT_SPRING = { duration: 400, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+const LIFT_TIMING = { duration: 140, reduceMotion: ReduceMotion.System } as const;
+
+/** How much the grabbed card grows, so it reads as picked up off the stack. */
+const LIFT_SCALE = 0.03;
 
 function buzz() {
   if (Platform.OS !== 'web') {
@@ -126,14 +135,45 @@ function Row({
   onMeasure,
   children,
 }: RowProps) {
+  /** Where this row sits when it isn't the one under the finger. */
+  const offset = useSharedValue(0);
+  const lift = useSharedValue(0);
+
+  // The spring lives here, not in the style worklet. A style worklet re-runs
+  // on every frame the drag moves, and `withSpring` called from inside one is
+  // rebuilt each of those frames — it never gets to progress, so rows appear
+  // to teleport. A reaction fires only when the slot genuinely changes.
+  useAnimatedReaction(
+    () => topOf(slots.get(), heights.get(), ids.get(), id),
+    (target, previous) => {
+      if (previous === null || activeId.get() === id) {
+        // First layout, or this row is being dragged and `dragY` owns it.
+        // Either way it should land on the target without animating.
+        offset.set(target);
+        return;
+      }
+      if (target === previous) return;
+      offset.set(withSpring(target, SHIFT_SPRING));
+    }
+  );
+
+  useAnimatedReaction(
+    () => activeId.get() === id,
+    (isActive, wasActive) => {
+      if (isActive === wasActive) return;
+      lift.set(withTiming(isActive ? 1 : 0, LIFT_TIMING));
+    }
+  );
+
   const animatedStyle = useAnimatedStyle(() => {
     if (!positioned) return {};
-    const isActive = activeId.value === id;
-    const target = topOf(slots.value, heights.value, ids.value, id);
+    const isActive = activeId.get() === id;
     return {
-      // The dragged row follows the finger outright; everyone else springs
-      // toward the slot they now occupy.
-      transform: [{ translateY: isActive ? dragY.value : withSpring(target, SPRING) }],
+      transform: [
+        { translateY: isActive ? dragY.get() : offset.get() },
+        // Translate first so the lift doesn't scale the travel.
+        { scale: 1 + lift.get() * LIFT_SCALE },
+      ],
     };
   }, [positioned, id]);
 
@@ -179,27 +219,17 @@ interface DraggableListProps<T> {
  * this mirrors that: grab the handle on a card, drag up or down, and the new
  * order sticks.
  *
- * Two decisions account for how this feels.
+ * Everything about the motion runs on the UI thread. `Gesture.Pan` callbacks
+ * are worklets, slot assignments live in a shared value, and each row springs
+ * itself into place from a `useAnimatedReaction`. React sees two renders per
+ * drag — one on grab for the lifted shadow, one on release to commit the
+ * order — and none at all in between.
  *
- * **Nothing re-renders mid-drag.** Slot assignments live in a Reanimated
- * shared value, so re-slotting updates positions on the UI thread and React
- * is left out of it entirely until the finger lifts. The earlier version set
- * React state on every swap, which re-rendered every card mid-gesture — the
- * source of the stutter. Only two renders happen now: one on grab, one on
- * release.
- *
- * **Rows are measured, never assumed.** Heights come from `onLayout`, so a
- * card that grows — a longer address, a larger accessibility font, an
- * expanded section — is positioned correctly instead of being clipped by a
- * hardcoded row pitch. Until every row has reported in, the list renders in
- * normal flow, which is already the right layout; the switch to absolute
- * positioning is therefore invisible.
- *
- * **The gesture itself runs on the UI thread too.** `Gesture.Pan` callbacks
- * are worklets, so a finger movement never waits on JavaScript to be free —
- * the earlier `PanResponder` version routed every move through the JS thread,
- * which is fine until the app is doing anything else. JS is touched only for
- * the things that genuinely need it: haptics, and committing the new order.
+ * Rows are measured via `onLayout` rather than given a fixed pitch, so a card
+ * that grows — a longer address, a larger accessibility font, an expanded
+ * section — is placed correctly instead of clipped. Until every row has
+ * reported in, the list renders in normal flow, which is already the right
+ * layout, so the switch to absolute positioning is invisible.
  */
 export function DraggableList<T>({
   data,
@@ -242,15 +272,15 @@ export function DraggableList<T>({
     idsSV.value = next;
     slots.value = Object.fromEntries(next.map((id, i) => [id, i]));
     // Heights of departed rows would otherwise keep padding the stack.
-    const kentHeights: Record<string, number> = {};
+    const keptHeights: Record<string, number> = {};
     next.forEach((id) => {
-      if (heights.value[id] !== undefined) kentHeights[id] = heights.value[id];
+      if (heights.value[id] !== undefined) keptHeights[id] = heights.value[id];
     });
-    heights.value = kentHeights;
+    heights.value = keptHeights;
     if (next.length !== order.length || next.some((id, i) => id !== order[i])) {
       setOrder(next);
     }
-    if (next.some((id) => kentHeights[id] === undefined)) setPositioned(false);
+    if (next.some((id) => keptHeights[id] === undefined)) setPositioned(false);
   }
 
   const handleMeasure = useCallback(
@@ -290,7 +320,7 @@ export function DraggableList<T>({
   const grantTop = useSharedValue(0);
   /**
    * Translation already accumulated when the pan activated. Gesture handler
-   * measures `translationY` from the touch-down point, but only starts
+   * measures `translationY` from the touch-down point but only starts
    * reporting once the activation threshold is crossed — without subtracting
    * that head start the card sits a few millimetres behind the finger for the
    * whole drag.
@@ -312,30 +342,30 @@ export function DraggableList<T>({
       .activeOffsetY([-6, 6])
       .onStart((event) => {
         'worklet';
-        const top = topOf(slots.value, heights.value, idsSV.value, id);
-        grantTop.value = top;
-        startOffset.value = event.translationY;
-        dragY.value = top;
-        activeIdSV.value = id;
-        moved.value = false;
-        runOnJS(startDrag)(id);
+        const top = topOf(slots.get(), heights.get(), idsSV.get(), id);
+        grantTop.set(top);
+        startOffset.set(event.translationY);
+        dragY.set(top);
+        activeIdSV.set(id);
+        moved.set(false);
+        scheduleOnRN(startDrag, id);
       })
       .onUpdate((event) => {
         'worklet';
-        const draggedTop = grantTop.value + (event.translationY - startOffset.value);
-        dragY.value = draggedTop;
+        const draggedTop = grantTop.get() + (event.translationY - startOffset.get());
+        dragY.set(draggedTop);
 
         // Where this row now belongs among the others. Inserting at slot k
         // puts its top at the k-th other's stacked offset, so compare the
         // dragged *top* against their midpoints and take the last slot it
         // has cleared.
-        const current = slots.value;
-        const ordered = [...idsSV.value].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
+        const current = slots.get();
+        const ordered = [...idsSV.get()].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
         const others = ordered.filter((other) => other !== id);
         let accumulated = 0;
         let target = 0;
         for (let i = 0; i < others.length; i += 1) {
-          const height = heights.value[others[i]] ?? 0;
+          const height = heights.get()[others[i]] ?? 0;
           if (draggedTop <= accumulated + height / 2) break;
           accumulated += height;
           target += 1;
@@ -346,23 +376,32 @@ export function DraggableList<T>({
         next.splice(target, 0, id);
         const remapped: Record<string, number> = {};
         for (let i = 0; i < next.length; i += 1) remapped[next[i]] = i;
-        slots.value = remapped;
-        moved.value = true;
-        runOnJS(buzz)();
+        slots.set(remapped);
+        moved.set(true);
+        // Once per commit, never per frame — the row crossing a neighbour is
+        // the causal moment, and it fires in the same frame as the shuffle.
+        scheduleOnRN(buzz);
       })
       .onEnd(() => {
         'worklet';
-        const current = slots.value;
-        const settled = [...idsSV.value].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
-        // Settle into the slot, then hand back to slot-based positioning.
-        dragY.value = withSpring(topOf(current, heights.value, idsSV.value, id), SPRING);
-        runOnJS(commitOrder)(settled, moved.value);
+        const current = slots.get();
+        const settled = [...idsSV.get()].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
+        scheduleOnRN(commitOrder, settled, moved.get());
       })
-      // Always runs — including on cancellation — so the lifted state can't stick.
+      // Always runs — including on cancellation — so the card can't be left
+      // lifted, and always settles into its slot before handing back.
       .onFinalize(() => {
         'worklet';
-        activeIdSV.value = null;
-        runOnJS(endDrag)();
+        const target = topOf(slots.get(), heights.get(), idsSV.get(), id);
+        dragY.set(
+          withSpring(target, DROP_SPRING, (finished) => {
+            'worklet';
+            // Hand back to slot-based positioning only once the card has
+            // arrived, so the handoff never shows as a jump.
+            if (finished) activeIdSV.set(null);
+          })
+        );
+        scheduleOnRN(endDrag);
       });
 
     gestures.set(id, created);
@@ -411,9 +450,9 @@ const styles = StyleSheet.create({
   lifted: {
     zIndex: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    shadowOpacity: 0.22,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
+    shadowOpacity: 0.26,
+    elevation: 12,
   },
 });
