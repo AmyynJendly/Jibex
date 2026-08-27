@@ -1,14 +1,13 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import {
-  PanResponder,
-  Platform,
-  StyleSheet,
-  View,
-  type GestureResponderHandlers,
-  type LayoutChangeEvent,
-} from 'react-native';
+  Gesture,
+  GestureDetector,
+  type PanGesture,
+} from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -31,7 +30,7 @@ const handleWebStyle = Platform.OS === 'web' ? ({ touchAction: 'none' } as objec
 
 /** What a row needs to become draggable, handed to `renderItem`. */
 export interface DragBinding {
-  handlers: GestureResponderHandlers;
+  gesture: PanGesture;
   isActive: boolean;
 }
 
@@ -45,20 +44,21 @@ export function DragHandle({ drag }: { drag: DragBinding }) {
   const color = drag.isActive ? colors.accent : colors.textTertiary;
 
   return (
-    <View
-      accessibilityRole="adjustable"
-      style={[
-        handleStyles.target,
-        handleWebStyle,
-        drag.isActive && { backgroundColor: colors.accentSoft },
-      ]}
-      {...drag.handlers}>
-      <View style={handleStyles.dots}>
-        {Array.from({ length: 6 }, (_, i) => (
-          <View key={i} style={[handleStyles.dot, { backgroundColor: color }]} />
-        ))}
+    <GestureDetector gesture={drag.gesture}>
+      <View
+        accessibilityRole="adjustable"
+        style={[
+          handleStyles.target,
+          handleWebStyle,
+          drag.isActive && { backgroundColor: colors.accentSoft },
+        ]}>
+        <View style={handleStyles.dots}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <View key={i} style={[handleStyles.dot, { backgroundColor: color }]} />
+          ))}
+        </View>
       </View>
-    </View>
+    </GestureDetector>
   );
 }
 
@@ -195,10 +195,11 @@ interface DraggableListProps<T> {
  * normal flow, which is already the right layout; the switch to absolute
  * positioning is therefore invisible.
  *
- * Gestures stay on core `PanResponder` rather than react-native-gesture-
- * handler: the gesture lives only on the small handle so there's nothing to
- * arbitrate, and RNGH's web layer doesn't fire at all, which would leave this
- * untestable outside a device.
+ * **The gesture itself runs on the UI thread too.** `Gesture.Pan` callbacks
+ * are worklets, so a finger movement never waits on JavaScript to be free —
+ * the earlier `PanResponder` version routed every move through the JS thread,
+ * which is fine until the app is doing anything else. JS is touched only for
+ * the things that genuinely need it: haptics, and committing the new order.
  */
 export function DraggableList<T>({
   data,
@@ -267,31 +268,61 @@ export function DraggableList<T>({
     [heights]
   );
 
-  const responders = useRef(new Map<string, ReturnType<typeof PanResponder.create>>()).current;
-  const grantTop = useRef(0);
-  const didMove = useRef(false);
+  /** Committed from a worklet once the finger lifts. */
+  const commitOrder = useCallback((settled: string[], moved: boolean) => {
+    if (!moved) return;
+    orderRef.current = settled;
+    setOrder(settled);
+    onReorderRef.current(settled);
+  }, []);
 
-  function responderFor(id: string) {
-    const existing = responders.get(id);
+  const startDrag = useCallback((id: string) => {
+    setActiveId(id);
+    dragStateRef.current?.(true);
+    buzz();
+  }, []);
+
+  const endDrag = useCallback(() => {
+    setActiveId(null);
+    dragStateRef.current?.(false);
+  }, []);
+
+  const grantTop = useSharedValue(0);
+  /**
+   * Translation already accumulated when the pan activated. Gesture handler
+   * measures `translationY` from the touch-down point, but only starts
+   * reporting once the activation threshold is crossed — without subtracting
+   * that head start the card sits a few millimetres behind the finger for the
+   * whole drag.
+   */
+  const startOffset = useSharedValue(0);
+  const moved = useSharedValue(false);
+  const gestures = useRef(new Map<string, PanGesture>()).current;
+
+  function gestureFor(id: string) {
+    const existing = gestures.get(id);
     if (existing) return existing;
 
-    const created = PanResponder.create({
-      // Capture variants: claim the touch before the surrounding scroll view
-      // can, rather than racing it for the same finger.
-      onStartShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: () => {
-        grantTop.current = topOf(slots.value, heights.value, idsSV.value, id);
-        didMove.current = false;
-        dragY.value = grantTop.current;
+    const created = Gesture.Pan()
+      // The handle is a dedicated target, so the drag starts on contact
+      // rather than after a hold, and keeps the finger even past the edge.
+      .shouldCancelWhenOutside(false)
+      // A few pixels of vertical intent before this takes the finger, so a
+      // tap that grazes the handle doesn't start a drag.
+      .activeOffsetY([-6, 6])
+      .onStart((event) => {
+        'worklet';
+        const top = topOf(slots.value, heights.value, idsSV.value, id);
+        grantTop.value = top;
+        startOffset.value = event.translationY;
+        dragY.value = top;
         activeIdSV.value = id;
-        setActiveId(id);
-        dragStateRef.current?.(true);
-        buzz();
-      },
-      onPanResponderMove: (_event, gesture) => {
-        const draggedTop = grantTop.current + gesture.dy;
+        moved.value = false;
+        runOnJS(startDrag)(id);
+      })
+      .onUpdate((event) => {
+        'worklet';
+        const draggedTop = grantTop.value + (event.translationY - startOffset.value);
         dragY.value = draggedTop;
 
         // Where this row now belongs among the others. Inserting at slot k
@@ -303,8 +334,8 @@ export function DraggableList<T>({
         const others = ordered.filter((other) => other !== id);
         let accumulated = 0;
         let target = 0;
-        for (const other of others) {
-          const height = heights.value[other] ?? 0;
+        for (let i = 0; i < others.length; i += 1) {
+          const height = heights.value[others[i]] ?? 0;
           if (draggedTop <= accumulated + height / 2) break;
           accumulated += height;
           target += 1;
@@ -313,38 +344,28 @@ export function DraggableList<T>({
         if ((current[id] ?? 0) === target) return;
         const next = [...others];
         next.splice(target, 0, id);
-        // Writing the shared value repositions every row on the UI thread —
-        // no React render, which is what keeps the drag smooth.
-        slots.value = Object.fromEntries(next.map((rowId, i) => [rowId, i]));
-        didMove.current = true;
-        buzz();
-      },
-      onPanResponderRelease: () => {
+        const remapped: Record<string, number> = {};
+        for (let i = 0; i < next.length; i += 1) remapped[next[i]] = i;
+        slots.value = remapped;
+        moved.value = true;
+        runOnJS(buzz)();
+      })
+      .onEnd(() => {
+        'worklet';
         const current = slots.value;
         const settled = [...idsSV.value].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
-        // Hand the row back to slot-based positioning at its final offset, so
-        // the spring picks up exactly where the finger left it.
-        dragY.value = withSpring(
-          topOf(current, heights.value, idsSV.value, id),
-          SPRING
-        );
+        // Settle into the slot, then hand back to slot-based positioning.
+        dragY.value = withSpring(topOf(current, heights.value, idsSV.value, id), SPRING);
+        runOnJS(commitOrder)(settled, moved.value);
+      })
+      // Always runs — including on cancellation — so the lifted state can't stick.
+      .onFinalize(() => {
+        'worklet';
         activeIdSV.value = null;
-        setActiveId(null);
-        dragStateRef.current?.(false);
-        if (didMove.current) {
-          orderRef.current = settled;
-          setOrder(settled);
-          onReorderRef.current(settled);
-        }
-      },
-      onPanResponderTerminate: () => {
-        activeIdSV.value = null;
-        setActiveId(null);
-        dragStateRef.current?.(false);
-      },
-    });
+        runOnJS(endDrag)();
+      });
 
-    responders.set(id, created);
+    gestures.set(id, created);
     return created;
   }
 
@@ -368,10 +389,7 @@ export function DraggableList<T>({
             positioned={positioned}
             lifted={isActive}
             onMeasure={handleMeasure}>
-            {renderItem(item, slot, {
-              handlers: responderFor(id).panHandlers,
-              isActive,
-            })}
+            {renderItem(item, slot, { gesture: gestureFor(id), isActive })}
           </Row>
         );
       })}
