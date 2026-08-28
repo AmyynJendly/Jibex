@@ -20,7 +20,8 @@
         "LSApplicationQueriesSchemes": [
           "comgooglemaps"
         ],
-        "CADisableMinimumFrameDurationOnPhone": true
+        "CADisableMinimumFrameDurationOnPhone": true,
+        "NSFaceIDUsageDescription": "Jibex uses Face ID to unlock your driver session, which holds your route and cash totals."
       },
       "icon": "./assets/icon.png"
     },
@@ -53,7 +54,13 @@
         }
       ],
       "expo-notifications",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Jibex uses Face ID to unlock your driver session, which holds your route and cash totals."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

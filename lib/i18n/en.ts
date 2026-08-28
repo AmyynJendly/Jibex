@@ -42,6 +42,12 @@ const en = {
   },
 
   auth: {
+    gate: {
+      unlockPrompt: 'Unlock Jibex',
+      lockedBody: 'Locked. Unlock to get back to your day.',
+      unlock: 'Unlock',
+      useAnotherAccount: 'Sign in as someone else',
+    },
     login: {
       subtitle: 'Driver · Tunisia',
       usernameLabel: 'Username or Email',

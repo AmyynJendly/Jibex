@@ -45,6 +45,12 @@ const fr: TranslationResource = {
   },
 
   auth: {
+    gate: {
+      unlockPrompt: 'Déverrouiller Jibex',
+      lockedBody: 'Verrouillé. Déverrouillez pour reprendre votre journée.',
+      unlock: 'Déverrouiller',
+      useAnotherAccount: 'Se connecter avec un autre compte',
+    },
     login: {
       subtitle: 'Chauffeur · Tunisie',
       usernameLabel: "Nom d'utilisateur ou e-mail",
