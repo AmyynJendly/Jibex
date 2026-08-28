@@ -50,6 +50,11 @@ const en = {
 
   auth: {
     gate: {
+      with: {
+        face: 'Unlocking with Face ID',
+        fingerprint: 'Unlocking with Touch ID',
+        passcode: 'Unlocking with your passcode',
+      },
       unlockPrompt: 'Unlock Jibex',
       lockedBody: 'Locked. Unlock to get back to your day.',
       unlock: 'Unlock',

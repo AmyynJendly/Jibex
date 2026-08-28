@@ -21,6 +21,18 @@ type Gate =
   | { phase: 'unlocked' };
 
 /**
+ * What this device will actually challenge with.
+ *
+ * `authenticateAsync` doesn't report which method the system used, and iOS
+ * quietly drops to the passcode whenever biometrics are unavailable to the
+ * app — including when the build has no `NSFaceIDUsageDescription`, which is
+ * always the case under Expo Go, since it runs with its own Info.plist. Naming
+ * the method up front means a passcode prompt reads as expected rather than as
+ * a bug.
+ */
+type Method = 'face' | 'fingerprint' | 'passcode';
+
+/**
  * Startup gate.
  *
  * The app used to redirect to the login form unconditionally, so a driver
@@ -38,11 +50,15 @@ export default function Index() {
   const colors = useColors();
   const { t } = useTranslation();
   const [gate, setGate] = useState<Gate>({ phase: 'checking' });
+  const [method, setMethod] = useState<Method>('passcode');
 
   const unlock = useCallback(async () => {
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage: t('auth.gate.unlockPrompt'),
       cancelLabel: t('common.cancel'),
+      // Passcode fallback stays on deliberately: a driver whose face won't
+      // scan in the rain still has a shift to work.
+      disableDeviceFallback: false,
     }).catch(() => ({ success: false }) as const);
 
     setGate(result.success ? { phase: 'unlocked' } : { phase: 'locked', failed: true });
@@ -66,6 +82,18 @@ export default function Index() {
         (await LocalAuthentication.hasHardwareAsync().catch(() => false)) &&
         (await LocalAuthentication.isEnrolledAsync().catch(() => false));
       if (cancelled) return;
+
+      const types = await LocalAuthentication.supportedAuthenticationTypesAsync().catch(
+        () => [] as LocalAuthentication.AuthenticationType[]
+      );
+      if (cancelled) return;
+      setMethod(
+        types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)
+          ? 'face'
+          : types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)
+            ? 'fingerprint'
+            : 'passcode'
+      );
 
       if (!canLock) {
         setGate({ phase: 'unlocked' });
@@ -101,12 +129,20 @@ export default function Index() {
         <View style={styles.lockBlock}>
           <View style={styles.lockRow}>
             <Ionicons
-              name={gate.failed ? 'lock-closed' : 'scan-outline'}
+              name={
+                gate.failed
+                  ? 'lock-closed'
+                  : method === 'face'
+                    ? 'scan-outline'
+                    : method === 'fingerprint'
+                      ? 'finger-print-outline'
+                      : 'keypad-outline'
+              }
               size={16}
               color={colors.textSecondary}
             />
             <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              {gate.failed ? t('auth.gate.lockedBody') : t('auth.gate.unlockPrompt')}
+              {gate.failed ? t('auth.gate.lockedBody') : t(`auth.gate.with.${method}`)}
             </Text>
           </View>
 

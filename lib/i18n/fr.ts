@@ -53,6 +53,11 @@ const fr: TranslationResource = {
 
   auth: {
     gate: {
+      with: {
+        face: 'Déverrouillage par Face ID',
+        fingerprint: 'Déverrouillage par Touch ID',
+        passcode: 'Déverrouillage par code',
+      },
       unlockPrompt: 'Déverrouiller Jibex',
       lockedBody: 'Verrouillé. Déverrouillez pour reprendre votre journée.',
       unlock: 'Déverrouiller',
