@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Linking, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -281,183 +282,172 @@ export default function RunsheetsScreen() {
   );
   const codTotal = (active ?? []).reduce((sum, j) => sum + j.cashToCollect, 0);
 
+  const rows = toggle === 'current' ? (active ?? []) : filteredHistory;
+  const pending = toggle === 'current' ? !active : !history;
+
+  // Everything above the rows scrolls with them, so it lives in the list's
+  // header rather than wrapping the list in a ScrollView — nesting the two
+  // would hand scrolling back to the outer view and undo the virtualisation.
+  const header = (
+    <View style={styles.headerBlock}>
+      <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
+        {t('runsheets.headerTitle')}
+      </Text>
+
+      <SegmentedControl
+        segments={[
+          { value: 'current', label: t('runsheets.toggleCurrent') },
+          { value: 'history', label: t('runsheets.toggleHistory') },
+        ]}
+        value={toggle}
+        onChange={setToggle}
+      />
+
+      {toggle === 'current' ? (
+        <>
+          {unconfirmed.map((runsheet) => {
+            const isRecount = runsheet.status !== 'A_CONFIRMER';
+            return (
+              <View
+                key={runsheet.id}
+                style={[
+                  styles.confirmCard,
+                  { backgroundColor: colors.bgElevated, borderColor: colors.warning },
+                  getCardShadow(scheme),
+                ]}>
+                <View style={styles.confirmHead}>
+                  <View style={[styles.confirmIcon, { backgroundColor: colors.warningSoft }]}>
+                    <Ionicons name="lock-closed" size={16} color={colors.warning} />
+                  </View>
+                  <View style={styles.confirmHeadText}>
+                    <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
+                      {isRecount
+                        ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
+                        : t('runsheets.confirm.title', { count: runsheet.stopCount })}
+                    </Text>
+                    <Text
+                      style={[Typography.caption2, { color: colors.textSecondary }]}
+                      numberOfLines={1}>
+                      {runsheet.zone}
+                    </Text>
+                  </View>
+                </View>
+
+                <PrimaryButton
+                  label={
+                    isRecount
+                      ? t('runsheets.confirm.recountAction')
+                      : t('runsheets.confirm.action')
+                  }
+                  height={46}
+                  onPress={() => handleConfirmReceipt(runsheet)}
+                />
+              </View>
+            );
+          })}
+
+          {rows.length > 0 && (
+            <View style={styles.summaryRow}>
+              <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
+                <Text style={[monoStyle(20, 'medium'), { color: colors.text }]}>{rows.length}</Text>
+                <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
+                  {t('runsheets.summary.toDeliver')}
+                </Text>
+              </View>
+              <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
+                <Text style={[monoStyle(20, 'medium'), { color: colors.accent }]}>
+                  {formatCurrency(codTotal)}
+                </Text>
+                <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
+                  {t('runsheets.summary.toCollect')}
+                </Text>
+              </View>
+            </View>
+          )}
+        </>
+      ) : (
+        <View style={styles.filterRow}>
+          {(['all', 'DELIVERED', 'FAILED'] as HistoryFilter[]).map((value) => {
+            const selected = filter === value;
+            const label =
+              value === 'all'
+                ? t('runsheets.filters.all')
+                : value === 'DELIVERED'
+                  ? t('runsheets.filters.delivered')
+                  : t('runsheets.filters.failed');
+            return (
+              <AnimatedPressable
+                key={value}
+                scaleTo={0.95}
+                onPress={() => setFilter(value)}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: selected ? colors.accent : colors.bgElevated,
+                    borderColor: selected ? colors.accent : colors.separator,
+                  },
+                ]}>
+                <Text
+                  style={[styles.filterChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                  {label}
+                </Text>
+              </AnimatedPressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+
+  const empty = screen.isError ? (
+    <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+  ) : pending ? (
+    <View style={styles.skeletonGroup}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
+  ) : (
+    <EmptyState
+      icon={toggle === 'current' ? 'checkmark-done-outline' : 'file-tray-outline'}
+      title={toggle === 'current' ? t('runsheets.empty.current') : t('runsheets.empty.history')}
+    />
+  );
+
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <ScrollView
+      <FlashList
+        data={rows}
+        extraData={lockedIds}
+        keyExtractor={(job) => job.id}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}>
-        <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
-          {t('runsheets.headerTitle')}
-        </Text>
-
-        <SegmentedControl
-          segments={[
-            { value: 'current', label: t('runsheets.toggleCurrent') },
-            { value: 'history', label: t('runsheets.toggleHistory') },
-          ]}
-          value={toggle}
-          onChange={setToggle}
-        />
-
-        {screen.isError && !active && !history ? (
-          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
-        ) : toggle === 'current' ? (
-          <>
-            {unconfirmed.map((runsheet) => {
-              const isRecount = runsheet.status !== 'A_CONFIRMER';
-              return (
-                <View
-                  key={runsheet.id}
-                  style={[
-                    styles.confirmCard,
-                    { backgroundColor: colors.bgElevated, borderColor: colors.warning },
-                    getCardShadow(scheme),
-                  ]}>
-                  <View style={styles.confirmHead}>
-                    <View style={[styles.confirmIcon, { backgroundColor: colors.warningSoft }]}>
-                      <Ionicons name="lock-closed" size={16} color={colors.warning} />
-                    </View>
-                    <View style={styles.confirmHeadText}>
-                      <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
-                        {isRecount
-                          ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
-                          : t('runsheets.confirm.title', { count: runsheet.stopCount })}
-                      </Text>
-                      <Text
-                        style={[Typography.caption2, { color: colors.textSecondary }]}
-                        numberOfLines={1}>
-                        {runsheet.zone}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <PrimaryButton
-                    label={
-                      isRecount
-                        ? t('runsheets.confirm.recountAction')
-                        : t('runsheets.confirm.action')
-                    }
-                    height={46}
-                    onPress={() => handleConfirmReceipt(runsheet)}
-                  />
-                </View>
-              );
-            })}
-
-            {!active ? (
-              <View style={styles.skeletonGroup}>
-                <SkeletonRow />
-                <SkeletonRow />
-                <SkeletonRow />
-              </View>
-            ) : active.length === 0 ? (
-              <EmptyState icon="checkmark-done-outline" title={t('runsheets.empty.current')} />
-            ) : (
-              <>
-                {/* Where the driver stands, before the list of what's left. */}
-                <View style={styles.summaryRow}>
-                  <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
-                    <Text style={[monoStyle(20, 'medium'), { color: colors.text }]}>
-                      {active.length}
-                    </Text>
-                    <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
-                      {t('runsheets.summary.toDeliver')}
-                    </Text>
-                  </View>
-                  <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
-                    <Text style={[monoStyle(20, 'medium'), { color: colors.accent }]}>
-                      {formatCurrency(codTotal)}
-                    </Text>
-                    <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
-                      {t('runsheets.summary.toCollect')}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.parcelList}>
-                  {active.map((job, index) => (
-                    <ParcelCard
-                      key={job.id}
-                      job={job}
-                      colors={colors}
-                      scheme={scheme}
-                      stopNumber={index + 1}
-                      locked={lockedIds.has(job.id)}
-                      onOpen={() =>
-                        router.push({ pathname: '/job/[id]', params: { id: job.id } })
-                      }
-                      onCall={() => handleCall(job)}
-                      onUpdate={() => setSheetJob(job)}
-                      updateLabel={t('runsheets.update')}
-                      callLabel={t('runsheets.call')}
-                      lockedLabel={t('runsheets.confirm.lockedTag')}
-                      t={t}
-                    />
-                  ))}
-                </View>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <View style={styles.filterRow}>
-              {(['all', 'DELIVERED', 'FAILED'] as HistoryFilter[]).map((value) => {
-                const selected = filter === value;
-                const label =
-                  value === 'all'
-                    ? t('runsheets.filters.all')
-                    : value === 'DELIVERED'
-                      ? t('runsheets.filters.delivered')
-                      : t('runsheets.filters.failed');
-                return (
-                  <AnimatedPressable
-                    key={value}
-                    scaleTo={0.95}
-                    onPress={() => setFilter(value)}
-                    style={[
-                      styles.filterChip,
-                      {
-                        backgroundColor: selected ? colors.accent : colors.bgElevated,
-                        borderColor: selected ? colors.accent : colors.separator,
-                      },
-                    ]}>
-                    <Text
-                      style={[styles.filterChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
-                      {label}
-                    </Text>
-                  </AnimatedPressable>
-                );
-              })}
-            </View>
-
-            {!history ? (
-              <View style={styles.skeletonGroup}>
-                <SkeletonRow />
-                <SkeletonRow />
-              </View>
-            ) : filteredHistory.length === 0 ? (
-              <EmptyState icon="file-tray-outline" title={t('runsheets.empty.history')} />
-            ) : (
-              <View style={styles.historyList}>
-                {filteredHistory.map((job) => (
-                  <ParcelCard
-                    key={job.id}
-                    job={job}
-                    colors={colors}
-                    scheme={scheme}
-                    readOnly
-                    onUpdate={() => setSheetJob(job)}
-                    updateLabel={t('runsheets.update')}
-                    callLabel={t('runsheets.call')}
-                    lockedLabel={t('runsheets.confirm.lockedTag')}
-                    t={t}
-                  />
-                ))}
-              </View>
-            )}
-          </>
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        renderItem={({ item: job, index }) => (
+          <View style={styles.row}>
+            <ParcelCard
+              job={job}
+              colors={colors}
+              scheme={scheme}
+              stopNumber={toggle === 'current' ? index + 1 : undefined}
+              readOnly={toggle === 'history'}
+              locked={lockedIds.has(job.id)}
+              onOpen={
+                toggle === 'current'
+                  ? () => router.push({ pathname: '/job/[id]', params: { id: job.id } })
+                  : undefined
+              }
+              onCall={toggle === 'current' ? () => handleCall(job) : undefined}
+              onUpdate={() => setSheetJob(job)}
+              updateLabel={t('runsheets.update')}
+              callLabel={t('runsheets.call')}
+              lockedLabel={t('runsheets.confirm.lockedTag')}
+              t={t}
+            />
+          </View>
         )}
-      </ScrollView>
+      />
 
       <StatusUpdateSheet job={sheetJob} onClose={() => setSheetJob(null)} onDone={handleSheetDone} />
     </View>
@@ -466,6 +456,13 @@ export default function RunsheetsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  headerBlock: {
+    gap: Spacing.mlg,
+    paddingBottom: Spacing.mlg,
+  },
+  row: {
+    paddingBottom: Spacing.md,
+  },
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.md,
@@ -508,8 +505,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.smd,
     borderRadius: Radii.lg,
   },
-  parcelList: { gap: Spacing.md },
-  historyList: { gap: Spacing.md },
+
   card: {
     flex: 1,
     borderRadius: Radii.xxl,

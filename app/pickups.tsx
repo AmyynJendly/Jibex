@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -302,64 +303,61 @@ export default function PickupsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <SegmentedControl
-          segments={[
-            { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
-            { value: 'COMPLETED', label: t('pickups.segments.completed') },
-          ]}
-          value={segment}
-          onChange={setSegment}
-        />
-
-        {screen.isError && !pickups ? (
-          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
-        ) : !pickups ? (
-          <View style={styles.skeletonGroup}>
-            <SkeletonBlock height={140} radius={Radii.card} />
-            <SkeletonRow />
-            <SkeletonRow />
+      <FlashList
+        data={displayed}
+        extraData={[expandedIds, selectedIds]}
+        keyExtractor={(pickup) => pickup.id}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={
+          <View style={styles.headerBlock}>
+            <SegmentedControl
+              segments={[
+                { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
+                { value: 'COMPLETED', label: t('pickups.segments.completed') },
+              ]}
+              value={segment}
+              onChange={setSegment}
+            />
           </View>
-        ) : displayed.length === 0 ? (
-          <EmptyState
-            icon={segment === 'SCHEDULED' ? 'cube-outline' : 'checkmark-done-outline'}
-            title={
-              segment === 'SCHEDULED' ? t('pickups.empty.scheduled') : t('pickups.empty.completed')
-            }
-          />
-        ) : segment === 'SCHEDULED' ? (
-          <View style={styles.pickupList}>
-            {scheduled.map((pickup) => (
-              <PickupCard
-                key={pickup.id}
-                pickup={pickup}
-                colors={colors}
-                scheme={scheme}
-                expanded={expandedIds.has(pickup.id)}
-                selected={selectedIds.has(pickup.id)}
-                onToggle={() => toggleIn(setExpandedIds, pickup.id)}
-                onSelect={() => toggleIn(setSelectedIds, pickup.id)}
-                t={t}
-              />
-            ))}
-          </View>
-        ) : (
-          completed.map((pickup, i) => (
-            <View
-              key={pickup.id}>
-              <PickupCard
-                pickup={pickup}
-                colors={colors}
-                scheme={scheme}
-                readOnly
-                expanded={expandedIds.has(pickup.id)}
-                onToggle={() => toggleIn(setExpandedIds, pickup.id)}
-                t={t}
-              />
+        }
+        ListEmptyComponent={
+          screen.isError && !pickups ? (
+            <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+          ) : !pickups ? (
+            <View style={styles.skeletonGroup}>
+              <SkeletonBlock height={140} radius={Radii.card} />
+              <SkeletonRow />
+              <SkeletonRow />
             </View>
-          ))
+          ) : (
+            <EmptyState
+              icon={segment === 'SCHEDULED' ? 'cube-outline' : 'checkmark-done-outline'}
+              title={
+                segment === 'SCHEDULED'
+                  ? t('pickups.empty.scheduled')
+                  : t('pickups.empty.completed')
+              }
+            />
+          )
+        }
+        renderItem={({ item: pickup }) => (
+          <View style={styles.row}>
+            <PickupCard
+              pickup={pickup}
+              colors={colors}
+              scheme={scheme}
+              readOnly={segment === 'COMPLETED'}
+              expanded={expandedIds.has(pickup.id)}
+              selected={selectedIds.has(pickup.id)}
+              onToggle={() => toggleIn(setExpandedIds, pickup.id)}
+              onSelect={
+                segment === 'SCHEDULED' ? () => toggleIn(setSelectedIds, pickup.id) : undefined
+              }
+              t={t}
+            />
+          </View>
         )}
-      </ScrollView>
+      />
 
       {segment === 'SCHEDULED' && scheduled.length > 0 && (
         <View
@@ -426,8 +424,11 @@ const styles = StyleSheet.create({
   skeletonGroup: {
     gap: Spacing.mlg,
   },
-  pickupList: {
-    gap: Spacing.mlg,
+  headerBlock: {
+    paddingBottom: Spacing.mlg,
+  },
+  row: {
+    paddingBottom: Spacing.mlg,
   },
   card: {
     borderRadius: Radii.xxl,
