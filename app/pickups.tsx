@@ -3,13 +3,11 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useConfirm } from '../components/ConfirmDialog';
-import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
@@ -29,12 +27,8 @@ import {
 } from '../constants';
 import { formatCurrency } from '../lib/currency';
 import { telUrl } from '../lib/phone';
-import { completePickups, getPickups, setPickupOrder } from '../services/mock-api';
+import { completePickups, getPickups } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
-
-const STAGGER_MS = 40;
-
-const pickupId = (pickup: Pickup) => pickup.id;
 
 /**
  * Pickup addresses only have text, not coordinates, so this navigates by
@@ -69,7 +63,6 @@ interface PickupCardProps {
   /** Completed pickups are a record, not a worklist — no actions on them. */
   readOnly?: boolean;
   selected?: boolean;
-  drag?: DragBinding;
   onToggle: () => void;
   onSelect?: () => void;
   t: TFunction;
@@ -90,7 +83,6 @@ function PickupCard({
   expanded,
   readOnly = false,
   selected = false,
-  drag,
   onToggle,
   onSelect,
   t,
@@ -109,7 +101,6 @@ function PickupCard({
       <View style={[styles.cardEdge, { backgroundColor: accent }]} />
 
       <View style={styles.headRow}>
-        {drag && <DragHandle drag={drag} />}
         {/* Ticking a stop is what marks it collected — deliberately its own
             control, so expanding to check the parcels never commits anything. */}
         {onSelect && (
@@ -228,8 +219,6 @@ export default function PickupsScreen() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
-  // A drag and a scroll both follow the finger; only one of them may.
-  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     getPickups().then(setPickups);
@@ -283,13 +272,6 @@ export default function PickupsScreen() {
     });
   }
 
-  async function handleReorder(orderedIds: string[]) {
-    // No reload here: the list already shows the new order, and swapping the
-    // array out from under a just-settled drag makes it jump.
-    await setPickupOrder(orderedIds);
-    showToast(t('pickups.reorderedToast'));
-  }
-
   const totalPackages = displayed.reduce((sum, p) => sum + p.packageCount, 0);
 
   return (
@@ -316,7 +298,7 @@ export default function PickupsScreen() {
         </View>
       </View>
 
-      <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <SegmentedControl
           segments={[
             { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
@@ -340,30 +322,25 @@ export default function PickupsScreen() {
             }
           />
         ) : segment === 'SCHEDULED' ? (
-          <DraggableList
-            data={scheduled}
-            idOf={pickupId}
-            onReorder={handleReorder}
-            onDragStateChange={setDragging}
-            renderItem={(pickup, _index, drag) => (
+          <View style={styles.pickupList}>
+            {scheduled.map((pickup) => (
               <PickupCard
+                key={pickup.id}
                 pickup={pickup}
                 colors={colors}
                 scheme={scheme}
-                drag={drag}
                 expanded={expandedIds.has(pickup.id)}
                 selected={selectedIds.has(pickup.id)}
                 onToggle={() => toggleIn(setExpandedIds, pickup.id)}
                 onSelect={() => toggleIn(setSelectedIds, pickup.id)}
                 t={t}
               />
-            )}
-          />
+            ))}
+          </View>
         ) : (
           completed.map((pickup, i) => (
-            <Animated.View
-              key={pickup.id}
-              entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
+            <View
+              key={pickup.id}>
               <PickupCard
                 pickup={pickup}
                 colors={colors}
@@ -373,7 +350,7 @@ export default function PickupsScreen() {
                 onToggle={() => toggleIn(setExpandedIds, pickup.id)}
                 t={t}
               />
-            </Animated.View>
+            </View>
           ))
         )}
       </ScrollView>
@@ -441,6 +418,9 @@ const styles = StyleSheet.create({
     gap: Spacing.mlg,
   },
   skeletonGroup: {
+    gap: Spacing.mlg,
+  },
+  pickupList: {
     gap: Spacing.mlg,
   },
   card: {

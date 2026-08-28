@@ -29,15 +29,20 @@ import type {
  */
 
 // ---------------------------------------------------------------------------
-// Latency simulation
+// Async boundary
 // ---------------------------------------------------------------------------
 
-function randomDelayMs() {
-  return 300 + Math.random() * 300;
-}
-
-function delay<T>(value: T, ms = randomDelayMs()): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+/**
+ * Resolves on the microtask queue — no artificial latency.
+ *
+ * This used to sleep 300-600ms per call to imitate a network, which is a fine
+ * way to check your skeletons and a terrible way to use the app: a single
+ * screen makes several calls, so the fake latency stacked into seconds of
+ * staring at placeholders. Kept as a function (rather than deleted from ~40
+ * call sites) so these stay `async` for the day they hit a real API.
+ */
+function delay<T>(value: T): Promise<T> {
+  return Promise.resolve(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -803,23 +808,6 @@ export async function confirmRunsheetReceipt(id: string): Promise<Runsheet> {
 }
 
 /**
- * Driver-chosen parcel order. Drivers reorder their sheet by hand on paper
- * today; this is the same thing, persisted so it survives navigation. Ids
- * not listed here fall back to dispatch's original order.
- */
-let mockParcelOrder: string[] = [];
-
-/** Sorts by the driver's saved order, leaving unranked parcels in their original relative order behind the ranked ones. */
-function applyDriverOrder(jobs: Job[]): Job[] {
-  const rank = new Map(mockParcelOrder.map((id, i) => [id, i] as const));
-  return [...jobs].sort((a, b) => {
-    const ra = rank.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-    const rb = rank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-    return ra - rb;
-  });
-}
-
-/**
  * Every parcel the driver still has to work, flattened across all their
  * runsheets — the Runsheets tab shows these directly rather than a list of
  * runsheets to drill into. Delivered and failed parcels drop out entirely
@@ -831,7 +819,7 @@ export async function getActiveParcels(): Promise<Job[]> {
   const jobs = mockJobs.filter(
     (j) => ids.has(j.id) && j.status !== 'DELIVERED' && j.status !== 'FAILED'
   );
-  return applyDriverOrder(jobs).map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+  return jobs.map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
 /** Everything already resolved — the read-only history list. Most recent runsheets first. */
@@ -893,12 +881,6 @@ export async function reopenParcel(id: string): Promise<Job> {
   return { ...job, packageInfo: { ...job.packageInfo } };
 }
 
-/** Persists the driver's hand-sorted parcel order. */
-export async function setParcelOrder(orderedIds: string[]): Promise<void> {
-  mockParcelOrder = [...orderedIds];
-  await delay(undefined);
-}
-
 /**
  * Records that the driver pressed Call for this parcel. Delivery is gated
  * on at least one attempt, and the count/timestamp are what dispatch sees
@@ -954,20 +936,6 @@ export async function completePickups(ids: string[]): Promise<Pickup[]> {
     }
   });
   return mockPickups.map((p) => ({ ...p }));
-}
-
-/**
- * Persists the driver's chosen collection order, mirroring the parcel
- * ordering in Runsheets. Reordering the seed array is what makes the choice
- * survive leaving the screen and coming back.
- */
-export async function setPickupOrder(orderedIds: string[]): Promise<void> {
-  await delay(undefined);
-
-  const rank = new Map(orderedIds.map((id, i) => [id, i] as const));
-  mockPickups.sort(
-    (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER)
-  );
 }
 
 export async function getTransfers(): Promise<Transfer[]> {
@@ -1040,6 +1008,19 @@ export async function getJobDetail(id: string): Promise<Job> {
  * what keeps the driver from zig-zagging across town. Already-delivered/
  * failed stops are left at the end since they don't need routing.
  */
+/**
+ * Several jobs in one call. Home needs every stop across every runsheet to
+ * compute the day's totals; asking for them one id at a time meant a promise
+ * per parcel on every focus.
+ */
+export async function getJobsByIds(ids: string[]): Promise<Job[]> {
+  await delay(undefined);
+  const wanted = new Set(ids);
+  return mockJobs
+    .filter((j) => wanted.has(j.id))
+    .map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+}
+
 export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
   const jobs = stopIds
     .map((id) => mockJobs.find((j) => j.id === id))

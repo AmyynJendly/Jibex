@@ -3,7 +3,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AgencyFlow } from '../components/AgencyFlow';
@@ -31,8 +30,6 @@ import { confirmReturns, getReturns } from '../services/mock-api';
 import type { Return } from '../types';
 
 type Toggle = 'current' | 'history';
-
-const STAGGER_MS = 40;
 
 export default function ReturnsScreen() {
   const colors = useColors();
@@ -144,9 +141,8 @@ export default function ReturnsScreen() {
           displayed.map((item, i) => {
             const accent = isHistory ? colors.success : colors.warning;
             return (
-              <Animated.View
+              <View
                 key={item.id}
-                entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
                 style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
                 <View style={[styles.cardEdge, { backgroundColor: accent }]} />
 
@@ -218,7 +214,7 @@ export default function ReturnsScreen() {
                     </AnimatedPressable>
                   </View>
                 )}
-              </Animated.View>
+              </View>
             );
           })
         )}

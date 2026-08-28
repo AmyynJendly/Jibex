@@ -27,8 +27,6 @@ import {
 } from '../../../services/mock-api';
 import type { Notification, NotificationType } from '../../../types';
 
-const STAGGER_MS = 40;
-
 function typeStyle(type: NotificationType, colors: ColorPalette) {
   switch (type) {
     case 'PICKUP':
@@ -134,8 +132,7 @@ export default function AlertsScreen() {
     const style = typeStyle(notification.type, colors);
     return (
       <Animated.View
-        key={notification.id}
-        entering={FadeInUp.delay(index * STAGGER_MS).springify(220).dampingRatio(1)}>
+        key={notification.id}>
         <AnimatedPressable
           onPress={() => handlePress(notification.id)}
           style={[

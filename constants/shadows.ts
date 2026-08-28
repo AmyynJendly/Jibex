@@ -8,23 +8,31 @@ import { Platform, type ViewStyle } from 'react-native';
  * instead of the previous flat black. Dark mode still relies more on
  * `bgElevated` contrast than shadow, same reasoning as before.
  */
-export function getCardShadow(scheme: 'light' | 'dark'): ViewStyle {
-  if (Platform.OS === 'android') {
-    return { elevation: scheme === 'dark' ? 4 : 2 };
-  }
-  return scheme === 'dark'
-    ? {
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.45,
-        shadowRadius: 16,
-      }
+const CARD_SHADOWS: Record<'light' | 'dark', ViewStyle> =
+  Platform.OS === 'android'
+    ? { light: { elevation: 2 }, dark: { elevation: 4 } }
     : {
-        shadowColor: '#646E78',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
+        light: {
+          shadowColor: '#646E78',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.1,
+          shadowRadius: 16,
+        },
+        dark: {
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.45,
+          shadowRadius: 16,
+        },
       };
+
+/**
+ * Returns a shared, frozen style object rather than building one per call.
+ * This runs once per card per render across every list in the app; handing
+ * back a fresh object each time defeated style memoisation downstream.
+ */
+export function getCardShadow(scheme: 'light' | 'dark'): ViewStyle {
+  return CARD_SHADOWS[scheme];
 }
 
 /**

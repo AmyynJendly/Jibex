@@ -10,7 +10,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
@@ -20,8 +19,6 @@ import { useToast } from '../../../components/Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../../../constants';
 import { markDeliveryFailed } from '../../../services/mock-api';
 import type { DeliveryFailureReason } from '../../../types';
-
-const STAGGER_MS = 40;
 
 /** The real 7 failure reasons — icon per reason, label resolved from `enums.failureReason` (Part A/B). */
 const REASONS: { value: DeliveryFailureReason; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -76,9 +73,8 @@ export default function CantDeliverScreen() {
           {REASONS.map((option, i) => {
             const selected = reason === option.value;
             return (
-              <Animated.View
-                key={option.value}
-                entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
+              <View
+                key={option.value}>
                 <AnimatedPressable
                   onPress={() => setReason(option.value)}
                   style={[
@@ -105,7 +101,7 @@ export default function CantDeliverScreen() {
                     {selected && <Ionicons name="checkmark" size={12} color="#fff" />}
                   </View>
                 </AnimatedPressable>
-              </Animated.View>
+              </View>
             );
           })}
         </View>

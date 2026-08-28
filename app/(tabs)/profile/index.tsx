@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
@@ -27,8 +26,6 @@ import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { clearToken } from '../../../lib/token';
 import { getDriverStats, getRunsheets, getUser, getVehicle } from '../../../services/mock-api';
 import type { DriverStats, User, Vehicle } from '../../../types';
-
-const STAGGER_MS = 40;
 
 interface AccountRow {
   key: string;
@@ -195,9 +192,8 @@ export default function ProfileScreen() {
                 getCardShadow(scheme),
               ]}>
               {accountRows.map((row, i) => (
-                <Animated.View
-                  key={row.key}
-                  entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}>
+                <View
+                  key={row.key}>
                   <AnimatedPressable
                     onPress={() => router.push(row.href)}
                     style={[
@@ -215,7 +211,7 @@ export default function ProfileScreen() {
                     </Text>
                     <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                   </AnimatedPressable>
-                </Animated.View>
+                </View>
               ))}
             </View>
           </View>

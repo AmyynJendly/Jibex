@@ -12,7 +12,6 @@ import {
   View,
   type ColorValue,
 } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
@@ -38,15 +37,13 @@ import { useLiveCoords } from '../../../lib/useLiveCoords';
 import {
   confirmRunsheetReceipt,
   getDriverStats,
-  getJobDetail,
+  getJobsByIds,
   getNotifications,
   getRunsheets,
   getUser,
   optimizeRouteOrder,
 } from '../../../services/mock-api';
 import type { DriverStats, Job, Runsheet, User } from '../../../types';
-
-const STAGGER_MS = 40;
 
 interface HomeData {
   user: User;
@@ -98,7 +95,6 @@ export default function HomeScreen() {
     const blocked = new Set(unconfirmedRunsheets.map((r) => r.id));
     const workableRunsheets = runsheets.filter((r) => !blocked.has(r.id));
     const workableStopIds = workableRunsheets.flatMap((r) => r.stopIds);
-    const orderedIds = await optimizeRouteOrder(workableStopIds);
 
     // "Today's Deliveries" reflects every stop across every runsheet the
     // driver holds — including still-blocked ones, since those parcels are
@@ -106,7 +102,11 @@ export default function HomeScreen() {
     // moment a stop in Runsheets gets delivered or failed, instead of
     // trailing a separate counter nothing else touches.
     const allStopIds = runsheets.flatMap((r) => r.stopIds);
-    const allJobs = await Promise.all(allStopIds.map((id) => getJobDetail(id)));
+    // Independent of each other, so they go together rather than in sequence.
+    const [orderedIds, allJobs] = await Promise.all([
+      optimizeRouteOrder(workableStopIds),
+      getJobsByIds(allStopIds),
+    ]);
     const jobById = new Map(allJobs.map((j) => [j.id, j] as const));
 
     const orderedWorkableJobs = orderedIds.map((id) => jobById.get(id)).filter((j): j is Job => !!j);
@@ -322,9 +322,8 @@ export default function HomeScreen() {
             {t('home.toConfirmTitle', { count: unconfirmedRunsheets.length })}
           </Text>
           {unconfirmedRunsheets.map((runsheet, i) => (
-            <Animated.View
+            <View
               key={runsheet.id}
-              entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
               style={[
                 styles.toConfirmCard,
                 { backgroundColor: colors.bgElevated, borderColor: colors.warning },
@@ -351,7 +350,7 @@ export default function HomeScreen() {
                     : t('runsheets.confirm.recountAction')}
                 </Text>
               </AnimatedPressable>
-            </Animated.View>
+            </View>
           ))}
         </View>
       )}
@@ -452,9 +451,8 @@ export default function HomeScreen() {
 
       <View style={styles.compactRow}>
         {compactActions.map((action, i) => (
-          <Animated.View
+          <View
             key={action.key}
-            entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
             style={styles.compactWrapper}>
             <AnimatedPressable
               scaleTo={0.95}
@@ -473,7 +471,7 @@ export default function HomeScreen() {
                 {action.label}
               </Text>
             </AnimatedPressable>
-          </Animated.View>
+          </View>
         ))}
       </View>
 

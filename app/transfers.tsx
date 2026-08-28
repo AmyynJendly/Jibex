@@ -3,7 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 
@@ -30,8 +30,6 @@ import { getTransfers } from '../services/mock-api';
 import type { Transfer } from '../types';
 
 type Toggle = 'current' | 'history';
-
-const STAGGER_MS = 40;
 
 export default function TransfersScreen() {
   const colors = useColors();
@@ -113,9 +111,8 @@ export default function TransfersScreen() {
             const showingQr = qrTransferId === transfer.id;
 
             return (
-              <Animated.View
+              <View
                 key={transfer.id}
-                entering={FadeInUp.delay(i * STAGGER_MS).springify(220).dampingRatio(1)}
                 style={[
                   styles.card,
                   { backgroundColor: colors.bgElevated },
@@ -196,7 +193,7 @@ export default function TransfersScreen() {
                     )}
                   </View>
                 )}
-              </Animated.View>
+              </View>
             );
           })
         )}

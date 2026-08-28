@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
-import { DragHandle, DraggableList, type DragBinding } from '../../../components/DraggableList';
 import { EmptyState } from '../../../components/EmptyState';
 import { MetaChip } from '../../../components/MetaChip';
 import { PrimaryButton } from '../../../components/PrimaryButton';
@@ -35,15 +34,11 @@ import {
   getHistoryParcels,
   getRunsheets,
   logCallAttempt,
-  setParcelOrder,
 } from '../../../services/mock-api';
 import type { Job, JobStatus, Runsheet } from '../../../types';
 
 type Toggle = 'current' | 'history';
 type HistoryFilter = 'all' | 'DELIVERED' | 'FAILED';
-
-/** Stable across renders so `DraggableList` doesn't re-seat on every pass. */
-const jobId = (job: Job) => job.id;
 
 /** One colour per parcel state, drawn from the Sunlit palette. */
 function stateColor(status: JobStatus, colors: ColorPalette) {
@@ -70,7 +65,6 @@ interface ParcelCardProps {
   readOnly?: boolean;
   /** Parcels on a run the driver hasn't signed for yet: visible, but inert. */
   locked?: boolean;
-  drag?: DragBinding;
   onOpen?: () => void;
   onCall?: () => void;
   onUpdate?: () => void;
@@ -87,7 +81,6 @@ function ParcelCard({
   stopNumber,
   readOnly = false,
   locked = false,
-  drag,
   onOpen,
   onCall,
   onUpdate,
@@ -115,7 +108,6 @@ function ParcelCard({
       <View style={[styles.cardEdge, { backgroundColor: accent }]} />
 
       <View style={styles.cardHead}>
-        {drag && !locked && <DragHandle drag={drag} />}
         {locked && (
           <View style={styles.lockSlot}>
             <Ionicons name="lock-closed" size={15} color={colors.textTertiary} />
@@ -239,8 +231,6 @@ export default function RunsheetsScreen() {
   const [toggle, setToggle] = useState<Toggle>('current');
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sheetJob, setSheetJob] = useState<Job | null>(null);
-  // A drag and a scroll both follow the finger; only one of them may.
-  const [dragging, setDragging] = useState(false);
 
   const load = useCallback(async () => {
     const [a, h, r] = await Promise.all([getActiveParcels(), getHistoryParcels(), getRunsheets()]);
@@ -286,13 +276,6 @@ export default function RunsheetsScreen() {
     Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
   }
 
-  async function handleReorder(orderedIds: string[]) {
-    // Deliberately no reload: the list already shows the new order, and
-    // swapping the array out from under a just-settled drag makes it jump.
-    await setParcelOrder(orderedIds);
-    showToast(t('runsheets.reorderedToast'));
-  }
-
   async function handleSheetDone() {
     setSheetJob(null);
     await load();
@@ -307,7 +290,6 @@ export default function RunsheetsScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        scrollEnabled={!dragging}
         contentContainerStyle={styles.content}>
         <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
           {t('runsheets.headerTitle')}
@@ -395,19 +377,15 @@ export default function RunsheetsScreen() {
                   </View>
                 </View>
 
-                <DraggableList
-                  data={active}
-                  idOf={jobId}
-                  onReorder={handleReorder}
-                  onDragStateChange={setDragging}
-                  renderItem={(job, index, drag) => (
+                <View style={styles.parcelList}>
+                  {active.map((job, index) => (
                     <ParcelCard
+                      key={job.id}
                       job={job}
                       colors={colors}
                       scheme={scheme}
                       stopNumber={index + 1}
                       locked={lockedIds.has(job.id)}
-                      drag={drag}
                       onOpen={() =>
                         router.push({ pathname: '/job/[id]', params: { id: job.id } })
                       }
@@ -418,8 +396,8 @@ export default function RunsheetsScreen() {
                       lockedLabel={t('runsheets.confirm.lockedTag')}
                       t={t as never}
                     />
-                  )}
-                />
+                  ))}
+                </View>
               </>
             )}
           </>
@@ -533,6 +511,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.smd,
     borderRadius: Radii.lg,
   },
+  parcelList: { gap: Spacing.md },
   historyList: { gap: Spacing.md },
   card: {
     flex: 1,
