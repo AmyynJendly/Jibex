@@ -135,7 +135,7 @@ export default function JobDetailScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
-        <GlassIconButton onPress={() => router.back()}>
+        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         {position && (
@@ -145,7 +145,9 @@ export default function JobDetailScreen() {
             </Text>
           </View>
         )}
-        <GlassIconButton onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
+        <GlassIconButton
+          accessibilityLabel={t('jobDetail.a11yMore')}
+          onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>

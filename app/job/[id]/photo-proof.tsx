@@ -96,7 +96,10 @@ export default function PhotoProofScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <GlassIconButton forceDark onPress={() => router.back()}>
+        <GlassIconButton
+          forceDark
+          accessibilityLabel={t('common.close')}
+          onPress={() => router.back()}>
           <Ionicons name="close" size={20} color="#fff" />
         </GlassIconButton>
         <Text style={[Typography.headline, styles.title]}>{t('photoProof.title')}</Text>

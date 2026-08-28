@@ -29,7 +29,7 @@ export default function VehicleDetailsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
-        <GlassIconButton onPress={() => router.back()}>
+        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         <Text style={[Typography.headline, { color: colors.text }]}>

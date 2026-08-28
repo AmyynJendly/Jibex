@@ -320,10 +320,22 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <View style={styles.topRow}>
-        <GlassIconButton size={40} onPress={() => router.push('/scanner')}>
+        <GlassIconButton
+          size={40}
+          accessibilityLabel={t('home.a11y.search')}
+          onPress={() => router.push('/search')}>
+          <Ionicons name="search-outline" size={20} color={colors.text} />
+        </GlassIconButton>
+        <GlassIconButton
+          size={40}
+          accessibilityLabel={t('home.a11y.scan')}
+          onPress={() => router.push('/scanner')}>
           <Ionicons name="scan-outline" size={20} color={colors.text} />
         </GlassIconButton>
-        <GlassIconButton size={40} onPress={() => router.push('/alerts')}>
+        <GlassIconButton
+          size={40}
+          accessibilityLabel={t('home.a11y.alerts')}
+          onPress={() => router.push('/alerts')}>
           <Ionicons
             name={hasUnreadNotifications ? 'notifications' : 'notifications-outline'}
             size={20}

@@ -149,13 +149,19 @@ export default function ScannerScreen() {
       )}
 
       <View style={styles.header}>
-        <GlassIconButton forceDark onPress={() => router.back()}>
+        <GlassIconButton
+          forceDark
+          accessibilityLabel={t('common.close')}
+          onPress={() => router.back()}>
           <Ionicons name="close" size={20} color="#fff" />
         </GlassIconButton>
         <Text style={[Typography.headline, styles.title]}>
           {t(isBatchMode ? 'scanner.batchTitle' : 'scanner.title')}
         </Text>
-        <GlassIconButton forceDark onPress={() => setTorchOn((v) => !v)}>
+        <GlassIconButton
+          forceDark
+          accessibilityLabel={t('scanner.a11yTorch')}
+          onPress={() => setTorchOn((v) => !v)}>
           <Ionicons
             name={torchOn ? 'flashlight' : 'flashlight-outline'}
             size={20}

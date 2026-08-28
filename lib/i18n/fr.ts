@@ -19,6 +19,7 @@ const fr: TranslationResource = {
   },
 
   common: {
+    close: 'Fermer',
     offlineAction: "Vous êtes hors ligne — reconnectez-vous avant d'enregistrer.",
     loadError: {
       title: 'Chargement impossible',
@@ -74,6 +75,7 @@ const fr: TranslationResource = {
   },
 
   home: {
+    a11y: { search: 'Rechercher un numéro de suivi', scan: 'Scanner un colis', alerts: 'Alertes' },
     greeting: {
       morning: 'Ahla',
       evening: 'Ahla',
@@ -147,6 +149,7 @@ const fr: TranslationResource = {
   },
 
   jobDetail: {
+    a11yMore: "Plus d'options",
     stopOf: 'Arrêt {{index}} sur {{total}}',
     stopChip: 'ARRÊT {{index}} / {{total}}',
     etaLabel: 'ETA {{time}}',
@@ -211,6 +214,7 @@ const fr: TranslationResource = {
 
 
   scanner: {
+    a11yTorch: 'Activer la lampe',
     title: 'Scanner le colis',
     permissionTitle: 'Accès à la caméra requis',
     permissionBody: 'Jibex utilise la caméra pour scanner les codes-barres et confirmer les collectes.',
@@ -246,6 +250,8 @@ const fr: TranslationResource = {
   },
 
   pickups: {
+    a11yExpand: 'Affiche les colis de cette collecte',
+    a11yCollapse: 'Masque les colis de cette collecte',
     headerTitle: 'Ramassages',
     eyebrow: 'Collectes marchands',
     parcelCountLabel: 'Colis',

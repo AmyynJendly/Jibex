@@ -16,6 +16,7 @@ const en = {
   },
 
   common: {
+    close: 'Close',
     offlineAction: "You're offline — reconnect before recording this.",
     loadError: {
       title: "Couldn't load",
@@ -72,6 +73,7 @@ const en = {
   },
 
   home: {
+    a11y: { search: 'Search a tracking number', scan: 'Scan a package', alerts: 'Alerts' },
     greeting: {
       morning: 'Good Morning',
       evening: 'Good Evening',
@@ -147,6 +149,7 @@ const en = {
   },
 
   jobDetail: {
+    a11yMore: 'More options',
     stopOf: 'Stop {{index}} of {{total}}',
     stopChip: 'STOP {{index}} / {{total}}',
     etaLabel: 'ETA {{time}}',
@@ -211,6 +214,7 @@ const en = {
 
 
   scanner: {
+    a11yTorch: 'Toggle flashlight',
     title: 'Scan Package',
     permissionTitle: 'Camera access needed',
     permissionBody: 'Jibex uses the camera to scan package barcodes and confirm pickups.',
@@ -246,6 +250,8 @@ const en = {
   },
 
   pickups: {
+    a11yExpand: 'Shows the parcels at this stop',
+    a11yCollapse: 'Hides the parcels at this stop',
     headerTitle: 'Pickups',
     eyebrow: 'Merchant Pickups',
     parcelCountLabel: 'Packages',

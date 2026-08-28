@@ -11,6 +11,11 @@ interface GlassIconButtonProps {
   style?: StyleProp<ViewStyle>;
   /** Forces dark glass chrome regardless of system theme (e.g. the Scanner screen). */
   forceDark?: boolean;
+  /**
+   * Spoken name for the button. These are icon-only, so without one a screen
+   * reader announces "button" and nothing else — required, not optional.
+   */
+  accessibilityLabel: string;
 }
 
 /** Circular glass icon button — back buttons, notification bell, scanner shortcut, social login. */
@@ -20,11 +25,14 @@ export function GlassIconButton({
   children,
   style,
   forceDark = false,
+  accessibilityLabel,
 }: GlassIconButtonProps) {
   return (
     <AnimatedPressable
       onPress={onPress}
       scaleTo={0.9}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}>
       <GlassSurface
         style={[styles.fill, { borderRadius: size / 2 }, style]}

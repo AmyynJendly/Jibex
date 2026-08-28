@@ -88,7 +88,7 @@ export default function ReturnsScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.backRow}>
-        <GlassIconButton onPress={() => router.back()}>
+        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>

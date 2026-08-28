@@ -191,6 +191,8 @@ function ParcelCard({
             {onUpdate && (
               <AnimatedPressable
                 scaleTo={0.95}
+                accessibilityRole="button"
+                accessibilityLabel={`${updateLabel} ${job.id}`}
                 style={[styles.updateButton, { backgroundColor: colors.accent }]}
                 onPress={onUpdate}>
                 <Ionicons name="sync-outline" size={14} color="#fff" />
@@ -216,6 +218,10 @@ function ParcelCard({
   }
 
   return (
+    // Deliberately not accessibilityRole="button": this card contains Call and
+    // Update, and a button inside a button is invalid markup and ambiguous to
+    // a screen reader. The card's own text is read normally, and the two real
+    // buttons inside it carry their own labels.
     <AnimatedPressable scaleTo={0.985} style={cardStyle} onPress={onOpen}>
       {body}
     </AnimatedPressable>

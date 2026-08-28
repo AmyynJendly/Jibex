@@ -127,6 +127,8 @@ function PickupCard({
         <AnimatedPressable
           scaleTo={0.99}
           accessibilityRole="button"
+          accessibilityLabel={pickup.businessName}
+          accessibilityHint={t(expanded ? 'pickups.a11yCollapse' : 'pickups.a11yExpand')}
           style={styles.headPress}
           onPress={onToggle}>
           <View style={styles.headText}>
@@ -169,6 +171,8 @@ function PickupCard({
           <>
             <AnimatedPressable
               scaleTo={0.95}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('pickups.call')} ${pickup.businessName}`}
               style={[styles.actionButton, { backgroundColor: colors.accentSoft }]}
               onPress={() => Linking.openURL(telUrl(pickup.contactPhone)).catch(() => {})}>
               <Ionicons name="call-outline" size={17} color={colors.accent} />
@@ -178,6 +182,8 @@ function PickupCard({
             </AnimatedPressable>
             <AnimatedPressable
               scaleTo={0.95}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('pickups.navigate')} ${pickup.address}`}
               style={[styles.actionButton, styles.actionButtonWide, { backgroundColor: colors.accent }]}
               onPress={() => openInMaps(pickup.address)}>
               <Ionicons name="navigate" size={16} color="#fff" />
@@ -282,7 +288,7 @@ export default function PickupsScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.backRow}>
-        <GlassIconButton onPress={() => router.back()}>
+        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>
