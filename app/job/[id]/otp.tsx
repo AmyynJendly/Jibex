@@ -27,6 +27,7 @@ import {
   type ColorPalette,
 } from '../../../constants';
 import { telUrl } from '../../../lib/phone';
+import { invalidateDeliveryData } from '../../../lib/query';
 import { confirmDeliveryWithOTP, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -126,7 +127,8 @@ export default function OtpScreen() {
       return;
     }
 
-    router.push({
+    await invalidateDeliveryData();
+    router.replace({
       pathname: '/job/[id]/cash-collected',
       params: {
         id,

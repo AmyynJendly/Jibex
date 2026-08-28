@@ -198,6 +198,7 @@ const en = {
   },
 
   photoProof: {
+    captureFailed: "Couldn't take the photo. Try again.",
     title: 'Photo Proof',
     permissionBody: 'Camera access is needed to capture delivery proof.',
     enableCamera: 'Enable Camera',

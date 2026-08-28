@@ -19,6 +19,7 @@ import { GlassSurface } from '../components/GlassSurface';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useToast } from '../components/Toast';
 import { Fonts, Radii, Spacing, Typography, monoStyle } from '../constants';
+import { invalidateDeliveryData, invalidateReturns, invalidateTransfers } from '../lib/query';
 import { confirmScan } from '../services/mock-api';
 
 /**
@@ -101,6 +102,9 @@ export default function ScannerScreen() {
     setSubmitting(false);
 
     if (result.success) {
+      // A scan can close out a transfer, a return batch or a parcel — the
+      // screens holding any of those are elsewhere in the stack.
+      await Promise.all([invalidateTransfers(), invalidateReturns(), invalidateDeliveryData()]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const toastKey =
         result.kind === 'transfer' ? 'scanner.transferConfirmedToast' : 'scanner.confirmedToast';

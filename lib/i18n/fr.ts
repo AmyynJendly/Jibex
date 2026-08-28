@@ -198,6 +198,7 @@ const fr: TranslationResource = {
   },
 
   photoProof: {
+    captureFailed: "Impossible de prendre la photo. Réessayez.",
     title: 'Preuve photo',
     permissionBody: "L'accès à la caméra est nécessaire pour capturer la preuve de livraison.",
     enableCamera: 'Activer la caméra',

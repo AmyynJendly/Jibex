@@ -8,9 +8,11 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
+import { useToast } from '../../../components/Toast';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { Fonts, Radii, Spacing, Typography } from '../../../constants';
+import { invalidateDeliveryData } from '../../../lib/query';
 import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -22,6 +24,10 @@ export default function PhotoProofScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  /** A capture already in flight — a second shutter tap would race it. */
+  const capturingRef = useRef(false);
+  const mountedRef = useRef(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     getJobDetail(id).then(setJob);
@@ -29,11 +35,28 @@ export default function PhotoProofScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+
   async function handleCapture() {
-    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.5 });
-    if (photo) {
+    // Showing the photo swaps CameraView out for the preview, so the camera
+    // unmounts the moment a capture lands. A second tap — or backing out
+    // mid-capture — leaves takePictureAsync rejecting with "Camera unmounted
+    // during taking photo process", which used to surface as an uncaught
+    // rejection. Guard the second tap, and treat the rest as a failed shot.
+    if (capturingRef.current || photoUri) return;
+    capturingRef.current = true;
+
+    try {
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 0.5 });
+      if (!photo || !mountedRef.current) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setPhotoUri(photo.uri);
+    } catch {
+      if (mountedRef.current) showToast(t('photoProof.captureFailed'));
+    } finally {
+      capturingRef.current = false;
     }
   }
 
@@ -45,16 +68,26 @@ export default function PhotoProofScreen() {
     const result = await confirmDeliveryWithPhoto(id, photoUri, job.cashToCollect);
     setSubmitting(false);
 
-    if (result.success) {
-      router.push({
-        pathname: '/job/[id]/cash-collected',
-        params: {
-          id,
-          cashAmount: String(job.cashToCollect),
-          previousTotal: String(previousTotal),
-        },
-      });
+    // Previously this screen ignored a rejected delivery entirely, so the
+    // driver tapped Confirm and nothing at all happened — most often because
+    // the call-before-delivery gate had turned it down, with nothing on
+    // screen to say so.
+    if (!result.success) {
+      showToast(t(result.error ?? 'common.genericError'));
+      return;
     }
+
+    await invalidateDeliveryData();
+    // Replace, not push: the delivery is done, so backing out of the receipt
+    // should never land on the camera that took its proof.
+    router.replace({
+      pathname: '/job/[id]/cash-collected',
+      params: {
+        id,
+        cashAmount: String(job.cashToCollect),
+        previousTotal: String(previousTotal),
+      },
+    });
   }
 
   return (

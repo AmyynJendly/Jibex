@@ -17,6 +17,7 @@ import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../../../constants';
+import { invalidateDeliveryData } from '../../../lib/query';
 import { markDeliveryFailed } from '../../../services/mock-api';
 import type { DeliveryFailureReason } from '../../../types';
 
@@ -47,6 +48,7 @@ export default function CantDeliverScreen() {
     setSubmitting(false);
 
     if (result.success) {
+      await invalidateDeliveryData();
       router.replace('/(tabs)/runsheets');
     } else {
       showToast(t(result.error ?? 'common.genericError'));

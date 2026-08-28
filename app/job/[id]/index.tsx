@@ -41,6 +41,7 @@ import { localeTag } from '../../../lib/date';
 import { telUrl } from '../../../lib/phone';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
+import { invalidateDeliveryData } from '../../../lib/query';
 import { getJobDetail, getRunsheets, logCallAttempt } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -194,6 +195,7 @@ export default function JobDetailScreen() {
                   // Logged before dialling so the attempt is recorded even if
                   // the dialler never opens — delivery is gated on this.
                   setJob(await logCallAttempt(job.id));
+                  await invalidateDeliveryData();
                   Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
                 }}>
                 <Ionicons name="call-outline" size={18} color={colors.accent} />
