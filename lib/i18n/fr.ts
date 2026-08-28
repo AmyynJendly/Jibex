@@ -59,49 +59,6 @@ const fr: TranslationResource = {
         invalidCredentials: "Nom d'utilisateur ou mot de passe incorrect.",
       },
     },
-    register: {
-      step1: {
-        stepLabel: 'Étape 1 sur 3',
-        title: 'Vos informations',
-        subtitle: 'Configurons votre compte.',
-        fullNameLabel: 'Nom complet',
-        fullNamePlaceholder: 'Marcus Alden',
-        phoneLabel: 'Téléphone',
-        phonePlaceholder: '+216 XX XXX XXX',
-        pinLabel: 'Créer un code PIN',
-        pinConfirmLabel: 'Confirmer le code PIN',
-      },
-      step2: {
-        stepLabel: 'Étape 2 sur 3',
-        title: 'Votre véhicule',
-        subtitle: 'Le dispatch dimensionne votre charge avec cette info. Modifiable plus tard.',
-        vehicleTypeLabel: 'Type de véhicule',
-        vehicleTypes: { scooter: 'Scooter', car: 'Voiture', van: 'Camionnette' },
-        plateLabel: 'Matricule',
-        platePlaceholder: '142 TN 4483',
-        cinLabel: 'CIN',
-        cinPlaceholder: '09 447 218',
-        licenseTitle: 'Permis de conduire',
-        licenseSubtitle: 'Recto & verso requis',
-        add: 'Ajouter',
-        added: 'Ajouté',
-        agreement: "J'accepte le contrat coursier et confirme la validité de mes documents.",
-      },
-      step3: {
-        stepLabel: 'Étape 3 sur 3',
-        title: 'Vérification',
-        subtitle: 'Vérifiez vos informations avant de commencer.',
-        sectionAccount: 'Compte',
-        sectionVehicle: 'Véhicule',
-        submit: 'Créer mon compte',
-      },
-      continue: 'Continuer',
-      errors: {
-        pinMismatch: 'Les codes PIN ne correspondent pas.',
-        pinLength: 'Le code PIN doit contenir 4 chiffres.',
-        agreementRequired: 'Veuillez accepter le contrat pour continuer.',
-      },
-    },
   },
 
   home: {
@@ -163,16 +120,6 @@ const fr: TranslationResource = {
     },
   },
 
-  runsheetSchedule: {
-    headerTitle: 'Calendrier',
-    today: "Aujourd'hui",
-    viewingToday: "Affichage des colis d'aujourd'hui",
-    viewingTodayBody: "Retournez pour voir les colis que vous avez aujourd'hui.",
-    backToRunsheet: 'Retour aux colis',
-    emptyTitle: 'Rien de chargé pour le {{date}}',
-    emptyBody:
-      'Les autres jours apparaîtront ici une fois Jibex connecté à votre système de répartition.',
-  },
 
   statusUpdate: {
     title: 'Mettre à jour le statut',
@@ -249,15 +196,6 @@ const fr: TranslationResource = {
     retake: 'Reprendre la photo',
   },
 
-  returnPhoto: {
-    title: 'Photo du dommage',
-    permissionBody: "L'accès à la caméra est nécessaire pour documenter l'article endommagé.",
-    enableCamera: 'Activer la caméra',
-    hintCapture: 'Prenez une photo nette du dommage.',
-    hintConfirm: 'Ça vous convient ? Joignez cette photo au retour.',
-    attach: 'Joindre la photo',
-    retake: 'Reprendre la photo',
-  },
 
   scanner: {
     title: 'Scanner le colis',
@@ -397,25 +335,7 @@ const fr: TranslationResource = {
     },
   },
 
-  availability: {
-    headerTitle: 'Disponibilité',
-    intro:
-      'Sélectionnez une date pour marquer les créneaux où vous êtes disponible. La répartition utilise ceci pour planifier vos prochaines journées.',
-    pastNote: 'Impossible de définir une disponibilité pour une date passée.',
-    summary_one: '{{count}} jour marqué disponible ce mois-ci',
-    summary_other: '{{count}} jours marqués disponibles ce mois-ci',
-  },
 
-  shiftSummary: {
-    wrappingUp: 'Clôture de votre journée…',
-    title: 'Journée terminée',
-    timeRange: '{{start}} – {{end}} · {{duration}}',
-    stats: { delivered: 'Livrés', failed: 'Échoués', miles: 'Miles' },
-    cashToHandOff: 'Espèces à remettre',
-    handedOff: 'Remis',
-    confirm: 'Confirmer',
-    done: 'Terminé',
-  },
 
   personalInfo: {
     headerTitle: 'Informations personnelles',
@@ -438,15 +358,6 @@ const fr: TranslationResource = {
     colorLabel: 'Couleur',
   },
 
-  bankInfo: {
-    headerTitle: 'Coordonnées bancaires',
-    note: 'Utilisées uniquement pour déposer vos versements en espèces.',
-    bankNameLabel: 'Nom de la banque',
-    accountHolderLabel: 'Titulaire du compte',
-    ibanLabel: 'IBAN',
-    saveChanges: 'Enregistrer',
-    savedToast: 'Coordonnées bancaires enregistrées',
-  },
 
   helpCenter: {
     headerTitle: "Centre d'aide",
@@ -472,11 +383,6 @@ const fr: TranslationResource = {
         question: 'Mon scanner ne lit pas un code-barres',
         answer:
           'Vérifiez que l\'accès à la caméra est activé et que le code-barres est bien éclairé. S\'il ne se scanne toujours pas, utilisez "Saisir le code manuellement" sur l\'écran du scanner.',
-      },
-      {
-        question: 'Comment changer mes jours de travail ?',
-        answer:
-          'Allez dans Profil → Disponibilité et marquez les dates et créneaux où vous êtes libre.',
       },
     ],
   },

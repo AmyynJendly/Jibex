@@ -137,8 +137,7 @@ export default function LoginScreen() {
             </AnimatedPressable>
           </View>
 
-          {/* No self-signup: agencies provision driver accounts, so there's
-              deliberately no route from here to the register screen. */}
+          {/* No self-signup: agencies provision driver accounts. */}
           <TickerMarquee
             items={t('auth.login.ticker', { returnObjects: true, phone: DISPATCH_PHONE }) as string[]}
             style={styles.ticker}

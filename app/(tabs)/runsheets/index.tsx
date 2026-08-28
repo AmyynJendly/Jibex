@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -71,7 +72,7 @@ interface ParcelCardProps {
   updateLabel: string;
   callLabel: string;
   lockedLabel: string;
-  t: (key: string, opts?: Record<string, unknown>) => string;
+  t: TFunction;
 }
 
 function ParcelCard({
@@ -99,7 +100,7 @@ function ParcelCard({
         label={
           job.status === 'IN_TRANSIT'
             ? t('runsheets.inTransit')
-            : enumLabel(t as never, 'jobStatus', job.status)
+            : enumLabel(t, 'jobStatus', job.status)
         }
         color={accent}
       />
@@ -150,7 +151,7 @@ function ParcelCard({
 
       {job.status === 'FAILED' && job.failureReason && (
         <Text style={[styles.failureText, { color: colors.danger }]} numberOfLines={1}>
-          {enumLabel(t as never, 'failureReason', job.failureReason)}
+          {enumLabel(t, 'failureReason', job.failureReason)}
         </Text>
       )}
 
@@ -394,7 +395,7 @@ export default function RunsheetsScreen() {
                       updateLabel={t('runsheets.update')}
                       callLabel={t('runsheets.call')}
                       lockedLabel={t('runsheets.confirm.lockedTag')}
-                      t={t as never}
+                      t={t}
                     />
                   ))}
                 </View>
@@ -453,7 +454,7 @@ export default function RunsheetsScreen() {
                     updateLabel={t('runsheets.update')}
                     callLabel={t('runsheets.call')}
                     lockedLabel={t('runsheets.confirm.lockedTag')}
-                    t={t as never}
+                    t={t}
                   />
                 ))}
               </View>

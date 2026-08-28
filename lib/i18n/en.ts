@@ -57,49 +57,6 @@ const en = {
         invalidCredentials: 'Incorrect username or password.',
       },
     },
-    register: {
-      step1: {
-        stepLabel: 'Step 1 of 3',
-        title: 'Your Info',
-        subtitle: "Let's get your account set up.",
-        fullNameLabel: 'Full Name',
-        fullNamePlaceholder: 'Marcus Alden',
-        phoneLabel: 'Phone Number',
-        phonePlaceholder: '+216 XX XXX XXX',
-        pinLabel: 'Create PIN Code',
-        pinConfirmLabel: 'Confirm PIN Code',
-      },
-      step2: {
-        stepLabel: 'Step 2 of 3',
-        title: 'Your Vehicle',
-        subtitle: 'Dispatch sizes your load using this info. Editable later.',
-        vehicleTypeLabel: 'Vehicle Type',
-        vehicleTypes: { scooter: 'Scooter', car: 'Car', van: 'Van' },
-        plateLabel: 'Plate Number',
-        platePlaceholder: '142 TN 4483',
-        cinLabel: 'National ID (CIN)',
-        cinPlaceholder: '09 447 218',
-        licenseTitle: "Driver's License",
-        licenseSubtitle: 'Front & back required',
-        add: 'Add',
-        added: 'Added',
-        agreement: 'I accept the courier contract and confirm my documents are valid.',
-      },
-      step3: {
-        stepLabel: 'Step 3 of 3',
-        title: 'Review & Confirm',
-        subtitle: 'Check your details before you hit the road.',
-        sectionAccount: 'Account',
-        sectionVehicle: 'Vehicle',
-        submit: 'Create Account',
-      },
-      continue: 'Continue',
-      errors: {
-        pinMismatch: 'PIN codes do not match.',
-        pinLength: 'PIN must be 4 digits.',
-        agreementRequired: 'Please accept the agreement to continue.',
-      },
-    },
   },
 
   home: {
@@ -163,15 +120,6 @@ const en = {
     },
   },
 
-  runsheetSchedule: {
-    headerTitle: 'Schedule',
-    today: 'Today',
-    viewingToday: "Viewing today's packages",
-    viewingTodayBody: 'Go back to see the packages you have today.',
-    backToRunsheet: 'Back to Packages',
-    emptyTitle: 'Nothing loaded for {{date}}',
-    emptyBody: 'Other days will show up here once Jibex is connected to your dispatch system.',
-  },
 
   statusUpdate: {
     title: 'Update Status',
@@ -248,15 +196,6 @@ const en = {
     retake: 'Retake Photo',
   },
 
-  returnPhoto: {
-    title: 'Damage Photo',
-    permissionBody: 'Camera access is needed to document the damaged item.',
-    enableCamera: 'Enable Camera',
-    hintCapture: 'Take a clear photo of the damage.',
-    hintConfirm: 'Looks good? Attach this photo to the return.',
-    attach: 'Attach Photo',
-    retake: 'Retake Photo',
-  },
 
   scanner: {
     title: 'Scan Package',
@@ -392,25 +331,7 @@ const en = {
     },
   },
 
-  availability: {
-    headerTitle: 'Availability',
-    intro:
-      "Tap a date to mark the time blocks you're available to work. Dispatch uses this to plan upcoming assignments.",
-    pastNote: "Can't set availability for a past date.",
-    summary_one: '{{count}} day marked available this month',
-    summary_other: '{{count}} days marked available this month',
-  },
 
-  shiftSummary: {
-    wrappingUp: 'Wrapping up your shift…',
-    title: 'Shift Complete',
-    timeRange: '{{start}} – {{end}} · {{duration}}',
-    stats: { delivered: 'Delivered', failed: 'Failed', miles: 'Miles' },
-    cashToHandOff: 'Cash to hand off',
-    handedOff: 'Handed Off',
-    confirm: 'Confirm',
-    done: 'Done',
-  },
 
   personalInfo: {
     headerTitle: 'Personal Info',
@@ -433,15 +354,6 @@ const en = {
     colorLabel: 'Color',
   },
 
-  bankInfo: {
-    headerTitle: 'Bank & Payout Info',
-    note: 'Used only to deposit your cash-collection payouts.',
-    bankNameLabel: 'Bank Name',
-    accountHolderLabel: 'Account Holder',
-    ibanLabel: 'IBAN',
-    saveChanges: 'Save Changes',
-    savedToast: 'Bank info saved',
-  },
 
   helpCenter: {
     headerTitle: 'Help Center',
@@ -467,10 +379,6 @@ const en = {
         question: "My scanner won't read a barcode",
         answer:
           'Make sure camera access is enabled and the barcode is well-lit. If it still won\'t scan, use "Enter Code Manually" on the scanner screen instead.',
-      },
-      {
-        question: 'How do I change which days I work?',
-        answer: "Go to Profile → Availability and mark the dates and time blocks you're free.",
       },
     ],
   },

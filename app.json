@@ -19,7 +19,8 @@
         "UIDesignRequiresCompatibility": false,
         "LSApplicationQueriesSchemes": [
           "comgooglemaps"
-        ]
+        ],
+        "CADisableMinimumFrameDurationOnPhone": true
       },
       "icon": "./assets/icon.png"
     },

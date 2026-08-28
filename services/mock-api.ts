@@ -2,20 +2,15 @@ import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
 import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids';
 import type {
-  Availability,
-  DayAvailability,
   DeliveryFailureReason,
   DriverStats,
   GeoPoint,
   Job,
   Notification,
-  PayoutInfo,
   Pickup,
   PickupParcel,
   Return,
   Runsheet,
-  ShiftStatus,
-  ShiftSummary,
   Transfer,
   User,
   Vehicle,
@@ -646,38 +641,11 @@ let mockUser: User = {
 /** Dev-only mock credentials — irrelevant once login() calls a real API. */
 const mockPassword = 'password123';
 
-let mockShiftStatus: ShiftStatus = { isActive: false, startedAt: null };
-
-/** Mon-Thu AM+PM, Fri AM+PM+Eve, Sat AM only, Sun off — same shape as the driver's old weekly pattern, seeded onto real upcoming dates. */
-function defaultDayAvailability(weekday: number): DayAvailability {
-  if (weekday === 0) return { morning: false, afternoon: false, evening: false }; // Sunday
-  if (weekday === 6) return { morning: true, afternoon: false, evening: false }; // Saturday
-  if (weekday === 5) return { morning: true, afternoon: true, evening: true }; // Friday
-  return { morning: true, afternoon: true, evening: false }; // Mon-Thu
-}
-
-function seedAvailability(days: number): Availability {
-  const availability: Availability = {};
-  for (let i = 0; i < days; i++) {
-    const date = addDays(new Date(), i);
-    availability[toDateKey(date)] = defaultDayAvailability(date.getDay());
-  }
-  return availability;
-}
-
-let mockAvailability: Availability = seedAvailability(21);
-
 let mockVehicle: Vehicle = {
   type: 'motorcycle',
   plate: 'TU-2847-KL',
   model: 'Yamaha NMAX 155',
   color: 'Matte Black',
-};
-
-let mockPayoutInfo: PayoutInfo = {
-  bankName: 'Banque de Tunisie',
-  accountHolder: 'Marcus Alden',
-  iban: 'TN59 1000 6035 0000 0123 4567',
 };
 
 // ---------------------------------------------------------------------------
@@ -733,23 +701,8 @@ function initialsFor(name: string) {
     .join('');
 }
 
-export async function register(params: RegisterParams): Promise<LoginResult> {
-  await delay(undefined);
-
-  const user: User = {
-    id: `driver-${Date.now()}`,
-    name: params.name.trim(),
-    username: params.phone.replace(/\D/g, ''),
-    email: params.email?.trim() ?? '',
-    avatarInitials: initialsFor(params.name),
-    driverCode: `DRV-${Math.floor(1000 + Math.random() * 9000)}`,
-  };
-
-  return {
-    success: true,
-    user,
-    token: `mock-token-${user.id}-${Date.now()}`,
-  };
+export async function getVehicle(): Promise<Vehicle> {
+  return delay({ ...mockVehicle });
 }
 
 export async function getUser(): Promise<User> {
@@ -960,19 +913,6 @@ export async function confirmReturns(ids: string[]): Promise<Return[]> {
 
 export async function getReturns(): Promise<Return[]> {
   return delay(mockReturns.map((r) => ({ ...r })));
-}
-
-/** Attaches a locally captured photo (device URI) documenting a damaged return. */
-export async function attachReturnPhoto(id: string, photoUri: string): Promise<Return> {
-  await delay(undefined);
-
-  const item = mockReturns.find((r) => r.id === id);
-  if (!item) {
-    throw new Error(`Return ${id} not found`);
-  }
-
-  item.photoUris = [...(item.photoUris ?? []), photoUri];
-  return { ...item };
 }
 
 export async function getNotifications(): Promise<Notification[]> {
@@ -1217,92 +1157,14 @@ export async function confirmScan(code: string): Promise<ScanResult> {
   return { success: false, error: 'scanner.errors.notRecognized' };
 }
 
-export async function getShiftStatus(): Promise<ShiftStatus> {
-  return delay({ ...mockShiftStatus });
-}
-
-export async function startShift(): Promise<ShiftStatus> {
-  mockShiftStatus = { isActive: true, startedAt: new Date().toISOString() };
-  return delay({ ...mockShiftStatus });
-}
-
-export async function endShift(): Promise<ShiftSummary> {
-  await delay(undefined);
-
-  const startedAt = mockShiftStatus.startedAt ?? new Date().toISOString();
-  const endedAt = new Date().toISOString();
-  const durationMinutes = Math.max(
-    1,
-    Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60_000)
-  );
-
-  const summary: ShiftSummary = {
-    startedAt,
-    endedAt,
-    durationMinutes,
-    delivered: mockDriverStats.delivered,
-    failed: mockDriverStats.failed,
-    distanceMiles:
-      Math.round((mockDriverStats.delivered * 2.3 + mockDriverStats.failed * 1.1) * 10) / 10,
-    cashCollected: mockDriverStats.cashCollectedTotal,
-  };
-
-  mockShiftStatus = { isActive: false, startedAt: null };
-  return summary;
-}
-
 /** Driver hands off the day's cash (deposit, office drop-off, etc.) — zeroes the running total. */
 export async function confirmCashHandoff(): Promise<void> {
   await delay(undefined);
   mockDriverStats = { ...mockDriverStats, cashCollectedTotal: 0 };
 }
 
-export async function getAvailability(): Promise<Availability> {
-  return delay(JSON.parse(JSON.stringify(mockAvailability)));
-}
-
-export async function setAvailability(availability: Availability): Promise<void> {
-  mockAvailability = JSON.parse(JSON.stringify(availability));
-  await delay(undefined);
-}
-
 /** A real backend would associate this token with the driver's account for server-sent push. */
 export async function registerPushToken(token: string): Promise<void> {
   void token;
-  await delay(undefined);
-}
-
-export interface UpdateUserParams {
-  name: string;
-  phone: string;
-  email: string;
-}
-
-export async function updateUser(params: UpdateUserParams): Promise<User> {
-  mockUser = {
-    ...mockUser,
-    name: params.name,
-    username: params.phone.replace(/\D/g, ''),
-    email: params.email,
-    avatarInitials: initialsFor(params.name),
-  };
-  return delay({ ...mockUser });
-}
-
-export async function getVehicle(): Promise<Vehicle> {
-  return delay({ ...mockVehicle });
-}
-
-export async function updateVehicle(vehicle: Vehicle): Promise<void> {
-  mockVehicle = { ...vehicle };
-  await delay(undefined);
-}
-
-export async function getPayoutInfo(): Promise<PayoutInfo> {
-  return delay({ ...mockPayoutInfo });
-}
-
-export async function updatePayoutInfo(payout: PayoutInfo): Promise<void> {
-  mockPayoutInfo = { ...payout };
   await delay(undefined);
 }

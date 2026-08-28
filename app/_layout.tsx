@@ -70,16 +70,10 @@ export default function RootLayout() {
                 <Stack.Screen name="pickups" />
                 <Stack.Screen name="transfers" />
                 <Stack.Screen name="returns" />
-                <Stack.Screen name="availability" />
-                <Stack.Screen name="runsheet-schedule" />
                 <Stack.Screen name="personal-info" />
                 <Stack.Screen name="vehicle-details" />
-                <Stack.Screen name="bank-info" />
                 <Stack.Screen name="help-center" />
-                <Stack.Screen name="settings" />
-                <Stack.Screen name="shift-summary" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
-                <Stack.Screen name="return-photo" options={{ presentation: 'fullScreenModal' }} />
                 <Stack.Screen name="search" />
               </Stack>
               <OfflineBanner />
