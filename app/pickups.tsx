@@ -29,6 +29,7 @@ import {
 import { formatCurrency } from '../lib/currency';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
+import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { completePickups } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
 
@@ -216,6 +217,7 @@ export default function PickupsScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { confirm } = useConfirm();
+  const requireOnline = useOnlineGuard();
   const pickupsQuery = usePickups();
   const screen = useScreenState([pickupsQuery]);
   const pickups = pickupsQuery.data ?? null;
@@ -234,6 +236,7 @@ export default function PickupsScreen() {
 
   async function handleDoneSelected() {
     if (selected.length === 0 || completing) return;
+    if (!requireOnline()) return;
 
     const confirmed = await confirm({
       title: t('pickups.doneConfirmTitle'),

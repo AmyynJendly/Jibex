@@ -28,6 +28,7 @@ import {
 } from '../../../constants';
 import { telUrl } from '../../../lib/phone';
 import { invalidateDeliveryData } from '../../../lib/query';
+import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { confirmDeliveryWithOTP, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -80,6 +81,7 @@ function OtpBox({ digit, active, error, colors }: OtpBoxProps) {
 export default function OtpScreen() {
   const colors = useColors();
   const { t } = useTranslation();
+  const requireOnline = useOnlineGuard();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [otp, setOtp] = useState('');
@@ -114,6 +116,7 @@ export default function OtpScreen() {
 
   async function handleVerify() {
     if (!job || otp.length < OTP_LENGTH) return;
+    if (!requireOnline()) return;
     setSubmitting(true);
     setError(null);
 

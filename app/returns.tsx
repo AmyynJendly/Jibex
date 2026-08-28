@@ -28,6 +28,7 @@ import {
 import { localeTag } from '../lib/date';
 import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
+import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { confirmReturns } from '../services/mock-api';
 import type { Return } from '../types';
 
@@ -39,6 +40,7 @@ export default function ReturnsScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { confirm } = useConfirm();
+  const requireOnline = useOnlineGuard();
   const returnsQuery = useReturns();
   const screen = useScreenState([returnsQuery]);
   const returns = returnsQuery.data ?? null;
@@ -65,6 +67,7 @@ export default function ReturnsScreen() {
    */
   async function handleConfirm(batches: Return[]) {
     if (batches.length === 0 || confirming) return;
+    if (!requireOnline()) return;
     const parcels = batches.reduce((sum, r) => sum + r.parcelCount, 0);
 
     const accepted = await confirm({

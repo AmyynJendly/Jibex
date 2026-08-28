@@ -13,6 +13,7 @@ import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { Fonts, Radii, Spacing, Typography } from '../../../constants';
 import { invalidateDeliveryData } from '../../../lib/query';
+import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -28,6 +29,7 @@ export default function PhotoProofScreen() {
   const capturingRef = useRef(false);
   const mountedRef = useRef(true);
   const { showToast } = useToast();
+  const requireOnline = useOnlineGuard();
 
   useEffect(() => {
     getJobDetail(id).then(setJob);
@@ -62,6 +64,7 @@ export default function PhotoProofScreen() {
 
   async function handleConfirm() {
     if (!job || !photoUri || submitting) return;
+    if (!requireOnline()) return;
     setSubmitting(true);
 
     const previousTotal = (await getDriverStats()).cashCollectedTotal;

@@ -16,6 +16,7 @@ const en = {
   },
 
   common: {
+    offlineAction: "You're offline — reconnect before recording this.",
     loadError: {
       title: "Couldn't load",
       body: 'Check your connection and try again.',

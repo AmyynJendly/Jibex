@@ -18,6 +18,7 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../../../constants';
 import { invalidateDeliveryData } from '../../../lib/query';
+import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { markDeliveryFailed } from '../../../services/mock-api';
 import type { DeliveryFailureReason } from '../../../types';
 
@@ -36,6 +37,7 @@ export default function CantDeliverScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const requireOnline = useOnlineGuard();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
   const [note, setNote] = useState('');
@@ -43,6 +45,7 @@ export default function CantDeliverScreen() {
 
   async function handleConfirm() {
     if (!reason || submitting) return;
+    if (!requireOnline()) return;
     setSubmitting(true);
     const result = await markDeliveryFailed(id, reason, note.trim() || undefined);
     setSubmitting(false);

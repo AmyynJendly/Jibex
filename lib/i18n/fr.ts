@@ -19,6 +19,7 @@ const fr: TranslationResource = {
   },
 
   common: {
+    offlineAction: "Vous êtes hors ligne — reconnectez-vous avant d'enregistrer.",
     loadError: {
       title: 'Chargement impossible',
       body: 'Vérifiez votre connexion et réessayez.',
