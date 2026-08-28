@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
+import { LoadError } from '../components/LoadError';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -26,7 +27,8 @@ import {
 } from '../constants';
 import { localeTag } from '../lib/date';
 import { enumLabel } from '../lib/enumLabel';
-import { confirmReturns, getReturns } from '../services/mock-api';
+import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
+import { confirmReturns } from '../services/mock-api';
 import type { Return } from '../types';
 
 type Toggle = 'current' | 'history';
@@ -37,15 +39,11 @@ export default function ReturnsScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { confirm } = useConfirm();
-  const [returns, setReturns] = useState<Return[] | null>(null);
+  const returnsQuery = useReturns();
+  const screen = useScreenState([returnsQuery]);
+  const returns = returnsQuery.data ?? null;
   const [toggle, setToggle] = useState<Toggle>('current');
   const [confirming, setConfirming] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      getReturns().then(setReturns);
-    }, [])
-  );
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
@@ -78,7 +76,8 @@ export default function ReturnsScreen() {
     if (!accepted) return;
 
     setConfirming(true);
-    setReturns(await confirmReturns(batches.map((r) => r.id)));
+    await confirmReturns(batches.map((r) => r.id));
+    await invalidateReturns();
     setConfirming(false);
     showToast(t('returns.confirmToast', { count: batches.length }));
   }
@@ -126,7 +125,9 @@ export default function ReturnsScreen() {
           </View>
         )}
 
-        {!returns ? (
+        {screen.isError && !returns ? (
+          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+        ) : !returns ? (
           <>
             <SkeletonRow />
             <SkeletonRow />

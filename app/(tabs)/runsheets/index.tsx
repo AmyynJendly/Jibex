@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -9,6 +9,7 @@ import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
 import { EmptyState } from '../../../components/EmptyState';
+import { LoadError } from '../../../components/LoadError';
 import { MetaChip } from '../../../components/MetaChip';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SegmentedControl } from '../../../components/SegmentedControl';
@@ -30,12 +31,13 @@ import { formatCurrency } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { telUrl } from '../../../lib/phone';
 import {
-  confirmRunsheetReceipt,
-  getActiveParcels,
-  getHistoryParcels,
-  getRunsheets,
-  logCallAttempt,
-} from '../../../services/mock-api';
+  invalidateDeliveryData,
+  useActiveParcels,
+  useHistoryParcels,
+  useRunsheets,
+  useScreenState,
+} from '../../../lib/query';
+import { confirmRunsheetReceipt, logCallAttempt } from '../../../services/mock-api';
 import type { Job, JobStatus, Runsheet } from '../../../types';
 
 type Toggle = 'current' | 'history';
@@ -226,25 +228,17 @@ export default function RunsheetsScreen() {
   const { confirm } = useConfirm();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 
-  const [active, setActive] = useState<Job[] | null>(null);
-  const [history, setHistory] = useState<Job[] | null>(null);
-  const [runsheets, setRunsheets] = useState<Runsheet[]>([]);
+  const activeQuery = useActiveParcels();
+  const historyQuery = useHistoryParcels();
+  const runsheetsQuery = useRunsheets();
+  const screen = useScreenState([activeQuery, historyQuery, runsheetsQuery]);
+
+  const active = activeQuery.data ?? null;
+  const history = historyQuery.data ?? null;
+  const runsheets = runsheetsQuery.data ?? [];
   const [toggle, setToggle] = useState<Toggle>('current');
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sheetJob, setSheetJob] = useState<Job | null>(null);
-
-  const load = useCallback(async () => {
-    const [a, h, r] = await Promise.all([getActiveParcels(), getHistoryParcels(), getRunsheets()]);
-    setActive(a);
-    setHistory(h);
-    setRunsheets(r);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
 
   const unconfirmed = runsheets.filter((r) => r.needsConfirmation && r.status !== 'VALIDE');
   /** Parcels the driver hasn't signed for yet — inert until they do. */
@@ -265,7 +259,7 @@ export default function RunsheetsScreen() {
     if (!confirmed) return;
 
     await confirmRunsheetReceipt(runsheet.id);
-    await load();
+    await invalidateDeliveryData();
     showToast(t('runsheets.confirm.toast'));
   }
 
@@ -273,13 +267,13 @@ export default function RunsheetsScreen() {
     // Log first so the attempt is recorded even if the dialer never opens
     // (no telephony on web, or the driver backs out of the call sheet).
     await logCallAttempt(job.id);
-    await load();
+    await invalidateDeliveryData();
     Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
   }
 
   async function handleSheetDone() {
     setSheetJob(null);
-    await load();
+    await invalidateDeliveryData();
   }
 
   const filteredHistory = (history ?? []).filter((j) =>
@@ -305,7 +299,9 @@ export default function RunsheetsScreen() {
           onChange={setToggle}
         />
 
-        {toggle === 'current' ? (
+        {screen.isError && !active && !history ? (
+          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+        ) : toggle === 'current' ? (
           <>
             {unconfirmed.map((runsheet) => {
               const isRecount = runsheet.status !== 'A_CONFIRMER';

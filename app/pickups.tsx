@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import type { TFunction } from 'i18next';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
+import { LoadError } from '../components/LoadError';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -27,7 +28,8 @@ import {
 } from '../constants';
 import { formatCurrency } from '../lib/currency';
 import { telUrl } from '../lib/phone';
-import { completePickups, getPickups } from '../services/mock-api';
+import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
+import { completePickups } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
 
 /**
@@ -214,15 +216,13 @@ export default function PickupsScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { confirm } = useConfirm();
-  const [pickups, setPickups] = useState<Pickup[] | null>(null);
+  const pickupsQuery = usePickups();
+  const screen = useScreenState([pickupsQuery]);
+  const pickups = pickupsQuery.data ?? null;
   const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
-
-  useEffect(() => {
-    getPickups().then(setPickups);
-  }, []);
 
   const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
   const completed = pickups?.filter((p) => p.status === 'COMPLETED') ?? [];
@@ -248,7 +248,8 @@ export default function PickupsScreen() {
 
     setCompleting(true);
     const ids = selected.map((p) => p.id);
-    setPickups(await completePickups(ids));
+    await completePickups(ids);
+    await invalidatePickups();
     const forget = (prev: Set<string>) => {
       const next = new Set(prev);
       ids.forEach((id) => next.delete(id));
@@ -308,7 +309,9 @@ export default function PickupsScreen() {
           onChange={setSegment}
         />
 
-        {!pickups ? (
+        {screen.isError && !pickups ? (
+          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+        ) : !pickups ? (
           <View style={styles.skeletonGroup}>
             <SkeletonBlock height={140} radius={Radii.card} />
             <SkeletonRow />

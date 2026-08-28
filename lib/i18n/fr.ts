@@ -19,6 +19,11 @@ const fr: TranslationResource = {
   },
 
   common: {
+    loadError: {
+      title: 'Chargement impossible',
+      body: 'Vérifiez votre connexion et réessayez.',
+      retry: 'Réessayer',
+    },
     cancel: 'Annuler',
     save: 'Enregistrer',
     back: 'Retour',

@@ -16,6 +16,11 @@ const en = {
   },
 
   common: {
+    loadError: {
+      title: "Couldn't load",
+      body: 'Check your connection and try again.',
+      retry: 'Try Again',
+    },
     cancel: 'Cancel',
     save: 'Save',
     back: 'Back',

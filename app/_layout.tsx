@@ -20,6 +20,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { QueryProvider } from '../lib/query';
+
 import { ConfirmDialogProvider } from '../components/ConfirmDialog';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { ToastProvider } from '../components/Toast';
@@ -55,32 +57,34 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    // Gesture handler needs a root view above everything that uses a gesture —
-    // the drag list and every pressable run their gestures on the UI thread.
+    // Gesture handler needs a root view above anything using a gesture, and
+    // the navigators themselves rely on it.
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <LanguageProvider>
-          <ToastProvider>
-            <ConfirmDialogProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="job/[id]" />
-                {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
-                <Stack.Screen name="pickups" />
-                <Stack.Screen name="transfers" />
-                <Stack.Screen name="returns" />
-                <Stack.Screen name="personal-info" />
-                <Stack.Screen name="vehicle-details" />
-                <Stack.Screen name="help-center" />
-                <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
-                <Stack.Screen name="search" />
-              </Stack>
-              <OfflineBanner />
-              <StatusBar style="auto" />
-            </ConfirmDialogProvider>
-          </ToastProvider>
-        </LanguageProvider>
+        <QueryProvider>
+          <LanguageProvider>
+            <ToastProvider>
+              <ConfirmDialogProvider>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="job/[id]" />
+                  {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
+                  <Stack.Screen name="pickups" />
+                  <Stack.Screen name="transfers" />
+                  <Stack.Screen name="returns" />
+                  <Stack.Screen name="personal-info" />
+                  <Stack.Screen name="vehicle-details" />
+                  <Stack.Screen name="help-center" />
+                  <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
+                  <Stack.Screen name="search" />
+                </Stack>
+                <OfflineBanner />
+                <StatusBar style="auto" />
+              </ConfirmDialogProvider>
+            </ToastProvider>
+          </LanguageProvider>
+        </QueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

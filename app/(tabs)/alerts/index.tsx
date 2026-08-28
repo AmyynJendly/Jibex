@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -7,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { EmptyState } from '../../../components/EmptyState';
+import { invalidateNotifications, useNotifications, useScreenState } from '../../../lib/query';
+import { LoadError } from '../../../components/LoadError';
 import { SkeletonRow } from '../../../components/Skeleton';
 import {
   Fonts,
@@ -21,7 +22,6 @@ import {
 } from '../../../constants';
 import { localeTag } from '../../../lib/date';
 import {
-  getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../../services/mock-api';
@@ -60,7 +60,9 @@ export default function AlertsScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const [notifications, setNotifications] = useState<Notification[] | null>(null);
+  const notificationsQuery = useNotifications();
+  const screen = useScreenState([notificationsQuery]);
+  const notifications = notificationsQuery.data ?? null;
 
   function formatTime(iso: string) {
     const date = new Date(iso);
@@ -73,26 +75,14 @@ export default function AlertsScreen() {
     return date.toLocaleDateString(localeTag(i18n.language), { month: 'short', day: 'numeric' });
   }
 
-  const load = useCallback(async () => {
-    setNotifications(await getNotifications());
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
-
   async function handlePress(id: string) {
-    setNotifications((prev) =>
-      prev ? prev.map((n) => (n.id === id ? { ...n, read: true } : n)) : prev
-    );
     await markNotificationRead(id);
+    await invalidateNotifications();
   }
 
   async function handleMarkAllRead() {
-    setNotifications((prev) => (prev ? prev.map((n) => ({ ...n, read: true })) : prev));
     await markAllNotificationsRead();
+    await invalidateNotifications();
   }
 
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
@@ -188,7 +178,9 @@ export default function AlertsScreen() {
         )}
       </View>
 
-      {!notifications ? (
+      {screen.isError && !notifications ? (
+        <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+      ) : !notifications ? (
         <View style={styles.list}>
           <SkeletonRow />
           <SkeletonRow />

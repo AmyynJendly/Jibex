@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +24,7 @@ import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
 import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { clearToken } from '../../../lib/token';
-import { getDriverStats, getRunsheets, getUser, getVehicle } from '../../../services/mock-api';
+import { useDriverStats, useRunsheets, useUser, useVehicle } from '../../../lib/query';
 import type { DriverStats, User, Vehicle } from '../../../types';
 
 interface AccountRow {
@@ -41,31 +41,17 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { language, setLanguage } = useLanguage();
-  const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<DriverStats | null>(null);
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [hub, setHub] = useState<string | null>(null);
+  const userQuery = useUser();
+  const user = userQuery.data ?? null;
+  const statsQuery = useDriverStats();
+  const vehicleQuery = useVehicle();
+  const runsheetsQuery = useRunsheets();
+
+  const stats = statsQuery.data ?? null;
+  const vehicle = vehicleQuery.data ?? null;
+  const hub = runsheetsQuery.data?.[0]?.agency ?? null;
   const [biometricLogin, setBiometricLogin] = useState(true);
   const [newJobAlerts, setNewJobAlerts] = useState(true);
-
-  const load = useCallback(async () => {
-    const [u, s, v, runsheets] = await Promise.all([
-      getUser(),
-      getDriverStats(),
-      getVehicle(),
-      getRunsheets(),
-    ]);
-    setUser(u);
-    setStats(s);
-    setVehicle(v);
-    setHub(runsheets[0]?.agency ?? null);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
 
   async function handleLogOut() {
     await clearToken();

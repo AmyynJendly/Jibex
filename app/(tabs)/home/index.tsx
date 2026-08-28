@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -18,6 +18,7 @@ import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { CountUpText } from '../../../components/CountUpText';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { ParticleMotes } from '../../../components/ParticleMotes';
+import { LoadError } from '../../../components/LoadError';
 import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -35,14 +36,16 @@ import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import {
-  confirmRunsheetReceipt,
-  getDriverStats,
-  getJobsByIds,
-  getNotifications,
-  getRunsheets,
-  getUser,
-  optimizeRouteOrder,
-} from '../../../services/mock-api';
+  invalidateDeliveryData,
+  useDriverStats,
+  useJobsByIds,
+  useNotifications,
+  useRouteOrder,
+  useRunsheets,
+  useScreenState,
+  useUser,
+} from '../../../lib/query';
+import { confirmRunsheetReceipt } from '../../../services/mock-api';
 import type { DriverStats, Job, Runsheet, User } from '../../../types';
 
 interface HomeData {
@@ -71,72 +74,92 @@ export default function HomeScreen() {
   const { confirm } = useConfirm();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 
-  const [data, setData] = useState<HomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [gpsLocation, setGpsLocation] = useState<string | null>(null);
   const liveCoords = useLiveCoords();
 
-  const load = useCallback(async () => {
-    const [user, stats, runsheets, notifications] = await Promise.all([
-      getUser(),
-      getDriverStats(),
-      getRunsheets(),
-      getNotifications(),
-    ]);
+  const userQuery = useUser();
+  const statsQuery = useDriverStats();
+  const runsheetsQuery = useRunsheets();
+  const notificationsQuery = useNotifications();
 
-    // Awaiting a first signature, or holding a count the driver hasn't
-    // re-attested to since dispatch changed it — same standing either way.
-    const unconfirmedRunsheets = runsheets.filter(
-      (r) => r.needsConfirmation && r.status !== 'VALIDE'
-    );
-    // Parcels the driver hasn't signed for aren't deliverable yet, so they're
-    // left out of the "what's next today" ordering entirely — matching the
-    // locked cards in Runsheets.
+  const runsheets = useMemo(() => runsheetsQuery.data ?? [], [runsheetsQuery.data]);
+
+  // Awaiting a first signature, or holding a count the driver hasn't
+  // re-attested to since dispatch changed it — same standing either way.
+  const unconfirmedRunsheets = useMemo(
+    () => runsheets.filter((r) => r.needsConfirmation && r.status !== 'VALIDE'),
+    [runsheets]
+  );
+  // Parcels the driver hasn't signed for aren't deliverable yet, so they're
+  // left out of the "what's next today" ordering entirely — matching the
+  // locked cards in Runsheets.
+  const workableRunsheets = useMemo(() => {
     const blocked = new Set(unconfirmedRunsheets.map((r) => r.id));
-    const workableRunsheets = runsheets.filter((r) => !blocked.has(r.id));
-    const workableStopIds = workableRunsheets.flatMap((r) => r.stopIds);
+    return runsheets.filter((r) => !blocked.has(r.id));
+  }, [runsheets, unconfirmedRunsheets]);
 
-    // "Today's Deliveries" reflects every stop across every runsheet the
-    // driver holds — including still-blocked ones, since those parcels are
-    // genuinely assigned even if not yet workable — so it visibly moves the
-    // moment a stop in Runsheets gets delivered or failed, instead of
-    // trailing a separate counter nothing else touches.
-    const allStopIds = runsheets.flatMap((r) => r.stopIds);
-    // Independent of each other, so they go together rather than in sequence.
-    const [orderedIds, allJobs] = await Promise.all([
-      optimizeRouteOrder(workableStopIds),
-      getJobsByIds(allStopIds),
-    ]);
+  // "Today's Deliveries" reflects every stop across every runsheet the driver
+  // holds — including still-blocked ones, since those parcels are genuinely
+  // assigned even if not yet workable — so it moves the moment a stop in
+  // Runsheets is delivered or failed.
+  const allStopIds = useMemo(() => runsheets.flatMap((r) => r.stopIds), [runsheets]);
+  const workableStopIds = useMemo(
+    () => workableRunsheets.flatMap((r) => r.stopIds),
+    [workableRunsheets]
+  );
+
+  const jobsQuery = useJobsByIds(allStopIds);
+  const orderQuery = useRouteOrder(workableStopIds);
+
+  const screen = useScreenState([userQuery, statsQuery, runsheetsQuery, notificationsQuery]);
+
+  const data = useMemo<HomeData | null>(() => {
+    const user = userQuery.data;
+    const stats = statsQuery.data;
+    if (!user || !stats) return null;
+
+    const allJobs = jobsQuery.data ?? [];
+    const orderedIds = orderQuery.data ?? [];
     const jobById = new Map(allJobs.map((j) => [j.id, j] as const));
 
-    const orderedWorkableJobs = orderedIds.map((id) => jobById.get(id)).filter((j): j is Job => !!j);
+    const orderedWorkableJobs = orderedIds
+      .map((id) => jobById.get(id))
+      .filter((j): j is Job => !!j);
     const nextStop =
       orderedWorkableJobs.find((j) => j.status === 'IN_TRANSIT') ??
       orderedWorkableJobs.find((j) => j.status === 'PENDING') ??
       null;
-    const nextStopIndex = nextStop ? orderedIds.indexOf(nextStop.id) + 1 : 0;
 
     const delivered = allJobs.filter((j) => j.status === 'DELIVERED').length;
     const failed = allJobs.filter((j) => j.status === 'FAILED').length;
-    const pending = allJobs.length - delivered - failed;
-    const completionPercent = allJobs.length === 0 ? 0 : Math.round((delivered / allJobs.length) * 100);
 
-    setData({
+    return {
       user,
-      stats: { ...stats, delivered, pending, failed, completionPercent },
-      hasUnreadNotifications: notifications.some((n) => !n.read),
+      stats: {
+        ...stats,
+        delivered,
+        pending: allJobs.length - delivered - failed,
+        failed,
+        completionPercent:
+          allJobs.length === 0 ? 0 : Math.round((delivered / allJobs.length) * 100),
+      },
+      hasUnreadNotifications: (notificationsQuery.data ?? []).some((n) => !n.read),
       nextStop,
-      nextStopIndex,
+      nextStopIndex: nextStop ? orderedIds.indexOf(nextStop.id) + 1 : 0,
       zone: workableRunsheets[0]?.zone ?? runsheets[0]?.zone ?? null,
       unconfirmedRunsheets,
-    });
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+    };
+  }, [
+    userQuery.data,
+    statsQuery.data,
+    jobsQuery.data,
+    orderQuery.data,
+    notificationsQuery.data,
+    workableRunsheets,
+    runsheets,
+    unconfirmedRunsheets,
+  ]);
 
   // Real device GPS (via `useLiveCoords`) reverse-geocoded into a label —
   // falls back silently to the runsheet zone (shown from `data.zone`) if
@@ -161,9 +184,9 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await invalidateDeliveryData();
     setRefreshing(false);
-  }, [load]);
+  }, []);
 
   async function handleConfirmReceipt(runsheet: Runsheet) {
     const isRecount = runsheet.status !== 'A_CONFIRMER';
@@ -180,8 +203,20 @@ export default function HomeScreen() {
     if (!confirmed) return;
 
     await confirmRunsheetReceipt(runsheet.id);
-    await load();
+    await invalidateDeliveryData();
     showToast(t('runsheets.confirm.toast'));
+  }
+
+  // A failure with nothing cached is the only case where the driver gets a
+  // wall instead of the screen; otherwise the last good data stays up.
+  if (!data && screen.isError) {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
+          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+        </ScrollView>
+      </View>
+    );
   }
 
   if (!data) {
@@ -212,7 +247,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex, zone, unconfirmedRunsheets } = data;
+  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex, zone } = data;
   const locationLabel = gpsLocation ?? zone;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];

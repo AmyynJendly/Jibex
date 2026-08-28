@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { EmptyState } from '../components/EmptyState';
+import { LoadError } from '../components/LoadError';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -26,7 +27,7 @@ import {
   useColors,
 } from '../constants';
 import { localeTag } from '../lib/date';
-import { getTransfers } from '../services/mock-api';
+import { useScreenState, useTransfers } from '../lib/query';
 import type { Transfer } from '../types';
 
 type Toggle = 'current' | 'history';
@@ -35,7 +36,9 @@ export default function TransfersScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const [transfers, setTransfers] = useState<Transfer[] | null>(null);
+  const transfersQuery = useTransfers();
+  const screen = useScreenState([transfersQuery]);
+  const transfers = transfersQuery.data ?? null;
   const [toggle, setToggle] = useState<Toggle>('current');
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
 
@@ -45,12 +48,6 @@ export default function TransfersScreen() {
       minute: '2-digit',
     });
   }
-
-  useFocusEffect(
-    useCallback(() => {
-      getTransfers().then(setTransfers);
-    }, [])
-  );
 
   const current = transfers?.filter((tr) => tr.status === 'IN_PROGRESS') ?? [];
   const history = transfers?.filter((tr) => tr.status === 'COMPLETED') ?? [];
@@ -93,7 +90,9 @@ export default function TransfersScreen() {
           onChange={setToggle}
         />
 
-        {!transfers ? (
+        {screen.isError && !transfers ? (
+          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+        ) : !transfers ? (
           <>
             <SkeletonRow />
             <SkeletonRow />
