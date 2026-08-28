@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
+import { Card } from '../../../components/Card';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
 import { EmptyState } from '../../../components/EmptyState';
@@ -107,10 +108,6 @@ function ParcelCard({
         }
         color={accent}
       />
-      {/* Colour repeated down the leading edge: the ribbon is easy to miss
-          when the card is mid-drag, this never is. */}
-      <View style={[styles.cardEdge, { backgroundColor: accent }]} />
-
       <View style={styles.cardHead}>
         {locked && (
           <View style={styles.lockSlot}>
@@ -205,25 +202,22 @@ function ParcelCard({
     </>
   );
 
-  const cardStyle = [
-    styles.card,
-    { backgroundColor: colors.bgElevated },
-    locked && styles.cardLocked,
-    getCardShadow(scheme),
-  ];
+  const card = (
+    <Card accent={accent} gap={Spacing.xs} dimmed={locked}>
+      {body}
+    </Card>
+  );
 
   // Locked and history cards are display surfaces, not controls.
-  if (inert || !onOpen) {
-    return <View style={cardStyle}>{body}</View>;
-  }
+  if (inert || !onOpen) return card;
 
+  // Deliberately not accessibilityRole="button": this card contains Call and
+  // Update, and a button inside a button is invalid markup and ambiguous to a
+  // screen reader. The card's own text is read normally, and the two real
+  // buttons inside it carry their own labels.
   return (
-    // Deliberately not accessibilityRole="button": this card contains Call and
-    // Update, and a button inside a button is invalid markup and ambiguous to
-    // a screen reader. The card's own text is read normally, and the two real
-    // buttons inside it carry their own labels.
-    <AnimatedPressable scaleTo={0.985} style={cardStyle} onPress={onOpen}>
-      {body}
+    <AnimatedPressable scaleTo={0.985} onPress={onOpen}>
+      {card}
     </AnimatedPressable>
   );
 }
@@ -512,24 +506,6 @@ const styles = StyleSheet.create({
     borderRadius: Radii.lg,
   },
 
-  card: {
-    flex: 1,
-    borderRadius: Radii.xxl,
-    padding: Spacing.lg,
-    paddingLeft: Spacing.lg + 4,
-    gap: Spacing.xs,
-    overflow: 'hidden',
-  },
-  cardLocked: {
-    opacity: 0.55,
-  },
-  cardEdge: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
   cardHead: {
     flexDirection: 'row',
     alignItems: 'center',

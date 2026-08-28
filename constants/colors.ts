@@ -26,6 +26,14 @@ export interface ColorPalette {
   /** "In Transit" filled-chip color — the design's darker clay tone, distinct from `accent` and `warning`. */
   info: string;
   infoSoft: string;
+  /** Ink for text and icons sitting on an accent/filled surface. */
+  onAccent: string;
+  /** Ink readable on `warning` — the amber fills are too light for white. */
+  onWarning: string;
+  /** The one deliberately dark surface in a warm-cream app: the cash strip. */
+  inverseSurface: string;
+  inverseText: string;
+  inverseTextMuted: string;
 }
 
 /**
@@ -86,6 +94,11 @@ export const palette: { light: ColorPalette; dark: ColorPalette } = {
     // kept distinct from `warning` gold and `accent` clay-brown.
     info: '#96683F',
     infoSoft: 'rgba(150,104,63,0.14)',
+    onAccent: '#FFFFFF',
+    onWarning: '#2E3439',
+    inverseSurface: '#4E565F',
+    inverseText: '#F5EEE6',
+    inverseTextMuted: 'rgba(245,238,230,0.7)',
   },
   dark: {
     bg: '#2E3439',
@@ -111,6 +124,11 @@ export const palette: { light: ColorPalette; dark: ColorPalette } = {
     neutralSoft: 'rgba(141,152,167,0.18)',
     info: '#C99A6D',
     infoSoft: 'rgba(201,154,109,0.18)',
+    onAccent: '#2E2A26',
+    onWarning: '#2E3439',
+    inverseSurface: '#3A4149',
+    inverseText: '#F5EEE6',
+    inverseTextMuted: 'rgba(245,238,230,0.7)',
   },
 };
 

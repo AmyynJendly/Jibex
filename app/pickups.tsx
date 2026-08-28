@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { LoadError } from '../components/LoadError';
@@ -21,7 +22,6 @@ import {
   Radii,
   Spacing,
   Typography,
-  getCardShadow,
   monoLabelStyle,
   monoStyle,
   useColors,
@@ -95,14 +95,10 @@ function PickupCard({
   const accent = readOnly ? colors.success : colors.purple;
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: colors.bgElevated },
-        selected && { borderColor: colors.success, borderWidth: 1.5 },
-        getCardShadow(scheme),
-      ]}>
-      <View style={[styles.cardEdge, { backgroundColor: accent }]} />
+    <Card
+      accent={accent}
+      padding="tight"
+      borderColor={selected ? colors.success : undefined}>
 
       <View style={styles.headRow}>
         {/* Ticking a stop is what marks it collected — deliberately its own
@@ -214,7 +210,7 @@ function PickupCard({
           ))}
         </View>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -435,20 +431,6 @@ const styles = StyleSheet.create({
   },
   row: {
     paddingBottom: Spacing.mlg,
-  },
-  card: {
-    borderRadius: Radii.xxl,
-    paddingVertical: Spacing.md,
-    paddingRight: Spacing.md,
-    paddingLeft: Spacing.md + 4,
-    overflow: 'hidden',
-  },
-  cardEdge: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
   },
   headRow: {
     flexDirection: 'row',

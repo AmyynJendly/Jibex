@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { LoadError } from '../components/LoadError';
 import { GlassIconButton } from '../components/GlassIconButton';
@@ -21,7 +22,6 @@ import {
   Radii,
   Spacing,
   Typography,
-  getCardShadow,
   monoLabelStyle,
   monoStyle,
   useColors,
@@ -110,14 +110,7 @@ export default function TransfersScreen() {
             const showingQr = qrTransferId === transfer.id;
 
             return (
-              <View
-                key={transfer.id}
-                style={[
-                  styles.card,
-                  { backgroundColor: colors.bgElevated },
-                  getCardShadow(scheme),
-                ]}>
-                <View style={[styles.cardEdge, { backgroundColor: accent }]} />
+              <Card key={transfer.id} accent={accent} gap={Spacing.md}>
 
                 <View style={styles.cardTopRow}>
                   <Text style={[monoStyle(13, 'medium'), { color: colors.textSecondary }]}>
@@ -192,7 +185,7 @@ export default function TransfersScreen() {
                     )}
                   </View>
                 )}
-              </View>
+              </Card>
             );
           })
         )}
@@ -227,20 +220,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: 30,
     gap: Spacing.md,
-  },
-  card: {
-    borderRadius: Radii.xxl,
-    padding: Spacing.lg,
-    paddingLeft: Spacing.lg + 4,
-    gap: Spacing.md,
-    overflow: 'hidden',
-  },
-  cardEdge: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
   },
   cardTopRow: {
     flexDirection: 'row',

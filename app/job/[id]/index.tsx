@@ -1,17 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  Image,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -157,10 +149,14 @@ export default function JobDetailScreen() {
           scaleTo={0.98}
           style={[styles.mapCard, getCardShadow(scheme)]}
           onPress={() => openInMaps(job)}>
+          {/* expo-image caches this between visits and fades it in, instead
+              of refetching the same tile every time the screen opens. */}
           <Image
             source={{ uri: staticMapUrl(job.location) }}
             style={StyleSheet.absoluteFill}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={180}
+            cachePolicy="memory-disk"
           />
           <LinearGradient
             colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)']}
@@ -336,13 +332,11 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#0A5FFF',
   },
   pin: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#0A5FFF',
     alignItems: 'center',
     justifyContent: 'center',
   },

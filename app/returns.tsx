@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { LoadError } from '../components/LoadError';
@@ -20,7 +21,6 @@ import {
   Radii,
   Spacing,
   Typography,
-  getCardShadow,
   monoLabelStyle,
   monoStyle,
   useColors,
@@ -145,10 +145,7 @@ export default function ReturnsScreen() {
           displayed.map((item, i) => {
             const accent = isHistory ? colors.success : colors.warning;
             return (
-              <View
-                key={item.id}
-                style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
-                <View style={[styles.cardEdge, { backgroundColor: accent }]} />
+              <Card key={item.id} accent={accent} gap={Spacing.md}>
 
                 <View style={styles.cardTopRow}>
                   <Text style={[monoStyle(13, 'medium'), { color: colors.textSecondary }]}>
@@ -218,7 +215,7 @@ export default function ReturnsScreen() {
                     </AnimatedPressable>
                   </View>
                 )}
-              </View>
+              </Card>
             );
           })
         )}
@@ -303,20 +300,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.archivoMedium,
     fontSize: 12,
     lineHeight: 17,
-  },
-  card: {
-    borderRadius: Radii.xxl,
-    padding: Spacing.lg,
-    paddingLeft: Spacing.lg + 4,
-    gap: Spacing.md,
-    overflow: 'hidden',
-  },
-  cardEdge: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
   },
   cardTopRow: {
     flexDirection: 'row',
