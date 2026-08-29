@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../components/AnimatedPressable';
 import { FormField } from '../../components/FormField';
 import { LanguageToggle } from '../../components/LanguageToggle';
-import { PackageCube } from '../../components/PackageCube';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { TickerMarquee } from '../../components/TickerMarquee';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, morphIn, useColors } from '../../constants';
@@ -55,7 +55,15 @@ export default function LoginScreen() {
           <View style={styles.header}>
             <View style={styles.logoStage}>
               <Animated.View entering={morphIn(0, 12)}>
-                <PackageCube size={88} />
+                {/* The same file app.json ships as the launcher icon, so the
+                    mark on this screen and the one on the home screen can't
+                    drift apart. */}
+                <Image
+                  source={require('../../assets/icon.png')}
+                  style={styles.logo}
+                  contentFit="contain"
+                  accessibilityLabel="Jibex"
+                />
               </Animated.View>
             </View>
             <Text style={[Typography.title1, { color: colors.text, marginTop: Spacing.xs }]}>
@@ -168,6 +176,10 @@ const styles = StyleSheet.create({
   logoStage: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logo: {
+    width: 96,
+    height: 96,
   },
   form: {
     gap: Spacing.mlg,

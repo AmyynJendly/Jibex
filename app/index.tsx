@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -6,7 +7,6 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
-import { PackageCube } from '../components/PackageCube';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Fonts, Spacing, Typography, useColors } from '../constants';
 import { clearToken, getToken } from '../lib/token';
@@ -120,7 +120,12 @@ export default function Index() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <PackageCube size={72} />
+      <Image
+        source={require('../assets/icon.png')}
+        style={styles.logo}
+        contentFit="contain"
+        accessibilityLabel="Jibex"
+      />
       <Text style={[Typography.title1, { color: colors.text }]}>Jibex</Text>
 
       {gate.phase === 'checking' ? (
@@ -169,6 +174,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.smd,
     paddingHorizontal: Spacing.xxxl,
+  },
+  logo: {
+    width: 80,
+    height: 80,
   },
   spinner: {
     marginTop: Spacing.lg,
