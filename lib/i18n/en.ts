@@ -157,6 +157,8 @@ const en = {
   },
 
   jobDetail: {
+      parcelCount: '{{count}} parcel',
+      parcelCount_other: '{{count}} parcels',
     a11yMore: 'More options',
     stopOf: 'Stop {{index}} of {{total}}',
     stopChip: 'STOP {{index}} / {{total}}',

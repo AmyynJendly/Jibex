@@ -156,6 +156,8 @@ const fr: TranslationResource = {
   },
 
   jobDetail: {
+      parcelCount: '{{count}} colis',
+      parcelCount_other: '{{count}} colis',
     a11yMore: "Plus d'options",
     stopOf: 'Arrêt {{index}} sur {{total}}',
     stopChip: 'ARRÊT {{index}} / {{total}}',

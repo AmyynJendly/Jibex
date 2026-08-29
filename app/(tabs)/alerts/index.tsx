@@ -79,6 +79,9 @@ function isYesterday(iso: string) {
   return new Date(iso).toDateString() === yesterday.toDateString();
 }
 
+/** "Mark all read" is small text in a corner — give it a real target. */
+const MARK_ALL_HIT_SLOP = { top: 12, bottom: 12, left: 16, right: 16 };
+
 export default function AlertsScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
@@ -214,9 +217,15 @@ export default function AlertsScreen() {
           </View>
         </View>
         {unreadCount > 0 && (
-          <Text onPress={handleMarkAllRead} style={[styles.markAllRead, { color: colors.accent }]}>
-            {t('alerts.markAllRead')}
-          </Text>
+          <AnimatedPressable
+            scaleTo={0.94}
+            hitSlop={MARK_ALL_HIT_SLOP}
+            accessibilityRole="button"
+            onPress={handleMarkAllRead}>
+            <Text style={[styles.markAllRead, { color: colors.accent }]}>
+              {t('alerts.markAllRead')}
+            </Text>
+          </AnimatedPressable>
         )}
       </View>
 

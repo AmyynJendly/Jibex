@@ -17,6 +17,9 @@ import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
+/** 44pt minimum target for the small text actions on this screen. */
+const HIT_SLOP = { top: 12, bottom: 12, left: 16, right: 16 };
+
 export default function PhotoProofScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -136,13 +139,21 @@ export default function PhotoProofScreen() {
               loading={submitting}
               onPress={handleConfirm}
             />
-            <Text onPress={() => setPhotoUri(null)} style={styles.retake}>
-              {t('photoProof.retake')}
-            </Text>
+            <AnimatedPressable
+              scaleTo={0.94}
+              hitSlop={HIT_SLOP}
+              onPress={() => setPhotoUri(null)}>
+              <Text style={styles.retake}>{t('photoProof.retake')}</Text>
+            </AnimatedPressable>
           </>
         ) : (
           permission?.granted && (
-            <AnimatedPressable scaleTo={0.9} style={styles.shutterOuter} onPress={handleCapture}>
+            <AnimatedPressable
+              // The capture handler fires its own Medium impact on success.
+              haptic={false}
+              scaleTo={0.9}
+              style={styles.shutterOuter}
+              onPress={handleCapture}>
               <View style={styles.shutterInner} />
             </AnimatedPressable>
           )

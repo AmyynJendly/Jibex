@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { forwardRef, type ComponentRef } from 'react';
 import { Pressable, type PressableProps } from 'react-native';
 import Animated, {
@@ -13,14 +14,46 @@ import { Spring } from '../constants';
 
 const ReanimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const PRESS_RETENTION = { top: 12, bottom: 12, left: 12, right: 12 };
+
+/** No-op on platforms without a taptic engine; expo-haptics handles that. */
+function fireHaptic(style: HapticStyle) {
+  if (!style) return;
+  if (style === 'selection') {
+    Haptics.selectionAsync();
+    return;
+  }
+  Haptics.impactAsync(
+    style === 'medium' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light
+  );
+}
+
 type EntryOrExitLayoutType =
   | BaseAnimationBuilder
   | typeof BaseAnimationBuilder
   | EntryExitAnimationFunction;
 
+/** Intensity of the tap that fires under the finger. `false` for silence. */
+type HapticStyle = 'selection' | 'light' | 'medium' | false;
+
 interface AnimatedPressableProps extends PressableProps {
   /** Scale at full press-down. @default 0.96 */
   scaleTo?: number;
+  /**
+   * Tactile feedback on press-in. @default 'light'
+   *
+   * Defaults on because this component *is* the app's interactive wrapper —
+   * anything wrapped in it is a deliberate control, and the app previously
+   * had no touch feedback at all outside three terminal moments (scan
+   * success, wrong OTP, shutter). That absence is most of what made it feel
+   * inert next to apps the driver uses all day.
+   *
+   * Fires on press-in, not on the tap completing: press-in is the causal
+   * moment, and a haptic that waits for the gesture to finish reads as lag.
+   * Pass `false` where the screen already fires its own, so a single action
+   * never buzzes twice.
+   */
+  haptic?: HapticStyle;
   /** Reanimated entrance animation — e.g. `FadeInUp.delay(i * 40)` for staggered lists. */
   entering?: EntryOrExitLayoutType;
   exiting?: EntryOrExitLayoutType;
@@ -42,7 +75,7 @@ interface AnimatedPressableProps extends PressableProps {
  * glass-surfaced button, not just a plain one.
  */
 export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, AnimatedPressableProps>(
-  ({ scaleTo = 0.96, style, onPressIn, onPressOut, ...props }, ref) => {
+  ({ scaleTo = 0.96, haptic = 'light', style, onPressIn, onPressOut, ...props }, ref) => {
     const pressed = useSharedValue(0);
 
     const animatedStyle = useAnimatedStyle(() => {
@@ -60,6 +93,7 @@ export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, Anim
           // Critically damped going down: an overshoot under the finger
           // reads as the button slipping out from under it.
           pressed.set(withSpring(1, Spring.press));
+          fireHaptic(haptic);
           onPressIn?.(e);
         }}
         onPressOut={(e) => {
@@ -68,6 +102,9 @@ export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, Anim
           pressed.set(withSpring(0, Spring.release));
           onPressOut?.(e);
         }}
+        // A finger that drifts a few points shouldn't cancel a press the
+        // driver meant — they're often tapping one-handed in a moving van.
+        pressRetentionOffset={PRESS_RETENTION}
         style={[animatedStyle, style]}
         {...props}
       />

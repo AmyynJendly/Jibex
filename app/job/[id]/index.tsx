@@ -184,8 +184,26 @@ export default function JobDetailScreen() {
 
         <View
           style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+          {/* The id gets its own full-width row. It was previously squeezed
+              into a third of the meta strip, where it was literally clipped
+              mid-code — and this is the one field the driver checks against
+              the label on the box before handing it over. */}
+          <View style={styles.idRow}>
+            <TrackingId value={job.id} />
+            {job.packageInfo.fragile && (
+              <View style={[styles.careChip, { backgroundColor: colors.dangerSoft }]}>
+                <Ionicons name="alert-circle" size={13} color={colors.danger} />
+                <Text style={[styles.careChipText, { color: colors.danger }]}>
+                  {t('jobDetail.fragile')}
+                </Text>
+              </View>
+            )}
+          </View>
+
           <View style={styles.customerRow}>
-            <Text style={[Typography.title3, { color: colors.text }]}>{job.customerName}</Text>
+            <Text style={[Typography.title3, styles.customerName, { color: colors.text }]}>
+              {job.customerName}
+            </Text>
             <View style={styles.iconRow}>
               <AnimatedPressable
                 scaleTo={0.88}
@@ -219,40 +237,35 @@ export default function JobDetailScreen() {
             </Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.separator }]} />
-          <View style={styles.metaRow}>
-            <View style={styles.metaCol}>
-              <Text style={[monoLabelStyle(9, 0.12), { color: colors.textTertiary }]}>
-                {t('jobDetail.billLabel')}
-              </Text>
-              <TrackingId value={job.id} style={styles.metaTrackingId} />
-            </View>
-            <View style={[styles.metaDivider, { backgroundColor: colors.separator }]} />
-            <View style={styles.metaCol}>
-              <Text style={[monoLabelStyle(9, 0.12), { color: colors.textTertiary }]}>
-                {t('jobDetail.parcelLabel')}
-              </Text>
-              <Text style={[monoStyle(13, 'medium'), { color: colors.text }]}>
-                {job.packageInfo.count} · {formatDecimal(job.packageInfo.weightLbs)} KG
+
+          {/* Facts as chips rather than three columns split by hairlines. The
+              columns forced every value into a third of the width whether it
+              needed it or not, which is what clipped the id and left the
+              other two swimming in space. */}
+          <View style={styles.factRow}>
+            <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
+              <Ionicons name="cube-outline" size={14} color={colors.textSecondary} />
+              <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
+                {t('jobDetail.parcelCount', { count: job.packageInfo.count })} ·{' '}
+                {formatDecimal(job.packageInfo.weightLbs)} KG
               </Text>
             </View>
-            <View style={[styles.metaDivider, { backgroundColor: colors.separator }]} />
-            <View style={styles.metaCol}>
-              <Text style={[monoLabelStyle(9, 0.12), { color: colors.textTertiary }]}>
-                {t('jobDetail.careLabel')}
-              </Text>
-              <Text
-                style={[
-                  monoStyle(13, 'medium'),
-                  { color: job.packageInfo.fragile ? colors.danger : colors.text },
-                ]}>
-                {job.packageInfo.fragile ? t('jobDetail.fragile') : t('jobDetail.standard')}
+            <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
+              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+              <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
+                {t('jobDetail.etaLabel', { time: etaTime })}
               </Text>
             </View>
           </View>
+
+          {/* Promoted out of a grey italic footnote. It is an instruction from
+              the customer about how to complete the drop — the driver needs to
+              read it before knocking, not discover it afterwards. */}
           {job.packageInfo.note && (
-            <Text style={[styles.note, { color: colors.textTertiary }]}>
-              &quot;{job.packageInfo.note}&quot;
-            </Text>
+            <View style={[styles.noteCallout, { backgroundColor: colors.warningSoft }]}>
+              <Ionicons name="information-circle" size={16} color={colors.warning} />
+              <Text style={[styles.note, { color: colors.text }]}>{job.packageInfo.note}</Text>
+            </View>
           )}
         </View>
 
@@ -314,9 +327,16 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.mlg,
     paddingBottom: Spacing.xxl,
     gap: Spacing.mlg,
+    // Grow to fill the screen so the map can take up the slack. This stop has
+    // little text, and pinning the actions to the bottom used to leave a tall
+    // band of empty background in the middle of the screen.
+    flexGrow: 1,
   },
   mapCard: {
-    height: 150,
+    // Absorbs whatever height the content doesn't need, down to the original
+    // 150 on a long stop. A bigger map is the most useful thing to put there.
+    flex: 1,
+    minHeight: 150,
     borderRadius: Radii.card,
     overflow: 'hidden',
     justifyContent: 'center',
@@ -370,10 +390,34 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     gap: Spacing.smd,
   },
+  idRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  careChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radii.xs,
+  },
+  careChipText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   customerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  customerName: {
+    flex: 1,
   },
   iconRow: {
     flexDirection: 'row',
@@ -403,26 +447,30 @@ const styles = StyleSheet.create({
     height: 1,
     marginVertical: 2,
   },
-  metaRow: {
+  factRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  factChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.smd,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radii.sm,
   },
-  metaTrackingId: {
-    marginTop: 2,
-  },
-  metaCol: {
-    flex: 1,
-    gap: 3,
-  },
-  metaDivider: {
-    width: 1,
-    height: 28,
-    marginHorizontal: Spacing.md,
+  noteCallout: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.smd,
+    borderRadius: Radii.md,
   },
   note: {
     fontFamily: Fonts.archivoMedium,
     fontSize: 13,
-    fontStyle: 'italic',
+    flex: 1,
   },
   codCard: {
     borderRadius: Radii.card,
