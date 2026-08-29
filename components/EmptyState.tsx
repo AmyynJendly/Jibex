@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { Fonts, Radii, Spacing, Typography, morphIn, useColors } from '../constants';
 
 interface EmptyStateProps {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
+  /** Overrides `icon` — for parcel-shaped empties, which get the brand box. */
+  illustration?: ReactNode;
   title: string;
   subtitle?: string;
 }
@@ -24,7 +27,7 @@ interface EmptyStateProps {
  * instead of a floating object. The only motion left is the one-shot
  * entrance, so it settles once and then stays put.
  */
-export function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
+export function EmptyState({ icon, illustration, title, subtitle }: EmptyStateProps) {
   const colors = useColors();
 
   return (
@@ -34,7 +37,7 @@ export function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
           styles.iconTile,
           { backgroundColor: colors.neutralSoft, borderColor: colors.separator },
         ]}>
-        <Ionicons name={icon} size={26} color={colors.textTertiary} />
+        {illustration ?? <Ionicons name={icon ?? 'ellipse-outline'} size={26} color={colors.textTertiary} />}
       </View>
       <View style={styles.copy}>
         <Text style={[Typography.callout, styles.title, { color: colors.textSecondary }]}>

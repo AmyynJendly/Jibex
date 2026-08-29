@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -26,7 +27,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../../services/mock-api';
-import type { Notification, NotificationType } from '../../../types';
+import type { Notification, NotificationTarget, NotificationType } from '../../../types';
 
 function typeStyle(type: NotificationType, colors: ColorPalette) {
   switch (type) {
@@ -44,6 +45,27 @@ function typeStyle(type: NotificationType, colors: ColorPalette) {
       };
     case 'RETURN':
       return { icon: 'arrow-undo-outline' as const, color: colors.danger, soft: colors.dangerSoft };
+  }
+}
+
+/** Resolves a notification's target to a route push. */
+function goToTarget(target: NotificationTarget) {
+  switch (target.screen) {
+    case 'job':
+      router.push({ pathname: '/job/[id]', params: { id: target.jobId } });
+      return;
+    case 'pickups':
+      router.push('/pickups');
+      return;
+    case 'transfers':
+      router.push('/transfers');
+      return;
+    case 'returns':
+      router.push('/returns');
+      return;
+    case 'runsheets':
+      router.push('/(tabs)/runsheets');
+      return;
   }
 }
 
@@ -76,9 +98,16 @@ export default function AlertsScreen() {
     return date.toLocaleDateString(localeTag(i18n.language), { month: 'short', day: 'numeric' });
   }
 
-  async function handlePress(id: string) {
-    await markNotificationRead(id);
-    await invalidateNotifications();
+  /**
+   * Tapping an alert marks it read and then goes where it points.
+   *
+   * Navigation happens first so the screen change feels instant; the read
+   * flag and its refetch settle behind it. Waiting on the write before
+   * moving made a tap feel like it had missed.
+   */
+  function handlePress(notification: Notification) {
+    if (notification.target) goToTarget(notification.target);
+    markNotificationRead(notification.id).then(invalidateNotifications);
   }
 
   async function handleMarkAllRead() {
@@ -97,7 +126,9 @@ export default function AlertsScreen() {
     return (
       <Animated.View entering={morphIn(0, 12)}>
         <AnimatedPressable
-          onPress={() => handlePress(notification.id)}
+          onPress={() => handlePress(notification)}
+          accessibilityRole="button"
+          accessibilityHint={notification.target ? t('alerts.a11yOpens') : undefined}
           style={[styles.priorityCard, { backgroundColor: style.soft }]}>
           <View style={[styles.priorityIcon, { backgroundColor: colors.bgElevated }]}>
             <Ionicons name={style.icon} size={19} color={style.color} />
@@ -114,6 +145,9 @@ export default function AlertsScreen() {
             </Text>
             <View style={[styles.dot, { backgroundColor: colors.warning }]} />
           </View>
+          {notification.target && (
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          )}
         </AnimatedPressable>
       </Animated.View>
     );
@@ -125,7 +159,9 @@ export default function AlertsScreen() {
       <Animated.View
         key={notification.id}>
         <AnimatedPressable
-          onPress={() => handlePress(notification.id)}
+          onPress={() => handlePress(notification)}
+          accessibilityRole="button"
+          accessibilityHint={notification.target ? t('alerts.a11yOpens') : undefined}
           style={[
             styles.card,
             { backgroundColor: colors.bgElevated, opacity: dimmed ? 0.75 : 1 },
@@ -148,6 +184,11 @@ export default function AlertsScreen() {
               <View style={[styles.dot, { backgroundColor: colors.accent }]} />
             )}
           </View>
+          {/* Only alerts that actually lead somewhere get a chevron —
+              otherwise every row promises a destination and some do nothing. */}
+          {notification.target && (
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          )}
         </AnimatedPressable>
       </Animated.View>
     );

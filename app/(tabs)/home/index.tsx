@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { CountUpText } from '../../../components/CountUpText';
 import { GlassIconButton } from '../../../components/GlassIconButton';
-import { ParticleMotes } from '../../../components/ParticleMotes';
+import { PackageCube } from '../../../components/PackageCube';
 import { LoadError } from '../../../components/LoadError';
 import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
@@ -60,9 +60,20 @@ interface HomeData {
   unconfirmedRunsheets: Runsheet[];
 }
 
+/**
+ * Which greeting fits the time on the driver's phone.
+ *
+ * This used to be a single split at 18:00, so a driver starting a 6am round
+ * and one finishing at 5pm were both told "Good Morning". Drivers work long
+ * enough days to notice. The late band runs past midnight, hence the `||`
+ * rather than a range.
+ */
 function getGreetingKey() {
   const hour = new Date().getHours();
-  return hour < 18 ? 'home.greeting.morning' : 'home.greeting.evening';
+  if (hour >= 22 || hour < 5) return 'home.greeting.late';
+  if (hour < 12) return 'home.greeting.morning';
+  if (hour < 18) return 'home.greeting.afternoon';
+  return 'home.greeting.evening';
 }
 
 const integerFormatter = (n: number) => String(Math.round(n));
@@ -312,7 +323,6 @@ export default function HomeScreen() {
         style={styles.heroGradient}
         pointerEvents="none"
       />
-      <ParticleMotes style={styles.heroGradient} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
@@ -476,7 +486,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <View style={[styles.nextStopIcon, { backgroundColor: colors.accentSoft }]}>
-              <Ionicons name="cube-outline" size={17} color={colors.accent} />
+              <PackageCube size={24} />
             </View>
           </View>
           <View style={styles.nextStopBottomRow}>

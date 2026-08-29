@@ -9,6 +9,7 @@ import type { TFunction } from 'i18next';
 
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
+import { PackageCube } from '../components/PackageCube';
 import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { LoadError } from '../components/LoadError';
@@ -333,7 +334,8 @@ export default function PickupsScreen() {
             </View>
           ) : (
             <EmptyState
-              icon={segment === 'SCHEDULED' ? 'cube-outline' : 'checkmark-done-outline'}
+              icon={segment === 'SCHEDULED' ? undefined : 'checkmark-done-outline'}
+              illustration={segment === 'SCHEDULED' ? <PackageCube size={34} /> : undefined}
               title={
                 segment === 'SCHEDULED'
                   ? t('pickups.empty.scheduled')

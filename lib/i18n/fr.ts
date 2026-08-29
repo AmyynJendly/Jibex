@@ -82,8 +82,10 @@ const fr: TranslationResource = {
   home: {
     a11y: { search: 'Rechercher un numéro de suivi', scan: 'Scanner un colis', alerts: 'Alertes' },
     greeting: {
-      morning: 'Ahla',
-      evening: 'Ahla',
+      morning: 'Bonjour',
+      afternoon: 'Bon après-midi',
+      evening: 'Bonsoir',
+      late: 'Service de nuit',
     },
     deliveriesCardTitle: 'Colis à livrer',
     stopsCaption: '{{delivered}} / {{total}} ARRÊTS',
@@ -331,6 +333,7 @@ const fr: TranslationResource = {
   },
 
   alerts: {
+    a11yOpens: "Ouvre l'écran correspondant",
     headerTitle: 'Alertes',
     eyebrow: 'Fil du dispatch',
     markAllRead: 'Tout lire',

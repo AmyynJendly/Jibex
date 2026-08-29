@@ -81,7 +81,10 @@ const en = {
     a11y: { search: 'Search a tracking number', scan: 'Scan a package', alerts: 'Alerts' },
     greeting: {
       morning: 'Good Morning',
+      afternoon: 'Good Afternoon',
       evening: 'Good Evening',
+      /** 22:00-05:00. Not "Good Night" — that's a goodbye, and they're starting. */
+      late: 'Late Shift',
     },
     deliveriesCardTitle: "Today's Deliveries",
     stopsCaption: '{{delivered}} / {{total}} STOPS',
@@ -331,6 +334,7 @@ const en = {
   },
 
   alerts: {
+    a11yOpens: 'Opens the related screen',
     headerTitle: 'Alerts',
     eyebrow: 'Dispatch Feed',
     markAllRead: 'Read All',

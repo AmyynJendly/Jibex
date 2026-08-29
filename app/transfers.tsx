@@ -11,6 +11,7 @@ import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
+import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
@@ -114,9 +115,7 @@ export default function TransfersScreen() {
               <Card key={transfer.id} accent={accent} gap={Spacing.md}>
 
                 <View style={styles.cardTopRow}>
-                  <Text style={[monoStyle(13, 'medium'), { color: colors.textSecondary }]}>
-                    {transfer.id}
-                  </Text>
+                  <TrackingId value={transfer.id} size="inline" />
                   <Text
                     style={[
                       styles.statusChip,

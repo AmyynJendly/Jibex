@@ -11,6 +11,7 @@ import { Card } from '../../../components/Card';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
 import { EmptyState } from '../../../components/EmptyState';
+import { TrackingId } from '../../../components/TrackingId';
 import { LoadError } from '../../../components/LoadError';
 import { MetaChip } from '../../../components/MetaChip';
 import { PrimaryButton } from '../../../components/PrimaryButton';
@@ -124,11 +125,7 @@ function ParcelCard({
         {/* The tracking number leads: it is the one field the driver reads
             off the parcel in their hand and matches against the screen. */}
         <View style={styles.cardHeadText}>
-          <Text
-            style={[styles.trackingId, { color: colors.text, backgroundColor: colors.bg }]}
-            numberOfLines={1}>
-            {job.id}
-          </Text>
+          <TrackingId value={job.id} />
           <Text style={[styles.customerName, { color: colors.textSecondary }]} numberOfLines={1}>
             {job.customerName}
           </Text>
@@ -530,15 +527,6 @@ const styles = StyleSheet.create({
   },
   cardHeadText: {
     flex: 1,
-  },
-  trackingId: {
-    ...monoStyle(15, 'medium'),
-    alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: Radii.xs,
-    overflow: 'hidden',
-    letterSpacing: 0.5,
   },
   customerName: {
     fontFamily: Fonts.archivoSemiBold,

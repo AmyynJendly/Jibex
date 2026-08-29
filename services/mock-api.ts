@@ -525,6 +525,7 @@ const mockNotifications: Notification[] = [
     message: 'Librairie El Kitab, Sousse',
     timestamp: minutesAgo(3),
     read: false,
+    target: { screen: 'pickups' },
   },
   {
     id: `DL-3-${toCompactDateKey(today)}-0007`,
@@ -533,6 +534,7 @@ const mockNotifications: Notification[] = [
     message: 'Sarra Gharbi · Rue Ibn Khaldoun, Monastir',
     timestamp: minutesAgo(9),
     read: false,
+    target: { screen: 'job', jobId: 'TRK-77F1E9AB' },
   },
   {
     id: `CS-3-${toCompactDateKey(today)}-0012`,
@@ -541,6 +543,7 @@ const mockNotifications: Notification[] = [
     message: `${formatCurrency(42)} from Amine Ben Salah`,
     timestamp: minutesAgo(24),
     read: true,
+    target: { screen: 'job', jobId: 'TRK-5DF3697E' },
   },
   {
     id: `TR-3-${toCompactDateKey(today)}-0003`,
@@ -549,6 +552,7 @@ const mockNotifications: Notification[] = [
     message: 'Agence Sousse → Agence Sfax at Dépôt Sahloul',
     timestamp: minutesAgo(40),
     read: true,
+    target: { screen: 'transfers' },
   },
   {
     id: `RT-3-${toCompactDateKey(yesterday)}-0004`,
@@ -557,6 +561,7 @@ const mockNotifications: Notification[] = [
     message: 'Order #TRK-88C1E3AA refused',
     timestamp: daysAgoAt(1, 17, 5),
     read: true,
+    target: { screen: 'returns' },
   },
   {
     id: formatPickupId('3', yesterday, 2),
@@ -565,6 +570,7 @@ const mockNotifications: Notification[] = [
     message: 'Atelier Ben Youssef, Monastir',
     timestamp: daysAgoAt(1, 8, 35),
     read: true,
+    target: { screen: 'pickups' },
   },
   {
     id: `DL-3-${toCompactDateKey(yesterday)}-0021`,

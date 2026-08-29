@@ -5,7 +5,7 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { Fonts, Spacing, morphInDown, morphOut, useColors } from '../constants';
+import { Fonts, Spacing, exitUp, morphInDown, useColors } from '../constants';
 
 /**
  * A persistent (not auto-dismissing, unlike Toast) banner shown whenever the
@@ -25,7 +25,7 @@ export function OfflineBanner() {
   return (
     <Animated.View
       entering={morphInDown(0, 12)}
-      exiting={morphOut(-8)}
+      exiting={exitUp()}
       style={[styles.banner, { top: insets.top, backgroundColor: colors.warning }]}>
       <Ionicons name="cloud-offline-outline" size={15} color="#fff" />
       <Text style={styles.text}>{t('offlineBanner.message')}</Text>

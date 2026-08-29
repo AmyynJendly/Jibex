@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Fonts, Radii, Spacing, Typography, morphInDown, morphOut, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, exitUp, morphInDown, useColors } from '../constants';
 
 interface ToastContextValue {
   /** Shows a transient, non-blocking status message — the honest placeholder for not-yet-built actions. */
@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         <View style={[styles.container, { top: insets.top + 8, pointerEvents: 'none' }]}>
           <Animated.View
             entering={morphInDown(0, 14)}
-            exiting={morphOut(-8)}
+            exiting={exitUp()}
             style={[styles.pill, { backgroundColor: colors.text }]}>
             <Text style={[Typography.footnote, styles.text, { color: colors.bg }]}>{message}</Text>
           </Animated.View>

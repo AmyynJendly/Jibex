@@ -10,6 +10,7 @@ import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
+import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
@@ -148,9 +149,7 @@ export default function ReturnsScreen() {
               <Card key={item.id} accent={accent} gap={Spacing.md}>
 
                 <View style={styles.cardTopRow}>
-                  <Text style={[monoStyle(13, 'medium'), { color: colors.textSecondary }]}>
-                    {t('returns.batchNumber', { id: item.id })}
-                  </Text>
+                  <TrackingId value={item.id} size="inline" />
                   <Text
                     style={[
                       styles.statusChip,

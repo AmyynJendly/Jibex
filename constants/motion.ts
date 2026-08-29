@@ -1,4 +1,12 @@
-import { Easing, Keyframe } from 'react-native-reanimated';
+import { Platform } from 'react-native';
+import {
+  Easing,
+  FadeInDown,
+  FadeInUp,
+  FadeOutDown,
+  FadeOutUp,
+  Keyframe,
+} from 'react-native-reanimated';
 
 /**
  * Motion tokens.
@@ -22,8 +30,8 @@ export const Ease = {
 
 /**
  * Spring configs for gesture and press feedback, in Apple's two designer
- * parameters. These drive `withSpring` directly — the entrance builders below
- * can't use them (see the note on `morphIn`).
+ * parameters. These drive `withSpring` directly, so the layout-animation
+ * caveat below does not apply to them.
  */
 export const Spring = {
   /** Something snapping back to a resting position. */
@@ -35,6 +43,26 @@ export const Spring = {
 } as const;
 
 /**
+ * Why the entrances below fall back to stock builders on web.
+ *
+ * Reanimated 4.1.7's web layout-animation code schedules a cleanup timer for
+ * any animation that isn't one of its own built-ins, and that callback runs:
+ *
+ *     if (shouldSavePosition) setElementPosition(element, snapshots.get(element));
+ *
+ * If the element unmounts before the timer fires there is no snapshot, and the
+ * unguarded read takes the whole page down with "Cannot read properties of
+ * undefined (reading 'top')". The offline banner triggers it on most loads:
+ * NetInfo reports a moment of "offline" before it resolves, so the banner
+ * mounts and unmounts well inside the animation window.
+ *
+ * Native has no such path, and native is what ships — so iOS and Android get
+ * the designed motion and web gets the nearest stock equivalent. Anything
+ * built on `Keyframe` needs this guard; springs and `withTiming` do not.
+ */
+const useStockBuilders = Platform.OS === 'web';
+
+/**
  * Grow-and-rise entrance: fades up while scaling from 94%, with a small
  * overshoot just past the target before it settles.
  *
@@ -43,18 +71,14 @@ export const Spring = {
  * The overshoot frame is what makes it read as "grew into place" rather than
  * "was switched on".
  *
- * Built as a `Keyframe` rather than a spring. A custom worklet entrance
- * would give a truer spring, but Reanimated's web build refuses anything
- * that isn't a predefined builder — it logs "Couldn't load entering/exiting
- * animation" and renders the element with no animation at all. Keyframes
- * compile to CSS keyframes on web and run on the UI thread on native, so
- * this is the only form that actually animates in both places.
- *
  * A new instance per call on purpose: `.delay()` and `.duration()` mutate the
  * builder and return it, so a shared module-level instance would leak one
  * call site's delay into every other.
  */
 export function morphIn(delay = 0, distance = 10) {
+  if (useStockBuilders) {
+    return (distance < 0 ? FadeInDown : FadeInUp).duration(380).delay(delay);
+  }
   return new Keyframe({
     0: { opacity: 0, transform: [{ translateY: distance }, { scale: 0.94 }] },
     62: {
@@ -73,19 +97,13 @@ export function morphInDown(delay = 0, distance = 10) {
   return morphIn(delay, -distance);
 }
 
-/**
- * The matching exit — shrinks back out the way it came instead of blinking
- * off. Deliberately quicker than the entrance: the user has already moved on.
- */
-export function morphOut(distance = 6) {
-  return new Keyframe({
-    0: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] },
-    100: {
-      opacity: 0,
-      transform: [{ translateY: distance }, { scale: 0.96 }],
-      easing: Ease.out,
-    },
-  }).duration(170);
+/** Exits, quicker than the entrances — the user has already moved on. */
+export function exitUp(duration = 170) {
+  return FadeOutUp.duration(duration);
+}
+
+export function exitDown(duration = 170) {
+  return FadeOutDown.duration(duration);
 }
 
 /**
@@ -97,6 +115,7 @@ export function morphOut(distance = 6) {
  * covering the first frames.
  */
 export function sheetIn(delay = 0) {
+  if (useStockBuilders) return FadeInUp.duration(400).delay(delay);
   return new Keyframe({
     0: { opacity: 0, transform: [{ translateY: 32 }] },
     68: { opacity: 1, transform: [{ translateY: -3 }], easing: Ease.sheet },

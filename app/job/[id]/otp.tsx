@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
+import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import {
   Fonts,
@@ -170,7 +171,7 @@ export default function OtpScreen() {
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
-        {job && <Text style={[monoStyle(12), { color: colors.textTertiary }]}>{job.id}</Text>}
+        {job && <TrackingId value={job.id} size="inline" />}
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

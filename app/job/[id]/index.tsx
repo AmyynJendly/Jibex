@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
+import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import {
@@ -223,7 +224,7 @@ export default function JobDetailScreen() {
               <Text style={[monoLabelStyle(9, 0.12), { color: colors.textTertiary }]}>
                 {t('jobDetail.billLabel')}
               </Text>
-              <Text style={[monoStyle(13, 'medium'), { color: colors.text }]}>{job.id}</Text>
+              <TrackingId value={job.id} style={styles.metaTrackingId} />
             </View>
             <View style={[styles.metaDivider, { backgroundColor: colors.separator }]} />
             <View style={styles.metaCol}>
@@ -405,6 +406,9 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  metaTrackingId: {
+    marginTop: 2,
   },
   metaCol: {
     flex: 1,

@@ -30,28 +30,34 @@ function DigitColumn({
   style?: StyleProp<TextStyle>;
 }) {
   const progress = useSharedValue(0);
+  const changed = from !== to;
 
   useEffect(() => {
-    if (from === to) return;
-    progress.value = withDelay(
-      delay,
-      withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) })
-    );
-  }, [from, to, delay, progress]);
+    if (!changed) return;
+    progress.set(withDelay(delay, withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) })));
+  }, [changed, delay, progress]);
 
-  if (from === to) {
-    return <Text style={style}>{to}</Text>;
-  }
-
+  // Declared before the early return below, not after it. This used to sit
+  // under the `from === to` branch, which meant the hook ran for changed
+  // columns and not for unchanged ones — a different hook count depending on
+  // the data, which React only tolerates until a digit changes mid-render.
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -progress.value * lineHeight }],
+    transform: [{ translateY: -progress.get() * lineHeight }],
   }));
+
+  // Unchanged columns carry the same explicit line box as the rolling ones.
+  // Without it they fell back to the font's own metrics while their rolling
+  // neighbours were pinned to `lineHeight`, so a total that changed only its
+  // last digit rendered with that digit visibly out of line with the rest.
+  if (!changed) {
+    return <Text style={[style, styles.cell, { height: lineHeight, lineHeight }]}>{to}</Text>;
+  }
 
   return (
     <View style={{ height: lineHeight, overflow: 'hidden' }}>
       <Animated.View style={animatedStyle}>
-        <Text style={[style, { height: lineHeight, lineHeight }]}>{from}</Text>
-        <Text style={[style, { height: lineHeight, lineHeight }]}>{to}</Text>
+        <Text style={[style, styles.cell, { height: lineHeight, lineHeight }]}>{from}</Text>
+        <Text style={[style, styles.cell, { height: lineHeight, lineHeight }]}>{to}</Text>
       </Animated.View>
     </View>
   );
@@ -94,5 +100,12 @@ export function RollingDigits({ from, to, style, staggerMs = 60 }: RollingDigits
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  /** Centres each glyph inside the fixed line box the columns share. */
+  cell: {
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 });

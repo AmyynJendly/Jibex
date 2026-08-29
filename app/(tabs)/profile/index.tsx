@@ -412,11 +412,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  // All three figures share one line box even though the weekly total is set
+  // smaller to fit. Without that they were three different heights in a
+  // centre-aligned row, so each value and its label sat at its own offset —
+  // the weekly figure was the obvious one, visibly shy of its slot.
   statValue: {
     ...monoStyle(18, 'medium'),
+    lineHeight: 24,
+    textAlign: 'center',
   },
   statValueSmall: {
     ...monoStyle(16, 'medium'),
+    lineHeight: 24,
+    textAlign: 'center',
   },
   statLabel: {
     ...monoLabelStyle(9, 0.1),

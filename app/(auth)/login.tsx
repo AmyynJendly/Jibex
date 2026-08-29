@@ -3,17 +3,16 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
-import { AmbientGlow } from '../../components/AmbientGlow';
 import { AnimatedPressable } from '../../components/AnimatedPressable';
 import { FormField } from '../../components/FormField';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { PackageCube } from '../../components/PackageCube';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { TickerMarquee } from '../../components/TickerMarquee';
-import { Fonts, Radii, Spacing, Typography, monoLabelStyle, useColors } from '../../constants';
+import { Fonts, Radii, Spacing, Typography, monoLabelStyle, morphIn, useColors } from '../../constants';
 import { DISPATCH_PHONE, telUrl } from '../../lib/phone';
 import { saveToken } from '../../lib/token';
 import { login } from '../../services/mock-api';
@@ -55,10 +54,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.logoStage}>
-              <View style={styles.glowLayer}>
-                <AmbientGlow width={220} height={220} color={colors.warning} />
-              </View>
-              <Animated.View entering={ZoomIn.springify(320).dampingRatio(1)}>
+              <Animated.View entering={morphIn(0, 12)}>
                 <PackageCube size={88} />
               </Animated.View>
             </View>
@@ -166,17 +162,12 @@ const styles = StyleSheet.create({
     gap: Spacing.smd,
     paddingBottom: Spacing.xxl,
   },
+  // Sized to the logo now. It used to be a 220pt square because that was the
+  // glow's footprint, which left the mark floating in a lot of dead space
+  // once the glow came out.
   logoStage: {
-    width: 220,
-    height: 220,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: -Spacing.xl,
-  },
-  glowLayer: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
   },
   form: {
     gap: Spacing.mlg,

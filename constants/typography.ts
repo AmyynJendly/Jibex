@@ -67,11 +67,24 @@ export const sectionLabelStyle: TextStyle = {
 /**
  * DM Mono readouts — currency amounts, tracking/runsheet IDs, timestamps,
  * OTP digits, stat numbers. `weight` mirrors the two loaded DM Mono cuts.
+ *
+ * The explicit `lineHeight` matters more than it looks. Without one, a mono
+ * number gets DM Mono's own vertical metrics while the Archivo label beside
+ * it gets Archivo's, so the two sit on boxes of different heights and the
+ * number reads as nudged off-centre — which is exactly what it looked like
+ * in the profile stats, on the delivery-confirmation total, and anywhere
+ * else a figure sat next to or above text. Pinning the box to a fixed ratio
+ * of the font size makes every readout land where it's placed.
+ *
+ * `includeFontPadding: false` does the same job on Android, where the
+ * platform adds its own extra leading on top of the line box.
  */
 export function monoStyle(size: number, weight: 'regular' | 'medium' = 'regular'): TextStyle {
   return {
     fontFamily: weight === 'medium' ? Fonts.dmMonoMedium : Fonts.dmMonoRegular,
     fontSize: size,
+    lineHeight: Math.round(size * 1.3),
+    includeFontPadding: false,
   };
 }
 

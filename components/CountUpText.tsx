@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Text, type StyleProp, type TextStyle } from 'react-native';
-import {
-  Easing,
-  runOnJS,
-  useAnimatedReaction,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { Easing, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 interface CountUpTextProps {
   value: number;
@@ -29,13 +24,16 @@ export function CountUpText({ value, duration = 350, formatter, style }: CountUp
   const format = formatter ?? ((n: number) => String(Math.round(n)));
 
   useEffect(() => {
-    progress.value = withTiming(value, { duration, easing: Easing.out(Easing.cubic) });
+    progress.set(withTiming(value, { duration, easing: Easing.out(Easing.cubic) }));
   }, [value, duration, progress]);
 
   useAnimatedReaction(
-    () => progress.value,
-    (current) => {
-      runOnJS(setDisplay)(current);
+    () => progress.get(),
+    (current, previous) => {
+      // `runOnJS` is deprecated in Reanimated 4; `scheduleOnRN` is its
+      // replacement. The equality guard skips the hop entirely once the
+      // count has landed, so a settled readout costs nothing per frame.
+      if (current !== previous) scheduleOnRN(setDisplay, current);
     }
   );
 
