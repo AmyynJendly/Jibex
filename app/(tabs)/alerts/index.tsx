@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
@@ -19,6 +19,7 @@ import {
   sectionLabelStyle,
   useColors,
   type ColorPalette,
+  morphIn,
 } from '../../../constants';
 import { localeTag } from '../../../lib/date';
 import {
@@ -94,7 +95,7 @@ export default function AlertsScreen() {
   function renderPriorityCard(notification: Notification) {
     const style = typeStyle(notification.type, colors);
     return (
-      <Animated.View entering={FadeInUp.springify(220).dampingRatio(1)}>
+      <Animated.View entering={morphIn(0, 12)}>
         <AnimatedPressable
           onPress={() => handlePress(notification.id)}
           style={[styles.priorityCard, { backgroundColor: style.soft }]}>

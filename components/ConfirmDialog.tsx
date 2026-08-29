@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
-import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, getCardShadow, morphIn, useColors } from '../constants';
 import { AnimatedPressable } from './AnimatedPressable';
 import { PrimaryButton } from './PrimaryButton';
 
@@ -55,7 +55,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
           </Animated.View>
           {options && (
             <Animated.View
-              entering={FadeInUp.duration(200).springify(260).dampingRatio(1)}
+              entering={morphIn(0, 14)}
               style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow('light')]}>
               <Text style={[Typography.title3, { color: colors.text }]}>{options.title}</Text>
               <Text style={[Typography.subhead, styles.message, { color: colors.textSecondary }]}>

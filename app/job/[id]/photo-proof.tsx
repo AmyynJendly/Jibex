@@ -4,14 +4,14 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useToast } from '../../../components/Toast';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import { Fonts, Radii, Spacing, Typography } from '../../../constants';
+import { Fonts, Radii, Spacing, Typography, morphIn } from '../../../constants';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/mock-api';
@@ -107,7 +107,7 @@ export default function PhotoProofScreen() {
       </View>
 
       {photoUri ? (
-        <Animated.View entering={ZoomIn.springify(240).dampingRatio(1)} style={styles.preview}>
+        <Animated.View entering={morphIn()} style={styles.preview}>
           <Animated.Image source={{ uri: photoUri }} style={StyleSheet.absoluteFill} />
         </Animated.View>
       ) : permission?.granted ? (

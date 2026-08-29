@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from './AnimatedPressable';
 import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
-import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, sheetIn, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
 import { markDeliveryFailed, reopenParcel } from '../services/mock-api';
 import type { DeliveryFailureReason, Job } from '../types';
@@ -104,7 +104,7 @@ export function StatusUpdateSheet({ job, onClose, onDone }: StatusUpdateSheetPro
         </Animated.View>
         {job && (
           <Animated.View
-            entering={FadeInUp.duration(220).springify(260).dampingRatio(1)}
+            entering={sheetIn()}
             style={[
               styles.sheet,
               { backgroundColor: colors.bgElevated, paddingBottom: insets.bottom + Spacing.lg },

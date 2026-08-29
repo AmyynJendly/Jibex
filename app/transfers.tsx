@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 
@@ -25,6 +25,7 @@ import {
   monoLabelStyle,
   monoStyle,
   useColors,
+  morphIn,
 } from '../constants';
 import { localeTag } from '../lib/date';
 import { useScreenState, useTransfers } from '../lib/query';
@@ -151,7 +152,7 @@ export default function TransfersScreen() {
                 {!isHistory && (
                   <View style={[styles.actions, { borderTopColor: colors.separator }]}>
                     {showingQr ? (
-                      <Animated.View entering={FadeInDown.duration(180)} style={styles.qrBlock}>
+                      <Animated.View entering={morphIn(0, 8)} style={styles.qrBlock}>
                         <View style={styles.qrCard}>
                           <QRCode value={`JIBEX-TRANSFER:${transfer.id}`} size={150} />
                         </View>

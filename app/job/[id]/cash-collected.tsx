@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { Barcode } from '../../../components/Barcode';
@@ -18,6 +18,7 @@ import {
   monoLabelStyle,
   monoStyle,
   useColors,
+  morphIn,
 } from '../../../constants';
 import { localeTag } from '../../../lib/date';
 import { formatCurrency } from '../../../lib/currency';
@@ -79,7 +80,7 @@ export default function CashCollectedScreen() {
         <InkStampSeal topText="JIBEX · SOUSSE" bottomText={confirmedAt} />
 
         <Animated.View
-          entering={FadeInUp.delay(120).springify(220).dampingRatio(1)}
+          entering={morphIn(120, 14)}
           style={styles.textBlock}>
           <Text style={[styles.title, { color: colors.text }]}>
             {t('cashCollected.title', { index: position ?? '—' })}
@@ -90,7 +91,7 @@ export default function CashCollectedScreen() {
         </Animated.View>
 
         <Animated.View
-          entering={FadeInUp.delay(200).springify(220).dampingRatio(1)}
+          entering={morphIn(200, 14)}
           style={[
             styles.summaryCard,
             { backgroundColor: colors.bgElevated },

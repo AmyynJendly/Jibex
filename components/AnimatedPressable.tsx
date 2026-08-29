@@ -9,6 +9,8 @@ import Animated, {
   type LayoutAnimationFunction,
 } from 'react-native-reanimated';
 
+import { Spring } from '../constants';
+
 const ReanimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type EntryOrExitLayoutType =
@@ -43,23 +45,27 @@ export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, Anim
   ({ scaleTo = 0.96, style, onPressIn, onPressOut, ...props }, ref) => {
     const pressed = useSharedValue(0);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-      transform: [
-        { scale: 1 - pressed.value * (1 - scaleTo) },
-        { translateY: pressed.value * 1.5 },
-      ],
-      opacity: 1 - pressed.value * 0.12,
-    }));
+    const animatedStyle = useAnimatedStyle(() => {
+      const p = pressed.get();
+      return {
+        transform: [{ translateY: p * 1.5 }, { scale: 1 - p * (1 - scaleTo) }],
+        opacity: 1 - p * 0.12,
+      };
+    });
 
     return (
       <ReanimatedPressable
         ref={ref}
         onPressIn={(e) => {
-          pressed.value = withSpring(1, { duration: 150, dampingRatio: 1 });
+          // Critically damped going down: an overshoot under the finger
+          // reads as the button slipping out from under it.
+          pressed.set(withSpring(1, Spring.press));
           onPressIn?.(e);
         }}
         onPressOut={(e) => {
-          pressed.value = withSpring(0, { duration: 200, dampingRatio: 1 });
+          // Coming back up it gets a little rebound, which is what makes
+          // the button feel like an object rather than a state flag.
+          pressed.set(withSpring(0, Spring.release));
           onPressOut?.(e);
         }}
         style={[animatedStyle, style]}
