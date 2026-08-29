@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +31,7 @@ import {
 import { formatCurrency } from '../lib/currency';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
+import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { completePickups } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
@@ -68,6 +69,8 @@ interface PickupCardProps {
   /** Completed pickups are a record, not a worklist — no actions on them. */
   readOnly?: boolean;
   selected?: boolean;
+  /** Arrived here from a notification about this pickup. */
+  highlighted?: boolean;
   onToggle: () => void;
   onSelect?: () => void;
   t: TFunction;
@@ -88,6 +91,7 @@ function PickupCard({
   expanded,
   readOnly = false,
   selected = false,
+  highlighted = false,
   onToggle,
   onSelect,
   t,
@@ -99,7 +103,9 @@ function PickupCard({
     <Card
       accent={accent}
       padding="tight"
-      borderColor={selected ? colors.success : undefined}>
+      borderColor={
+        selected ? colors.success : highlighted ? colors.accent : undefined
+      }>
 
       <View style={styles.headRow}>
         {/* Ticking a stop is what marks it collected — deliberately its own
@@ -225,7 +231,13 @@ export default function PickupsScreen() {
   const pickupsQuery = usePickups();
   const screen = useScreenState([pickupsQuery]);
   const pickups = pickupsQuery.data ?? null;
-  const [segment, setSegment] = useState<PickupStatus>('SCHEDULED');
+  const tabParam = useTabParam(['SCHEDULED', 'COMPLETED'] as const);
+  const [segment, setSegment] = useState<PickupStatus>(tabParam ?? 'SCHEDULED');
+  const highlightedId = useFocusHighlight();
+
+  useEffect(() => {
+    if (tabParam) setSegment(tabParam);
+  }, [tabParam]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
@@ -353,6 +365,7 @@ export default function PickupsScreen() {
               readOnly={segment === 'COMPLETED'}
               expanded={expandedIds.has(pickup.id)}
               selected={selectedIds.has(pickup.id)}
+              highlighted={pickup.id === highlightedId}
               onToggle={() => toggleIn(setExpandedIds, pickup.id)}
               onSelect={
                 segment === 'SCHEDULED' ? () => toggleIn(setSelectedIds, pickup.id) : undefined

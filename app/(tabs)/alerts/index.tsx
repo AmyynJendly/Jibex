@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
+import { useConfirm } from '../../../components/ConfirmDialog';
 import { EmptyState } from '../../../components/EmptyState';
 import { invalidateNotifications, useNotifications, useScreenState } from '../../../lib/query';
 import { LoadError } from '../../../components/LoadError';
@@ -24,6 +27,8 @@ import {
 } from '../../../constants';
 import { localeTag } from '../../../lib/date';
 import {
+  deleteAllNotifications,
+  deleteNotification,
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../../services/mock-api';
@@ -48,25 +53,40 @@ function typeStyle(type: NotificationType, colors: ColorPalette) {
   }
 }
 
-/** Resolves a notification's target to a route push. */
+/**
+ * Resolves a notification's target to a route push.
+ *
+ * Every destination carries the tab to open on and, where the alert is about
+ * one specific thing, that thing's id. Landing on the right list is not the
+ * same as landing on the parcel — "Order #TRK-B6F31C08 refused" should put
+ * the driver on that parcel in runsheet history, not on the runsheets tab
+ * with ten cards to read through.
+ */
 function goToTarget(target: NotificationTarget) {
   switch (target.screen) {
     case 'job':
       router.push({ pathname: '/job/[id]', params: { id: target.jobId } });
       return;
     case 'pickups':
-      router.push('/pickups');
+      router.push({ pathname: '/pickups', params: focusParams(target.tab, target.focusId) });
       return;
     case 'transfers':
-      router.push('/transfers');
+      router.push({ pathname: '/transfers', params: focusParams(target.tab, target.focusId) });
       return;
     case 'returns':
-      router.push('/returns');
+      router.push({ pathname: '/returns', params: focusParams(target.tab, target.focusId) });
       return;
     case 'runsheets':
-      router.push('/(tabs)/runsheets');
+      router.push({
+        pathname: '/(tabs)/runsheets',
+        params: focusParams(target.tab, target.focusId),
+      });
       return;
   }
+}
+
+function focusParams(tab: string, focusId?: string) {
+  return focusId ? { tab, focus: focusId } : { tab };
 }
 
 function isToday(iso: string) {
@@ -86,6 +106,7 @@ export default function AlertsScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { confirm } = useConfirm();
   const notificationsQuery = useNotifications();
   const screen = useScreenState([notificationsQuery]);
   const notifications = notificationsQuery.data ?? null;
@@ -118,15 +139,68 @@ export default function AlertsScreen() {
     await invalidateNotifications();
   }
 
+  async function handleDelete(id: string) {
+    await deleteNotification(id);
+    await invalidateNotifications();
+  }
+
+  async function handleDeleteAll() {
+    // Clearing the whole list is not undoable, so it asks first — unlike
+    // "mark all read", which loses nothing.
+    const confirmed = await confirm({
+      title: t('alerts.deleteAllTitle'),
+      message: t('alerts.deleteAllMessage'),
+      confirmLabel: t('alerts.deleteAllConfirm'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!confirmed) return;
+    await deleteAllNotifications();
+    await invalidateNotifications();
+  }
+
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
   const now = notifications?.[0];
   const isNowPriority = !!now && !now.read;
   const today = notifications?.filter((n) => isToday(n.timestamp) && n.id !== now?.id) ?? [];
   const earlier = notifications?.filter((n) => !isToday(n.timestamp)) ?? [];
 
+  /**
+   * Wraps a row so it can be swiped left onto a delete action.
+   *
+   * `ReanimatedSwipeable` runs the drag on the UI thread, so the row tracks
+   * the finger even while the list is re-rendering behind it. The action is
+   * only revealed on the right, matching the platform convention for a
+   * destructive swipe, and the row is only removed once the driver actually
+   * taps it — a swipe alone never deletes, since it is far too easy to do by
+   * accident while scrolling.
+   */
+  function renderSwipeable(notification: Notification, children: ReactNode) {
+    return (
+      <ReanimatedSwipeable
+        key={notification.id}
+        friction={2}
+        rightThreshold={40}
+        overshootRight={false}
+        renderRightActions={() => (
+          <AnimatedPressable
+            haptic="medium"
+            scaleTo={0.94}
+            accessibilityRole="button"
+            accessibilityLabel={t('alerts.deleteOne')}
+            style={[styles.deleteAction, { backgroundColor: colors.danger }]}
+            onPress={() => handleDelete(notification.id)}>
+            <Ionicons name="trash-outline" size={20} color="#fff" />
+          </AnimatedPressable>
+        )}>
+        {children}
+      </ReanimatedSwipeable>
+    );
+  }
+
   function renderPriorityCard(notification: Notification) {
     const style = typeStyle(notification.type, colors);
-    return (
+    return renderSwipeable(
+      notification,
       <Animated.View entering={morphIn(0, 12)}>
         <AnimatedPressable
           onPress={() => handlePress(notification)}
@@ -158,9 +232,9 @@ export default function AlertsScreen() {
 
   function renderCard(notification: Notification, dimmed: boolean, index: number) {
     const style = typeStyle(notification.type, colors);
-    return (
-      <Animated.View
-        key={notification.id}>
+    return renderSwipeable(
+      notification,
+      <Animated.View>
         <AnimatedPressable
           onPress={() => handlePress(notification)}
           accessibilityRole="button"
@@ -216,17 +290,31 @@ export default function AlertsScreen() {
             )}
           </View>
         </View>
-        {unreadCount > 0 && (
-          <AnimatedPressable
-            scaleTo={0.94}
-            hitSlop={MARK_ALL_HIT_SLOP}
-            accessibilityRole="button"
-            onPress={handleMarkAllRead}>
-            <Text style={[styles.markAllRead, { color: colors.accent }]}>
-              {t('alerts.markAllRead')}
-            </Text>
-          </AnimatedPressable>
-        )}
+        <View style={styles.headerActions}>
+          {unreadCount > 0 && (
+            <AnimatedPressable
+              scaleTo={0.94}
+              hitSlop={MARK_ALL_HIT_SLOP}
+              accessibilityRole="button"
+              onPress={handleMarkAllRead}>
+              <Text style={[styles.markAllRead, { color: colors.accent }]}>
+                {t('alerts.markAllRead')}
+              </Text>
+            </AnimatedPressable>
+          )}
+          {(notifications?.length ?? 0) > 0 && (
+            <AnimatedPressable
+              scaleTo={0.94}
+              hitSlop={MARK_ALL_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel={t('alerts.deleteAll')}
+              onPress={handleDeleteAll}>
+              <Text style={[styles.markAllRead, { color: colors.danger }]}>
+                {t('alerts.deleteAll')}
+              </Text>
+            </AnimatedPressable>
+          )}
+        </View>
       </View>
 
       {screen.isError && !notifications ? (
@@ -313,9 +401,21 @@ const styles = StyleSheet.create({
     ...monoStyle(13, 'medium'),
     color: '#fff',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.mlg,
+  },
   markAllRead: {
     fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
+  },
+  deleteAction: {
+    width: 68,
+    marginLeft: Spacing.sm,
+    borderRadius: Radii.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   section: {
     gap: Spacing.sm,

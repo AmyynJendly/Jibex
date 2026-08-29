@@ -157,6 +157,7 @@ const en = {
   },
 
   jobDetail: {
+      markDelivered: 'Delivered',
       parcelCount: '{{count}} parcel',
       parcelCount_other: '{{count}} parcels',
     a11yMore: 'More options',
@@ -175,7 +176,6 @@ const en = {
     packageInfo_other: '{{count}} packages · {{weight}} lbs',
     fragile: 'Fragile',
     standard: 'Standard',
-    startDelivery: 'On-Site — Scan Package',
     deliveryFailed: 'Delivery Failed',
     cantDeliver: "Can't Deliver",
   },
@@ -336,6 +336,11 @@ const en = {
   },
 
   alerts: {
+    deleteAll: 'Clear all',
+    deleteOne: 'Delete notification',
+    deleteAllTitle: 'Clear all notifications?',
+    deleteAllMessage: "They can't be brought back.",
+    deleteAllConfirm: 'Clear all',
     a11yOpens: 'Opens the related screen',
     headerTitle: 'Alerts',
     eyebrow: 'Dispatch Feed',

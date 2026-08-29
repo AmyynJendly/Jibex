@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Linking, StyleSheet, Text, useColorScheme, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -33,6 +33,7 @@ import {
 import { formatCurrency } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { telUrl } from '../../../lib/phone';
+import { useFocusHighlight, useTabParam } from '../../../lib/useFocusHighlight';
 import {
   invalidateDeliveryData,
   useActiveParcels,
@@ -77,6 +78,8 @@ interface ParcelCardProps {
   updateLabel: string;
   callLabel: string;
   lockedLabel: string;
+  /** Arrived here from a notification about this parcel. */
+  highlighted?: boolean;
   t: TFunction;
 }
 
@@ -93,6 +96,7 @@ function ParcelCard({
   updateLabel,
   callLabel,
   lockedLabel,
+  highlighted = false,
   t,
 }: ParcelCardProps) {
   const hasCod = job.cashToCollect > 0;
@@ -200,7 +204,11 @@ function ParcelCard({
   );
 
   const card = (
-    <Card accent={accent} gap={Spacing.xs} dimmed={locked}>
+    <Card
+      accent={accent}
+      gap={Spacing.xs}
+      dimmed={locked}
+      borderColor={highlighted ? colors.accent : undefined}>
       {body}
     </Card>
   );
@@ -234,7 +242,16 @@ export default function RunsheetsScreen() {
   const active = activeQuery.data ?? null;
   const history = historyQuery.data ?? null;
   const runsheets = runsheetsQuery.data ?? [];
-  const [toggle, setToggle] = useState<Toggle>('current');
+  // Opened from a notification, the screen lands on the side that alert is
+  // about — a refusal belongs in history, not on the current run.
+  const tabParam = useTabParam(['current', 'history'] as const);
+  const [toggle, setToggle] = useState<Toggle>(tabParam ?? 'current');
+  const highlightedId = useFocusHighlight();
+  const listRef = useRef<FlashListRef<Job>>(null);
+
+  useEffect(() => {
+    if (tabParam) setToggle(tabParam);
+  }, [tabParam]);
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sheetJob, setSheetJob] = useState<Job | null>(null);
 
@@ -280,6 +297,18 @@ export default function RunsheetsScreen() {
   const codTotal = (active ?? []).reduce((sum, j) => sum + j.cashToCollect, 0);
 
   const rows = toggle === 'current' ? (active ?? []) : filteredHistory;
+
+  // Bring the linked parcel into view. Highlighting alone only helps if the
+  // card is on screen, and a history list runs well past one screenful.
+  useEffect(() => {
+    if (!highlightedId) return;
+    const index = rows.findIndex((job) => job.id === highlightedId);
+    if (index < 0) return;
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.35 });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [highlightedId, rows]);
   const pending = toggle === 'current' ? !active : !history;
 
   // Everything above the rows scrolls with them, so it lives in the list's
@@ -414,6 +443,7 @@ export default function RunsheetsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <FlashList
+        ref={listRef}
         data={rows}
         extraData={lockedIds}
         keyExtractor={(job) => job.id}
@@ -427,6 +457,7 @@ export default function RunsheetsScreen() {
               job={job}
               colors={colors}
               scheme={scheme}
+              highlighted={job.id === highlightedId}
               stopNumber={toggle === 'current' ? index + 1 : undefined}
               readOnly={toggle === 'history'}
               locked={lockedIds.has(job.id)}

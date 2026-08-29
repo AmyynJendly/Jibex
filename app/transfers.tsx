@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
@@ -30,6 +30,7 @@ import {
 } from '../constants';
 import { localeTag } from '../lib/date';
 import { useScreenState, useTransfers } from '../lib/query';
+import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
 import type { Transfer } from '../types';
 
 type Toggle = 'current' | 'history';
@@ -41,7 +42,13 @@ export default function TransfersScreen() {
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
   const transfers = transfersQuery.data ?? null;
-  const [toggle, setToggle] = useState<Toggle>('current');
+  const tabParam = useTabParam(['current', 'history'] as const);
+  const [toggle, setToggle] = useState<Toggle>(tabParam ?? 'current');
+  const highlightedId = useFocusHighlight();
+
+  useEffect(() => {
+    if (tabParam) setToggle(tabParam);
+  }, [tabParam]);
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
 
   function formatTime(iso: string) {
@@ -112,7 +119,11 @@ export default function TransfersScreen() {
             const showingQr = qrTransferId === transfer.id;
 
             return (
-              <Card key={transfer.id} accent={accent} gap={Spacing.md}>
+              <Card
+                key={transfer.id}
+                accent={accent}
+                gap={Spacing.md}
+                borderColor={transfer.id === highlightedId ? colors.accent : undefined}>
 
                 <View style={styles.cardTopRow}>
                   <TrackingId value={transfer.id} size="inline" />

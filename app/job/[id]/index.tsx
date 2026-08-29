@@ -35,7 +35,14 @@ import { telUrl } from '../../../lib/phone';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { invalidateDeliveryData } from '../../../lib/query';
-import { getJobDetail, getRunsheets, logCallAttempt } from '../../../services/mock-api';
+import { useOnlineGuard } from '../../../lib/useOnlineGuard';
+import {
+  confirmDelivery,
+  getDriverStats,
+  getJobDetail,
+  getRunsheets,
+  logCallAttempt,
+} from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
 /**
@@ -81,6 +88,8 @@ export default function JobDetailScreen() {
   const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
+  const requireOnline = useOnlineGuard();
+  const [delivering, setDelivering] = useState(false);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [position, setPosition] = useState<{ index: number; total: number } | null>(null);
@@ -124,6 +133,43 @@ export default function JobDetailScreen() {
     localeTag(i18n.language),
     { hour: '2-digit', minute: '2-digit' }
   );
+
+  /**
+   * Marks the parcel delivered from the doorstep.
+   *
+   * This replaces a button that only opened the scanner flow, so the driver
+   * had to go two screens deep to record the ordinary outcome. The gates the
+   * OTP and photo routes enforce still apply — the run has to be signed for,
+   * and the customer has to have been called — and the reason surfaces as a
+   * toast rather than the press silently doing nothing.
+   *
+   * It then lands on the same cash receipt the other two routes end on, so
+   * the money is confirmed the same way however the delivery was recorded.
+   */
+  async function handleDelivered() {
+    if (!job || delivering) return;
+    if (!requireOnline()) return;
+
+    setDelivering(true);
+    const previousTotal = (await getDriverStats()).cashCollectedTotal;
+    const result = await confirmDelivery(job.id, job.cashToCollect);
+    setDelivering(false);
+
+    if (!result.success) {
+      showToast(t(result.error ?? 'common.genericError'));
+      return;
+    }
+
+    await invalidateDeliveryData();
+    router.replace({
+      pathname: '/job/[id]/cash-collected',
+      params: {
+        id: job.id,
+        cashAmount: String(job.cashToCollect),
+        previousTotal: String(previousTotal),
+      },
+    });
+  }
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -287,20 +333,28 @@ export default function JobDetailScreen() {
         )}
       </ScrollView>
 
+      {/* The two outcomes of standing at the door, side by side: it went
+          wrong on the left, it went right on the left-to-right reading order's
+          end. Delivered is the wider of the two because it is the one pressed
+          on almost every stop. */}
       <View style={styles.footer}>
-        <PrimaryButton
-          label={t('jobDetail.startDelivery')}
-          height={56}
-          onPress={() => router.push({ pathname: '/job/[id]/otp', params: { id } })}
-        />
         <AnimatedPressable
           scaleTo={0.97}
-          style={[styles.secondaryButton, { backgroundColor: colors.dangerSoft }]}
+          accessibilityRole="button"
+          style={[styles.failedButton, { backgroundColor: colors.dangerSoft }]}
           onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
+          <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
           <Text style={[Typography.footnote, { color: colors.danger }]}>
             {t('jobDetail.deliveryFailed')}
           </Text>
         </AnimatedPressable>
+        <PrimaryButton
+          label={t('jobDetail.markDelivered')}
+          height={56}
+          loading={delivering}
+          style={styles.deliveredButton}
+          onPress={handleDelivered}
+        />
       </View>
     </View>
   );
@@ -490,16 +544,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   footer: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
     paddingHorizontal: Spacing.xxl,
     paddingBottom: 30,
     paddingTop: Spacing.md,
     gap: Spacing.smd,
   },
-  secondaryButton: {
-    alignSelf: 'stretch',
+  failedButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radii.pill / 2,
-    paddingVertical: Spacing.md,
+    gap: Spacing.xs,
+    height: 56,
+    borderRadius: Radii.pill,
+  },
+  deliveredButton: {
+    flex: 1.4,
   },
 });

@@ -156,6 +156,7 @@ const fr: TranslationResource = {
   },
 
   jobDetail: {
+      markDelivered: 'Livré',
       parcelCount: '{{count}} colis',
       parcelCount_other: '{{count}} colis',
     a11yMore: "Plus d'options",
@@ -174,7 +175,6 @@ const fr: TranslationResource = {
     packageInfo_other: '{{count}} colis · {{weight}} lbs',
     fragile: 'Fragile',
     standard: 'Standard',
-    startDelivery: 'Sur place — scanner le colis',
     deliveryFailed: 'Échec de livraison',
     cantDeliver: 'Impossible de livrer',
   },
@@ -335,6 +335,11 @@ const fr: TranslationResource = {
   },
 
   alerts: {
+    deleteAll: 'Tout effacer',
+    deleteOne: 'Supprimer la notification',
+    deleteAllTitle: 'Effacer toutes les notifications ?',
+    deleteAllMessage: 'Elles ne pourront pas être récupérées.',
+    deleteAllConfirm: 'Tout effacer',
     a11yOpens: "Ouvre l'écran correspondant",
     headerTitle: 'Alertes',
     eyebrow: 'Fil du dispatch',

@@ -9,11 +9,12 @@ export type NotificationType = 'PICKUP' | 'DELIVERY' | 'CASH' | 'RETURN' | 'TRAN
  * case here, and the compiler finds every place that has to handle it.
  */
 export type NotificationTarget =
+  /** A single parcel — opens its stop screen directly. */
   | { screen: 'job'; jobId: string }
-  | { screen: 'pickups' }
-  | { screen: 'transfers' }
-  | { screen: 'returns' }
-  | { screen: 'runsheets' };
+  | { screen: 'runsheets'; tab: 'current' | 'history'; focusId?: string }
+  | { screen: 'pickups'; tab: 'SCHEDULED' | 'COMPLETED'; focusId?: string }
+  | { screen: 'transfers'; tab: 'current' | 'history'; focusId?: string }
+  | { screen: 'returns'; tab: 'current' | 'history'; focusId?: string };
 
 export interface Notification {
   /** e.g. "PU-3-20260712-0002" — {TYPE}-{route}-{YYYYMMDD}-{seq}. */

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +30,7 @@ import { localeTag } from '../lib/date';
 import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
+import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
 import { confirmReturns } from '../services/mock-api';
 import type { Return } from '../types';
 
@@ -45,7 +46,13 @@ export default function ReturnsScreen() {
   const returnsQuery = useReturns();
   const screen = useScreenState([returnsQuery]);
   const returns = returnsQuery.data ?? null;
-  const [toggle, setToggle] = useState<Toggle>('current');
+  const tabParam = useTabParam(['current', 'history'] as const);
+  const [toggle, setToggle] = useState<Toggle>(tabParam ?? 'current');
+  const highlightedId = useFocusHighlight();
+
+  useEffect(() => {
+    if (tabParam) setToggle(tabParam);
+  }, [tabParam]);
   const [confirming, setConfirming] = useState(false);
 
   function formatTime(iso: string) {
@@ -146,7 +153,11 @@ export default function ReturnsScreen() {
           displayed.map((item, i) => {
             const accent = isHistory ? colors.success : colors.warning;
             return (
-              <Card key={item.id} accent={accent} gap={Spacing.md}>
+              <Card
+                key={item.id}
+                accent={accent}
+                gap={Spacing.md}
+                borderColor={item.id === highlightedId ? colors.accent : undefined}>
 
                 <View style={styles.cardTopRow}>
                   <TrackingId value={item.id} size="inline" />

@@ -525,7 +525,7 @@ const mockNotifications: Notification[] = [
     message: 'Librairie El Kitab, Sousse',
     timestamp: minutesAgo(3),
     read: false,
-    target: { screen: 'pickups' },
+    target: { screen: 'pickups', tab: 'SCHEDULED', focusId: formatPickupId('3', today, 2) },
   },
   {
     id: `DL-3-${toCompactDateKey(today)}-0007`,
@@ -552,16 +552,16 @@ const mockNotifications: Notification[] = [
     message: 'Agence Sousse → Agence Sfax at Dépôt Sahloul',
     timestamp: minutesAgo(40),
     read: true,
-    target: { screen: 'transfers' },
+    target: { screen: 'transfers', tab: 'current', focusId: 'TR-9201' },
   },
   {
     id: `RT-3-${toCompactDateKey(yesterday)}-0004`,
     type: 'RETURN',
     title: 'Return flagged',
-    message: 'Order #TRK-88C1E3AA refused',
+    message: 'Order #TRK-B6F31C08 refused',
     timestamp: daysAgoAt(1, 17, 5),
     read: true,
-    target: { screen: 'returns' },
+    target: { screen: 'runsheets', tab: 'history', focusId: 'TRK-B6F31C08' },
   },
   {
     id: formatPickupId('3', yesterday, 2),
@@ -570,7 +570,7 @@ const mockNotifications: Notification[] = [
     message: 'Atelier Ben Youssef, Monastir',
     timestamp: daysAgoAt(1, 8, 35),
     read: true,
-    target: { screen: 'pickups' },
+    target: { screen: 'pickups', tab: 'COMPLETED', focusId: formatPickupId('3', yesterday, 2) },
   },
   {
     id: `DL-3-${toCompactDateKey(yesterday)}-0021`,
@@ -931,6 +931,17 @@ export async function markNotificationRead(id: string): Promise<void> {
   await delay(undefined);
 }
 
+export async function deleteNotification(id: string): Promise<void> {
+  const index = mockNotifications.findIndex((n) => n.id === id);
+  if (index >= 0) mockNotifications.splice(index, 1);
+  return delay(undefined);
+}
+
+export async function deleteAllNotifications(): Promise<void> {
+  mockNotifications.length = 0;
+  return delay(undefined);
+}
+
 export async function markAllNotificationsRead(): Promise<void> {
   mockNotifications.forEach((n) => {
     n.read = true;
@@ -1016,6 +1027,44 @@ export async function confirmDeliveryWithOTP(
   const expectedOtp = otpByJobId[id];
   if (!expectedOtp || otp !== expectedOtp) {
     return { success: false, error: 'otp.errors.incorrectCode' };
+  }
+
+  const wasAlreadyDelivered = job.status === 'DELIVERED';
+  job.status = 'DELIVERED';
+  job.cashCollected = cashAmount;
+
+  if (!wasAlreadyDelivered) {
+    recordDeliveryCompletion(cashAmount);
+  }
+  maybeCompleteRunsheet(id);
+
+  return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
+}
+
+/**
+ * Delivery confirmed by the driver on the doorstep, with no code and no photo.
+ *
+ * The same gates still apply — the run has to be signed for and the customer
+ * has to have been called — but there is no proof artefact attached, so a
+ * dispute over this one comes down to the driver's word. That is a deliberate
+ * product decision: the OTP and photo routes remain for parcels that warrant
+ * proof, and this is the fast path for the ones that don't.
+ */
+export async function confirmDelivery(
+  id: string,
+  cashAmount: number
+): Promise<ConfirmDeliveryResult> {
+  await delay(undefined);
+
+  const job = mockJobs.find((j) => j.id === id);
+  if (!job) {
+    return { success: false, error: 'common.genericError' };
+  }
+  if (isJobBlockedByUnconfirmedRunsheet(id)) {
+    return { success: false, error: 'runsheets.confirm.blockedError' };
+  }
+  if (job.callAttempts === 0) {
+    return { success: false, error: 'statusUpdate.callRequired' };
   }
 
   const wasAlreadyDelivered = job.status === 'DELIVERED';

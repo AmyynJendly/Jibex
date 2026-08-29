@@ -34,6 +34,69 @@ async function workableParcel(api: Api) {
   return parcel;
 }
 
+describe('the doorstep Delivered button', () => {
+  it('refuses when the driver never called, same as the OTP and photo routes', async () => {
+    const api = freshApi();
+    const parcel = await workableParcel(api);
+
+    const result = await api.confirmDelivery(parcel.id, parcel.cashToCollect);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('statusUpdate.callRequired');
+  });
+
+  it('marks the parcel delivered and banks the cash once the call is logged', async () => {
+    const api = freshApi();
+    const parcel = await workableParcel(api);
+    const before = (await api.getDriverStats()).cashCollectedTotal;
+
+    await api.logCallAttempt(parcel.id);
+    const result = await api.confirmDelivery(parcel.id, parcel.cashToCollect);
+
+    expect(result.success).toBe(true);
+    expect(result.job?.status).toBe('DELIVERED');
+    expect((await api.getDriverStats()).cashCollectedTotal).toBe(before + parcel.cashToCollect);
+  });
+
+  it('still refuses on a run the driver has not signed for', async () => {
+    const api = freshApi();
+    const runsheets = await api.getRunsheets();
+    const unsigned = runsheets.find((r) => r.needsConfirmation);
+    if (!unsigned) throw new Error('seed data has no unconfirmed run');
+    const parcel = (await api.getActiveParcels()).find((p) => unsigned.stopIds.includes(p.id));
+    if (!parcel) throw new Error('seed data has no parcel on an unconfirmed run');
+
+    await api.logCallAttempt(parcel.id);
+    const result = await api.confirmDelivery(parcel.id, parcel.cashToCollect);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('runsheets.confirm.blockedError');
+  });
+});
+
+describe('notifications can be cleared', () => {
+  it('deletes one without touching the rest', async () => {
+    const api = freshApi();
+    const before = await api.getNotifications();
+    expect(before.length).toBeGreaterThan(1);
+
+    await api.deleteNotification(before[0].id);
+    const after = await api.getNotifications();
+
+    expect(after).toHaveLength(before.length - 1);
+    expect(after.find((n) => n.id === before[0].id)).toBeUndefined();
+  });
+
+  it('empties the list', async () => {
+    const api = freshApi();
+    expect((await api.getNotifications()).length).toBeGreaterThan(0);
+
+    await api.deleteAllNotifications();
+
+    expect(await api.getNotifications()).toHaveLength(0);
+  });
+});
+
 describe('a delivery needs a call attempt first', () => {
   it('refuses an OTP delivery when the driver never called', async () => {
     const api = freshApi();
