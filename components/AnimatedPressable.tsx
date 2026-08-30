@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { forwardRef, type ComponentRef } from 'react';
+import { forwardRef, useEffect, useRef, type ComponentRef } from 'react';
 import { Pressable, type PressableProps } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -11,10 +11,24 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Spring } from '../constants';
+import { useHapticsEnabled } from '../lib/haptics';
 
 const ReanimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const PRESS_RETENTION = { top: 12, bottom: 12, left: 12, right: 12 };
+
+/**
+ * How long a press has to hold before the haptic fires.
+ *
+ * `onPressIn` fires the instant a finger touches down — inside a scrolling
+ * list that's also the instant a scroll gesture begins, since RN's touch
+ * responder hasn't yet decided which gesture wins. Firing the haptic there
+ * meant every card under a finger buzzed as the driver scrolled past it. A
+ * genuine tap holds for well over this long before lifting; a scroll starts
+ * moving inside it, which cancels the press (and this timer) before the
+ * haptic ever fires.
+ */
+const HAPTIC_ARM_DELAY = 70;
 
 /** No-op on platforms without a taptic engine; expo-haptics handles that. */
 function fireHaptic(style: HapticStyle) {
@@ -77,6 +91,17 @@ interface AnimatedPressableProps extends PressableProps {
 export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, AnimatedPressableProps>(
   ({ scaleTo = 0.96, haptic = 'light', style, onPressIn, onPressOut, ...props }, ref) => {
     const pressed = useSharedValue(0);
+    const { enabled: hapticsEnabled } = useHapticsEnabled();
+    const hapticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    function clearHapticTimer() {
+      if (hapticTimer.current) {
+        clearTimeout(hapticTimer.current);
+        hapticTimer.current = null;
+      }
+    }
+
+    useEffect(() => clearHapticTimer, []);
 
     const animatedStyle = useAnimatedStyle(() => {
       const p = pressed.get();
@@ -93,13 +118,17 @@ export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, Anim
           // Critically damped going down: an overshoot under the finger
           // reads as the button slipping out from under it.
           pressed.set(withSpring(1, Spring.press));
-          fireHaptic(haptic);
+          if (haptic && hapticsEnabled) {
+            clearHapticTimer();
+            hapticTimer.current = setTimeout(() => fireHaptic(haptic), HAPTIC_ARM_DELAY);
+          }
           onPressIn?.(e);
         }}
         onPressOut={(e) => {
           // Coming back up it gets a little rebound, which is what makes
           // the button feel like an object rather than a state flag.
           pressed.set(withSpring(0, Spring.release));
+          clearHapticTimer();
           onPressOut?.(e);
         }}
         // A finger that drifts a few points shouldn't cancel a press the

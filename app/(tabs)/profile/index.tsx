@@ -24,6 +24,7 @@ import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
 import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { clearToken } from '../../../lib/token';
+import { useHapticsEnabled } from '../../../lib/haptics';
 import { useDriverStats, useRunsheets, useUser, useVehicle } from '../../../lib/query';
 import type { DriverStats, User, Vehicle } from '../../../types';
 
@@ -52,6 +53,7 @@ export default function ProfileScreen() {
   const hub = runsheetsQuery.data?.[0]?.agency ?? null;
   const [biometricLogin, setBiometricLogin] = useState(true);
   const [newJobAlerts, setNewJobAlerts] = useState(true);
+  const { enabled: hapticsEnabled, setEnabled: setHapticsEnabled } = useHapticsEnabled();
 
   async function handleLogOut() {
     await clearToken();
@@ -254,6 +256,23 @@ export default function ProfileScreen() {
                 <Switch
                   value={biometricLogin}
                   onValueChange={setBiometricLogin}
+                  trackColor={{ true: colors.accent }}
+                />
+              </View>
+              <View
+                style={[
+                  styles.row,
+                  { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
+                ]}>
+                <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="phone-portrait-outline" size={15} color={colors.accent} />
+                </View>
+                <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                  {t('settings.hapticFeedback')}
+                </Text>
+                <Switch
+                  value={hapticsEnabled}
+                  onValueChange={setHapticsEnabled}
                   trackColor={{ true: colors.accent }}
                 />
               </View>

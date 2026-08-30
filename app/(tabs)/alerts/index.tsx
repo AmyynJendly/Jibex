@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -33,6 +33,9 @@ import {
   markNotificationRead,
 } from '../../../services/mock-api';
 import type { Notification, NotificationTarget, NotificationType } from '../../../types';
+
+/** Corner radius shared by the card, its shadow wrapper, and the swipeable's own clip mask — see `renderSwipeable`. */
+const CARD_RADIUS = 20;
 
 function typeStyle(type: NotificationType, colors: ColorPalette) {
   switch (type) {
@@ -159,9 +162,7 @@ export default function AlertsScreen() {
   }
 
   const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
-  const now = notifications?.[0];
-  const isNowPriority = !!now && !now.read;
-  const today = notifications?.filter((n) => isToday(n.timestamp) && n.id !== now?.id) ?? [];
+  const today = notifications?.filter((n) => isToday(n.timestamp)) ?? [];
   const earlier = notifications?.filter((n) => !isToday(n.timestamp)) ?? [];
 
   /**
@@ -173,76 +174,69 @@ export default function AlertsScreen() {
    * destructive swipe, and the row is only removed once the driver actually
    * taps it — a swipe alone never deletes, since it is far too easy to do by
    * accident while scrolling.
+   *
+   * The card's shadow lives on this outer `View`, not on the card itself.
+   * The library's own container (the thing that actually clips the row so
+   * the delete action stays hidden until swiped) sets `overflow: 'hidden'`
+   * on itself with no border radius of its own — so a shadow painted on a
+   * *child* of that container was being cut off along that container's
+   * square edges, which is what showed as a flat-edged box behind the
+   * card's rounded corners. `containerStyle` rounds that clip mask to match
+   * the card, and moving the shadow one level up, onto a plain view the
+   * library never touches, keeps it soft and unclipped like every other
+   * card in the app.
    */
   function renderSwipeable(notification: Notification, children: ReactNode) {
     return (
-      <ReanimatedSwipeable
-        key={notification.id}
-        friction={2}
-        rightThreshold={40}
-        overshootRight={false}
-        renderRightActions={() => (
-          <AnimatedPressable
-            haptic="medium"
-            scaleTo={0.94}
-            accessibilityRole="button"
-            accessibilityLabel={t('alerts.deleteOne')}
-            style={[styles.deleteAction, { backgroundColor: colors.danger }]}
-            onPress={() => handleDelete(notification.id)}>
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-          </AnimatedPressable>
-        )}>
-        {children}
-      </ReanimatedSwipeable>
+      <View key={notification.id} style={[styles.shadowWrap, getCardShadow(scheme)]}>
+        <ReanimatedSwipeable
+          friction={2}
+          rightThreshold={40}
+          overshootRight={false}
+          containerStyle={styles.swipeContainer}
+          renderRightActions={() => (
+            <AnimatedPressable
+              haptic="medium"
+              scaleTo={0.94}
+              accessibilityRole="button"
+              accessibilityLabel={t('alerts.deleteOne')}
+              style={[styles.deleteAction, { backgroundColor: colors.danger }]}
+              onPress={() => handleDelete(notification.id)}>
+              <Ionicons name="trash-outline" size={20} color="#fff" />
+            </AnimatedPressable>
+          )}>
+          {children}
+        </ReanimatedSwipeable>
+      </View>
     );
   }
 
-  function renderPriorityCard(notification: Notification) {
+  /**
+   * One row for every notification, whether it arrived a minute ago or
+   * yesterday. This used to single out the most recent unread alert into
+   * its own "Now" section with its own gold styling — which meant reading
+   * it (the read flag flips the instant you tap, before the navigation even
+   * lands) made the card vanish from the screen outright, mid-tap. Unread is
+   * a property of the card now, not a place it lives: it stays in Today or
+   * Earlier exactly where it was, and only its color changes when it's read.
+   */
+  function renderCard(notification: Notification, dimmed: boolean) {
     const style = typeStyle(notification.type, colors);
+    const unread = !notification.read;
     return renderSwipeable(
       notification,
-      <Animated.View entering={morphIn(0, 12)}>
+      <Animated.View entering={morphIn(0, 8)}>
         <AnimatedPressable
           onPress={() => handlePress(notification)}
           accessibilityRole="button"
-          accessibilityHint={notification.target ? t('alerts.a11yOpens') : undefined}
-          style={[styles.priorityCard, { backgroundColor: style.soft }]}>
-          <View style={[styles.priorityIcon, { backgroundColor: colors.bgElevated }]}>
-            <Ionicons name={style.icon} size={19} color={style.color} />
-          </View>
-          <View style={styles.textBlock}>
-            <Text style={[styles.title, { color: colors.text }]}>{notification.title}</Text>
-            <Text style={[styles.message, { color: colors.textSecondary }]}>
-              {notification.message}
-            </Text>
-          </View>
-          <View style={styles.meta}>
-            <Text style={[styles.time, { color: colors.textTertiary }]}>
-              {formatTime(notification.timestamp)}
-            </Text>
-            <View style={[styles.dot, { backgroundColor: colors.warning }]} />
-          </View>
-          {notification.target && (
-            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-          )}
-        </AnimatedPressable>
-      </Animated.View>
-    );
-  }
-
-  function renderCard(notification: Notification, dimmed: boolean, index: number) {
-    const style = typeStyle(notification.type, colors);
-    return renderSwipeable(
-      notification,
-      <Animated.View>
-        <AnimatedPressable
-          onPress={() => handlePress(notification)}
-          accessibilityRole="button"
+          accessibilityState={{ selected: unread }}
           accessibilityHint={notification.target ? t('alerts.a11yOpens') : undefined}
           style={[
             styles.card,
-            { backgroundColor: colors.bgElevated, opacity: dimmed ? 0.75 : 1 },
-            getCardShadow(scheme),
+            {
+              backgroundColor: unread ? colors.warningSoft : colors.bgElevated,
+              opacity: dimmed ? 0.75 : 1,
+            },
           ]}>
           <View style={[styles.icon, { backgroundColor: style.soft }]}>
             <Ionicons name={style.icon} size={17} color={style.color} />
@@ -253,14 +247,9 @@ export default function AlertsScreen() {
               {notification.message}
             </Text>
           </View>
-          <View style={styles.meta}>
-            <Text style={[styles.time, { color: colors.textTertiary }]}>
-              {formatTime(notification.timestamp)}
-            </Text>
-            {!notification.read && (
-              <View style={[styles.dot, { backgroundColor: colors.accent }]} />
-            )}
-          </View>
+          <Text style={[styles.time, { color: colors.textTertiary }]}>
+            {formatTime(notification.timestamp)}
+          </Text>
           {/* Only alerts that actually lead somewhere get a chevron —
               otherwise every row promises a destination and some do nothing. */}
           {notification.target && (
@@ -327,23 +316,12 @@ export default function AlertsScreen() {
         </View>
       ) : (
         <>
-          {isNowPriority && now && (
-            <View style={styles.section}>
-              <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-                {t('alerts.now')}
-              </Text>
-              {renderPriorityCard(now)}
-            </View>
-          )}
-
           {today.length > 0 && (
             <View style={styles.section}>
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
                 {t('alerts.today')}
               </Text>
-              <View style={styles.list}>
-                {today.map((n, i) => renderCard(n, false, i))}
-              </View>
+              <View style={styles.list}>{today.map((n) => renderCard(n, false))}</View>
             </View>
           )}
 
@@ -352,9 +330,7 @@ export default function AlertsScreen() {
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
                 {t('alerts.earlier')}
               </Text>
-              <View style={styles.list}>
-                {earlier.map((n, i) => renderCard(n, true, today.length + i))}
-              </View>
+              <View style={styles.list}>{earlier.map((n) => renderCard(n, true))}</View>
             </View>
           )}
 
@@ -412,7 +388,6 @@ const styles = StyleSheet.create({
   },
   deleteAction: {
     width: 68,
-    marginLeft: Spacing.sm,
     borderRadius: Radii.xxl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -426,26 +401,20 @@ const styles = StyleSheet.create({
   list: {
     gap: Spacing.smd,
   },
+  // Shadow only — no background, no clipping. See the note on `renderSwipeable`.
+  shadowWrap: {
+    borderRadius: CARD_RADIUS,
+  },
+  // The swipeable's own clip mask, rounded to match the card it wraps.
+  swipeContainer: {
+    borderRadius: CARD_RADIUS,
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.md,
-    borderRadius: 20,
+    borderRadius: CARD_RADIUS,
     padding: Spacing.mlg,
-  },
-  priorityCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.md,
-    borderRadius: 20,
-    padding: Spacing.mlg,
-  },
-  priorityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   icon: {
     width: 36,
@@ -466,16 +435,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  meta: {
-    alignItems: 'flex-end',
-    gap: Spacing.xs,
-  },
   time: {
     ...monoStyle(11),
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    marginTop: 2,
   },
 });
