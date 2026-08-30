@@ -74,6 +74,41 @@ describe('the doorstep Delivered button', () => {
   });
 });
 
+describe('a failure reason can carry the driver\'s location', () => {
+  it('attaches the fix passed at the moment the reason was logged', async () => {
+    const api = freshApi();
+    const parcel = await workableParcel(api);
+    const fix = { lat: 35.848, lng: 10.5975 };
+
+    const result = await api.markDeliveryFailed(parcel.id, 'CUSTOMER_ABSENT', undefined, fix);
+
+    expect(result.success).toBe(true);
+    expect(result.job?.failureLocation).toEqual(fix);
+  });
+
+  it('is optional — a denied permission logs the failure with no location', async () => {
+    const api = freshApi();
+    const parcel = await workableParcel(api);
+
+    const result = await api.markDeliveryFailed(parcel.id, 'CUSTOMER_ABSENT');
+
+    expect(result.success).toBe(true);
+    expect(result.job?.failureLocation).toBeUndefined();
+  });
+
+  it('is cleared when the failure is reopened, along with the reason', async () => {
+    const api = freshApi();
+    const parcel = await workableParcel(api);
+    const fix = { lat: 35.848, lng: 10.5975 };
+
+    await api.markDeliveryFailed(parcel.id, 'CUSTOMER_ABSENT', undefined, fix);
+    const reopened = await api.reopenParcel(parcel.id);
+
+    expect(reopened.failureLocation).toBeUndefined();
+    expect(reopened.failureReason).toBeUndefined();
+  });
+});
+
 describe('notifications can be cleared', () => {
   it('deletes one without touching the rest', async () => {
     const api = freshApi();

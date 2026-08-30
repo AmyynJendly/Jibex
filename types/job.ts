@@ -41,6 +41,13 @@ export interface Job {
   /** Set when a delivery attempt fails via the Can't Deliver flow. */
   failureReason?: DeliveryFailureReason;
   failureNote?: string;
+  /**
+   * Driver's GPS fix at the moment they logged the failure reason, if a fix
+   * was available — proof they were actually at the address, not just
+   * clearing the stop from their list. Best-effort: absent when location
+   * permission was denied or unavailable, never blocks logging the failure.
+   */
+  failureLocation?: GeoPoint;
   /** Set when delivery is confirmed via photo instead of OTP. */
   proofPhotoUri?: string;
   /**

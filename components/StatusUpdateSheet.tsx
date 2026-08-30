@@ -11,6 +11,7 @@ import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
 import { Fonts, Radii, Spacing, Typography, sheetIn, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
+import { captureCurrentCoords } from '../lib/useLiveCoords';
 import { markDeliveryFailed, reopenParcel } from '../services/mock-api';
 import type { DeliveryFailureReason, Job } from '../types';
 
@@ -72,7 +73,10 @@ export function StatusUpdateSheet({ job, onClose, onDone }: StatusUpdateSheetPro
   async function handleConfirmFailed() {
     if (!job || !reason || submitting) return;
     setSubmitting(true);
-    const result = await markDeliveryFailed(job.id, reason);
+    // Same capture as the full-screen Can't Deliver flow — this sheet is the
+    // other place a failure reason gets set, so it needs the same proof.
+    const location = await captureCurrentCoords().catch(() => null);
+    const result = await markDeliveryFailed(job.id, reason, undefined, location ?? undefined);
     setSubmitting(false);
     setReason(null);
     if (!result.success) {

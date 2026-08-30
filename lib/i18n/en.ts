@@ -160,6 +160,7 @@ const en = {
       markDelivered: 'Delivered',
       parcelCount: '{{count}} parcel',
       parcelCount_other: '{{count}} parcels',
+      callDetail: 'Called {{count}}x · last at {{time}}',
     a11yMore: 'More options',
     stopOf: 'Stop {{index}} of {{total}}',
     stopChip: 'STOP {{index}} / {{total}}',

@@ -159,6 +159,7 @@ const fr: TranslationResource = {
       markDelivered: 'Livré',
       parcelCount: '{{count}} colis',
       parcelCount_other: '{{count}} colis',
+      callDetail: 'Appelé {{count}}x · dernier appel à {{time}}',
     a11yMore: "Plus d'options",
     stopOf: 'Arrêt {{index}} sur {{total}}',
     stopChip: 'ARRÊT {{index}} / {{total}}',

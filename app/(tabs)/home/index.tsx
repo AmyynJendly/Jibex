@@ -716,11 +716,6 @@ const styles = StyleSheet.create({
   cashAmount: {
     color: '#F5EEE6',
   },
-  depositPill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.smd,
-    borderRadius: Radii.md - 1,
-  },
   nextStopCard: {
     borderRadius: Radii.card,
     borderWidth: 1.5,

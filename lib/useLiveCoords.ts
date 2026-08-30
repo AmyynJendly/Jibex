@@ -36,6 +36,27 @@ async function resolveCoords(): Promise<GeoPoint | null> {
 }
 
 /**
+ * One-shot capture for the moment something needs to record *where the
+ * driver was*, rather than just display a live position — e.g. the GPS fix
+ * attached to a failed-delivery reason, so dispatch can see the driver was
+ * actually at the address when they logged "Customer absent". Reuses the
+ * same cache/in-flight de-duplication as the hook below: if a screen already
+ * has a fix from the last minute, this returns it instantly instead of
+ * taking a fresh reading. Resolves to `null` on denied permission or an
+ * unsupported platform (e.g. Expo web) — callers must treat the location as
+ * optional and never block the action it's attached to on this resolving.
+ */
+export async function captureCurrentCoords(): Promise<GeoPoint | null> {
+  const fresh = cachedCoords && Date.now() - fetchedAt < MAX_AGE_MS;
+  if (fresh) return cachedCoords;
+
+  inFlight = inFlight ?? resolveCoords().finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+/**
  * Driver's real device GPS coordinates — resolves once permission is granted
  * and a fix is available, and stays `null` otherwise (denied, or unsupported
  * on this platform, e.g. Expo web). Callers should fall back to a reasonable

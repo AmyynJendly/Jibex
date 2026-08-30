@@ -271,6 +271,22 @@ export default function JobDetailScreen() {
               </AnimatedPressable>
             </View>
           </View>
+          {job.callAttempts > 0 && (
+            <View style={styles.callDetailRow}>
+              <Ionicons name="call-outline" size={12} color={colors.textTertiary} />
+              <Text style={[styles.callDetailText, { color: colors.textTertiary }]}>
+                {t('jobDetail.callDetail', {
+                  count: job.callAttempts,
+                  time: job.lastCallAt
+                    ? new Date(job.lastCallAt).toLocaleTimeString(localeTag(i18n.language), {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '—',
+                })}
+              </Text>
+            </View>
+          )}
           <View style={styles.addressRow}>
             <Ionicons
               name="location-outline"
@@ -491,6 +507,16 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  callDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: -Spacing.xs,
+  },
+  callDetailText: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
   },
   addressRow: {
     flexDirection: 'row',

@@ -18,6 +18,7 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../../../constants';
 import { invalidateDeliveryData } from '../../../lib/query';
+import { captureCurrentCoords } from '../../../lib/useLiveCoords';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { markDeliveryFailed } from '../../../services/mock-api';
 import type { DeliveryFailureReason } from '../../../types';
@@ -47,7 +48,12 @@ export default function CantDeliverScreen() {
     if (!reason || submitting) return;
     if (!requireOnline()) return;
     setSubmitting(true);
-    const result = await markDeliveryFailed(id, reason, note.trim() || undefined);
+    // Captured before the write so the fix actually belongs to this failure
+    // record rather than to whatever screen the driver is on later. Never
+    // lets the failure go unlogged over it though — a denied permission or a
+    // fix that never resolves falls back to `null`, not a blocked submit.
+    const location = await captureCurrentCoords().catch(() => null);
+    const result = await markDeliveryFailed(id, reason, note.trim() || undefined, location ?? undefined);
     setSubmitting(false);
 
     if (result.success) {

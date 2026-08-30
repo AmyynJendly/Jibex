@@ -827,6 +827,7 @@ export async function reopenParcel(id: string): Promise<Job> {
     };
     job.failureReason = undefined;
     job.failureNote = undefined;
+    job.failureLocation = undefined;
   }
 
   job.status = 'PENDING';
@@ -1120,7 +1121,8 @@ export interface FailDeliveryResult {
 export async function markDeliveryFailed(
   id: string,
   reason: DeliveryFailureReason,
-  note?: string
+  note?: string,
+  location?: GeoPoint
 ): Promise<FailDeliveryResult> {
   await delay(undefined);
 
@@ -1136,6 +1138,7 @@ export async function markDeliveryFailed(
   job.status = 'FAILED';
   job.failureReason = reason;
   job.failureNote = note;
+  job.failureLocation = location;
 
   if (!wasAlreadyFailed) {
     recordDeliveryFailure();
