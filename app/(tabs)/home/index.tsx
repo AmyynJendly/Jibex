@@ -490,11 +490,15 @@ export default function HomeScreen() {
             </View>
           </View>
           <View style={styles.nextStopBottomRow}>
-            <View>
+            <View style={styles.nextStopCod}>
               <Text style={[monoStyle(9), styles.nextStopCodLabel, { color: colors.textTertiary }]}>
                 {t('home.nextStop.codLabel')}
               </Text>
-              <Text style={[monoStyle(19, 'medium'), { color: colors.text }]}>
+              <Text
+                style={[monoStyle(19, 'medium'), { color: colors.text }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}>
                 {formatCurrency(nextStop.cashToCollect)}
               </Text>
             </View>
@@ -751,6 +755,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  // `flex: 1` + `minWidth: 0` so the amount wraps/shrinks instead of pushing
+  // the "Go" pill out of the card — the pill has a fixed content width and
+  // was the row's only other flex item, which is exactly the shape that
+  // broke on the job-detail cash card in French.
+  nextStopCod: {
+    flex: 1,
+    minWidth: 0,
   },
   nextStopCodLabel: {
     textTransform: 'uppercase',

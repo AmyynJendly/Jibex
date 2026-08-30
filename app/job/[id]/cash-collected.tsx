@@ -102,7 +102,14 @@ export default function CashCollectedScreen() {
               <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
                 {t('cashCollected.cashCollected')}
               </Text>
-              <Text style={[styles.summaryAmount, { color: colors.success }]}>
+              {/* One line, shrinking if it must — three-decimal money at 24pt
+                  wraps mid-currency in a half-width column once the figure
+                  gets a couple of digits longer, which reads as broken. */}
+              <Text
+                style={[styles.summaryAmount, { color: colors.success }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}>
                 {formatCurrency(amount)}
               </Text>
             </View>

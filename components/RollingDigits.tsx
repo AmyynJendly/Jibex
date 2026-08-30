@@ -77,8 +77,14 @@ export function RollingDigits({ from, to, style, staggerMs = 60 }: RollingDigits
   // on native, not a plain object) — flatten before reading `fontSize`.
   const flatStyle = StyleSheet.flatten(style);
   const lineHeight = (flatStyle?.fontSize ?? 16) * 1.15;
-  const fromChars = from.split('');
-  const toChars = to.split('');
+  // A regular space, alone as a Text node's entire content, collapses to
+  // near-zero width on web — the browser treats a whitespace-only text node
+  // as collapsible, same as it would between two words. That's invisible in
+  // a sentence but fatal here: the space between the amount and "TND" (and
+  // any padStart space from the caller) disappears, gluing them together.
+  // A non-breaking space has real glyph width and isn't collapsible.
+  const fromChars = from.replaceAll(' ', '\u00A0').split('');
+  const toChars = to.replaceAll(' ', '\u00A0').split('');
   const length = Math.max(fromChars.length, toChars.length);
 
   return (

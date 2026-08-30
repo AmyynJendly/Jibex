@@ -322,13 +322,21 @@ export default function JobDetailScreen() {
               { backgroundColor: colors.accent },
               getAccentGlow(0.28, 24),
             ]}>
-            <View>
-              <Text style={styles.codLabel}>{t('jobDetail.codLabel')}</Text>
-              <Text style={styles.codAmount}>
-                {t('jobDetail.codCash', { amount: formatCurrency(job.cashToCollect) })}
+            {/* `flex: 1` + `minWidth: 0` is what makes this wrap instead of
+                push the icon out of the card — French labels run longer than
+                English ones, and a row with an unconstrained text sibling
+                just grows past the card's edge instead of yielding. */}
+            <View style={styles.codText}>
+              <Text style={styles.codLabel} numberOfLines={1}>
+                {t('jobDetail.codLabel')}
+              </Text>
+              <Text style={styles.codAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {formatCurrency(job.cashToCollect)}
               </Text>
             </View>
-            <Ionicons name="cash-outline" size={26} color="#fff" />
+            <View style={styles.codIcon}>
+              <Ionicons name="cash-outline" size={22} color="#fff" />
+            </View>
           </View>
         )}
       </ScrollView>
@@ -531,7 +539,11 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  codText: {
+    flex: 1,
+    minWidth: 0,
   },
   codLabel: {
     fontFamily: Fonts.archivoSemiBold,
@@ -542,6 +554,15 @@ const styles = StyleSheet.create({
     ...monoStyle(26, 'medium'),
     color: '#fff',
     marginTop: 2,
+  },
+  codIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    flexShrink: 0,
   },
   footer: {
     flexDirection: 'row',

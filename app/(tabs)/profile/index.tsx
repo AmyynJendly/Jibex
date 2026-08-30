@@ -20,7 +20,7 @@ import {
   sectionLabelStyle,
   useColors,
 } from '../../../constants';
-import { formatCurrency, formatDecimal } from '../../../lib/currency';
+import { CURRENCY_DECIMALS, formatDecimal } from '../../../lib/currency';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
 import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { clearToken } from '../../../lib/token';
@@ -160,8 +160,12 @@ export default function ProfileScreen() {
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
             <View style={styles.statItem}>
+              {/* The number alone — the label right below it already says
+                  "DT / Week", so `formatCurrency`'s own "TND" suffix would
+                  name the same currency twice, in two different
+                  abbreviations, on one stat. */}
               <Text style={[styles.statValueSmall, { color: colors.accent }]}>
-                {formatCurrency(stats.weeklyCashCollected)}
+                {formatDecimal(stats.weeklyCashCollected, CURRENCY_DECIMALS)}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                 {t('profile.stats.weeklyCash')}

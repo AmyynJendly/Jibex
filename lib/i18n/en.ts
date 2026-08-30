@@ -168,7 +168,6 @@ const en = {
     mapBadge: '{{distance}} km · ≈{{minutes}} min away',
     navigate: 'Navigate',
     codLabel: 'Collect on Delivery',
-    codCash: '{{amount}} cash',
     billLabel: 'Bill',
     parcelLabel: 'Parcel',
     careLabel: 'Care',
@@ -403,11 +402,6 @@ const en = {
         question: 'What if a customer refuses a package?',
         answer:
           'Open the stop, tap "Can\'t Deliver", and choose "Parcel refused". Dispatch is notified automatically and the item is flagged for return.',
-      },
-      {
-        question: 'How do I change the order of my packages?',
-        answer:
-          'In Runsheets, drag a package by the handle on its card to move it up or down. Your order is saved and stays put until you change it again.',
       },
       {
         question: "My scanner won't read a barcode",

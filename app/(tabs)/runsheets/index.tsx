@@ -381,7 +381,11 @@ export default function RunsheetsScreen() {
                 </Text>
               </View>
               <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
-                <Text style={[monoStyle(20, 'medium'), { color: colors.accent }]}>
+                <Text
+                  style={[monoStyle(20, 'medium'), { color: colors.accent }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}>
                   {formatCurrency(codTotal)}
                 </Text>
                 <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>

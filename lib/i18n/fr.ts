@@ -167,7 +167,6 @@ const fr: TranslationResource = {
     mapBadge: '{{distance}} km · ≈{{minutes}} min',
     navigate: 'Itinéraire',
     codLabel: 'Encaissement à la livraison',
-    codCash: '{{amount}} en espèces',
     billLabel: 'Bon',
     parcelLabel: 'Colis',
     careLabel: 'Soin',
@@ -406,11 +405,6 @@ const fr: TranslationResource = {
         question: 'Que faire si un client refuse un colis ?',
         answer:
           'Ouvrez l\'arrêt, appuyez sur "Impossible de livrer", puis choisissez "Colis refusé". La répartition est notifiée automatiquement et l\'article est marqué pour retour.',
-      },
-      {
-        question: "Comment changer l'ordre de mes colis ?",
-        answer:
-          "Dans Tournées, faites glisser un colis par la poignée sur sa carte pour le monter ou le descendre. Votre ordre est enregistré et ne bouge plus jusqu'à ce que vous le changiez.",
       },
       {
         question: 'Mon scanner ne lit pas un code-barres',
