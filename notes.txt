@@ -1,0 +1,61 @@
+
+----------------------------------------------------------
+
+English/french language switch in the login screen 
+
+remove the create account button since the agency who will buy the app will give their drivers accounts
+
+change PIN to password, it's not a pin code it's a password
+
+the login button should say login/connexion not tart
+
+
+
+in login, a phone number as a username is not what they asked for, they want username/email
+
+add runsheets button with the 3 other ones, retuns transfers pickups and make them in a good layout together
+
+driver should confirm that he received and loaded all the packages, and he might get a notification that tells him to confirm the number of packages again, because he might have missed one during loading / or he might receive another one midway or any other scenarios
+
+
+remove delivered packages : when a package is delivered, it should be deleted and no longer shown unless there is a history tab, otherwise, the system should clean all completed tasks so that when a driver finishes his runsheet should be empty
+
+remove progress bar in runsheets, since we're only keeping the available ones
+
+remove routes system, when i go to runsheets tab, i should see the packagesn no need to go through routes
+
+in the whole app, make all numbers that are floats have 3 digits after the dot, for exemple 50.00 should be 50.000
+
+update button: when a driver press confirm delivrey on a package, there should be a button next to the package that is now marked as delivered, called 'update' this button can update the state of a package, because the driver can make a mistake and mark the wrong pack as delivered so he should have a way to modify (the current update button which confirms the package, change it's name or do something ), and can you make the state as a Corner Ribbon and make each state with color, try to match the app theme colors
+
+call recording if possible / the driver can only set app as delivered when he at least pressed the calling button once, to confirm he actually tried to call the customer
+
+in all the history tabs, the driver should only see read-only things, he can't click anything, and the data should be limited to protect privacy, so for exemple he can no longer see the phone number 
+
+in pickup: there should be a button done all, because there could be 1000 one and he can't scan or press one by one 
+
+*INFO* transfer : it's concerning an agency to agency, like an agency A will deliver 500 packages to an agency B, it's like runsheets, think of it like runsheets are clients concerned and transfer is agencies concerned, they are on the same level,
+
+runsheet client
+transfer agence to agence
+
+in any history tab, it's preferable to add filtering system, based on what you thing is right
+
+*INFO* return tab : when a driver delivers a transfer task, 500 packages from agency A to B, B sold only 450 of them, tomorrow the driver will receive the 50 packs in the returns because the agency B did not deliver them, that's how they explained it as far as i understood, so the return tab is like the inverse work of the transfer tab, (1000 colis chauffer medinne and went home next day he will find 50 not delivered will return them)
+
+show cash on hand only no deposit button, it should be read only
+
+okay in the runsheets, many drivers tend to write on the paper and order packages, and it chaotic to them, i want to add a reordering system in the tabs like runsheets so that he can hold the element and drag it down or up as he wishes, because he might not like the order in mind, but the app doesn't have instructions so we should focus on the design UI/UX to make it intuitive, maybe add drag dots in one side or idk be creative
+
+taux de livraison instead of on time in the profile tab
+
+driver read only personal info he can't change them (and change the name to Amine jendli) / vehicule & driver info too ready only
+
+remove the cash&payouts in the profile tab
+
+remove  call dispatcher in profile tab
+
+
+add the settings directly in the profile tab, no need to press a button to acess them
+
+

@@ -106,6 +106,65 @@ function nearestNeighborOrder(jobs: Job[], start: GeoPoint): Job[] {
   return ordered;
 }
 
+/**
+ * Restores a driver's hand-picked order over a fresh set of items: whatever
+ * `order` lists comes first (in that sequence), anything new that dispatch
+ * added since — a stop, a pickup, a batch — falls in after, rather than
+ * vanishing or forcing a re-drag of everything.
+ */
+function reseat<T extends { id: string }>(order: string[], items: T[]): T[] {
+  const byId = new Map(items.map((item) => [item.id, item] as const));
+  const kept = order.map((id) => byId.get(id)).filter((item): item is T => !!item);
+  const keptIds = new Set(kept.map((item) => item.id));
+  return [...kept, ...items.filter((item) => !keptIds.has(item.id))];
+}
+
+// ---------------------------------------------------------------------------
+// Driver-owned order — stop sequence for Runsheets/Home, and one manual sort
+// per list for Pickups/Transfers/Returns. `nearestFirst` only applies to
+// stops (the only list with real GPS coordinates to sort by); dragging any
+// of these lists persists an id order that survives until the driver drags
+// again or, for stops, flips nearest-first back on.
+// ---------------------------------------------------------------------------
+
+let mockNearestFirst = true;
+let mockStopOrder: string[] = [];
+let mockPickupOrder: string[] = [];
+let mockTransferOrder: string[] = [];
+let mockReturnOrder: string[] = [];
+
+export async function getNearestFirst(): Promise<boolean> {
+  return delay(mockNearestFirst);
+}
+
+/** Toggled on, the driver's manual stop order is kept but stops driving anything — flip it back off to resume it. */
+export async function setNearestFirst(enabled: boolean): Promise<void> {
+  await delay(undefined);
+  mockNearestFirst = enabled;
+}
+
+/** A driver dragging their own order is a deliberate override — it turns nearest-first off rather than fighting it. */
+export async function setStopOrder(orderedIds: string[]): Promise<void> {
+  await delay(undefined);
+  mockStopOrder = orderedIds;
+  mockNearestFirst = false;
+}
+
+export async function setPickupOrder(orderedIds: string[]): Promise<void> {
+  await delay(undefined);
+  mockPickupOrder = orderedIds;
+}
+
+export async function setTransferOrder(orderedIds: string[]): Promise<void> {
+  await delay(undefined);
+  mockTransferOrder = orderedIds;
+}
+
+export async function setReturnOrder(orderedIds: string[]): Promise<void> {
+  await delay(undefined);
+  mockReturnOrder = orderedIds;
+}
+
 // ---------------------------------------------------------------------------
 // Mock data
 // ---------------------------------------------------------------------------
@@ -778,7 +837,13 @@ export async function getActiveParcels(): Promise<Job[]> {
   const jobs = mockJobs.filter(
     (j) => ids.has(j.id) && j.status !== 'DELIVERED' && j.status !== 'FAILED'
   );
-  return jobs.map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+  // Stops on a run the driver hasn't signed for are inert either way, so
+  // they sit after the ones actually in play rather than fighting either
+  // ordering for a slot among them.
+  const workable = jobs.filter((j) => !isJobBlockedByUnconfirmedRunsheet(j.id));
+  const locked = jobs.filter((j) => isJobBlockedByUnconfirmedRunsheet(j.id));
+  const ordered = mockNearestFirst ? nearestNeighborOrder(workable, DEPOT) : reseat(mockStopOrder, workable);
+  return [...ordered, ...locked].map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
 /** Everything already resolved — the read-only history list. Most recent runsheets first. */
@@ -879,7 +944,13 @@ function maybeCompleteRunsheet(jobId: string) {
 }
 
 export async function getPickups(): Promise<Pickup[]> {
-  return delay(mockPickups.map((p) => ({ ...p })));
+  await delay(undefined);
+  const scheduled = reseat(
+    mockPickupOrder,
+    mockPickups.filter((p) => p.status === 'SCHEDULED')
+  );
+  const rest = mockPickups.filter((p) => p.status !== 'SCHEDULED');
+  return [...scheduled, ...rest].map((p) => ({ ...p }));
 }
 
 /**
@@ -899,7 +970,13 @@ export async function completePickups(ids: string[]): Promise<Pickup[]> {
 }
 
 export async function getTransfers(): Promise<Transfer[]> {
-  return delay(mockTransfers.map((t) => ({ ...t })));
+  await delay(undefined);
+  const current = reseat(
+    mockTransferOrder,
+    mockTransfers.filter((tr) => tr.status === 'IN_PROGRESS')
+  );
+  const rest = mockTransfers.filter((tr) => tr.status !== 'IN_PROGRESS');
+  return [...current, ...rest].map((t) => ({ ...t }));
 }
 
 /**
@@ -919,7 +996,13 @@ export async function confirmReturns(ids: string[]): Promise<Return[]> {
 }
 
 export async function getReturns(): Promise<Return[]> {
-  return delay(mockReturns.map((r) => ({ ...r })));
+  await delay(undefined);
+  const pending = reseat(
+    mockReturnOrder,
+    mockReturns.filter((r) => r.status === 'PENDING_PICKUP')
+  );
+  const rest = mockReturns.filter((r) => r.status !== 'PENDING_PICKUP');
+  return [...pending, ...rest].map((r) => ({ ...r }));
 }
 
 export async function getNotifications(): Promise<Notification[]> {
@@ -979,6 +1062,11 @@ export async function getJobsByIds(ids: string[]): Promise<Job[]> {
     .map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
+/**
+ * Same order Runsheets shows for these stops — nearest-first, or the
+ * driver's own drag order once they've overridden it — so Home's next stop
+ * never disagrees with what the list says comes next.
+ */
 export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
   const jobs = stopIds
     .map((id) => mockJobs.find((j) => j.id === id))
@@ -987,7 +1075,9 @@ export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
   const outstanding = jobs.filter((j) => j.status === 'PENDING' || j.status === 'IN_TRANSIT');
   const done = jobs.filter((j) => j.status === 'DELIVERED' || j.status === 'FAILED');
 
-  const ordered = nearestNeighborOrder(outstanding, DEPOT);
+  const ordered = mockNearestFirst
+    ? nearestNeighborOrder(outstanding, DEPOT)
+    : reseat(mockStopOrder, outstanding);
   return delay([...ordered.map((j) => j.id), ...done.map((j) => j.id)]);
 }
 

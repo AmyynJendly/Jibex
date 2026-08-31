@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -10,6 +10,7 @@ import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Card } from '../../../components/Card';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
+import { DragHandle, DraggableList, type DragBinding } from '../../../components/DraggableList';
 import { EmptyState } from '../../../components/EmptyState';
 import { TrackingId } from '../../../components/TrackingId';
 import { LoadError } from '../../../components/LoadError';
@@ -38,10 +39,11 @@ import {
   invalidateDeliveryData,
   useActiveParcels,
   useHistoryParcels,
+  useNearestFirst,
   useRunsheets,
   useScreenState,
 } from '../../../lib/query';
-import { confirmRunsheetReceipt, logCallAttempt } from '../../../services/mock-api';
+import { confirmRunsheetReceipt, logCallAttempt, setNearestFirst, setStopOrder } from '../../../services/mock-api';
 import type { Job, JobStatus, Runsheet } from '../../../types';
 
 type Toggle = 'current' | 'history';
@@ -72,6 +74,8 @@ interface ParcelCardProps {
   readOnly?: boolean;
   /** Parcels on a run the driver hasn't signed for yet: visible, but inert. */
   locked?: boolean;
+  /** Present only for a workable stop in the current tab — spreads onto `DragHandle`. */
+  drag?: DragBinding;
   onOpen?: () => void;
   onCall?: () => void;
   onUpdate?: () => void;
@@ -90,6 +94,7 @@ function ParcelCard({
   stopNumber,
   readOnly = false,
   locked = false,
+  drag,
   onOpen,
   onCall,
   onUpdate,
@@ -114,6 +119,7 @@ function ParcelCard({
         color={accent}
       />
       <View style={styles.cardHead}>
+        {drag && !locked && <DragHandle drag={drag} />}
         {locked && (
           <View style={styles.lockSlot}>
             <Ionicons name="lock-closed" size={15} color={colors.textTertiary} />
@@ -237,11 +243,13 @@ export default function RunsheetsScreen() {
   const activeQuery = useActiveParcels();
   const historyQuery = useHistoryParcels();
   const runsheetsQuery = useRunsheets();
+  const nearestFirstQuery = useNearestFirst();
   const screen = useScreenState([activeQuery, historyQuery, runsheetsQuery]);
 
   const active = activeQuery.data ?? null;
   const history = historyQuery.data ?? null;
   const runsheets = runsheetsQuery.data ?? [];
+  const nearestFirst = nearestFirstQuery.data ?? true;
   // Opened from a notification, the screen lands on the side that alert is
   // about — a refusal belongs in history, not on the current run.
   const tabParam = useTabParam(['current', 'history'] as const);
@@ -254,10 +262,30 @@ export default function RunsheetsScreen() {
   }, [tabParam]);
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sheetJob, setSheetJob] = useState<Job | null>(null);
+  // The active list itself follows the finger during a drag, so the
+  // ScrollView around it has to step aside or the two fight over the touch.
+  const [dragging, setDragging] = useState(false);
 
   const unconfirmed = runsheets.filter((r) => r.needsConfirmation && r.status !== 'VALIDE');
   /** Parcels the driver hasn't signed for yet — inert until they do. */
   const lockedIds = new Set(unconfirmed.flatMap((r) => r.stopIds));
+  /** `active` already arrives workable-first (see `getActiveParcels`), so this split is stable, not a re-sort. */
+  const workable = (active ?? []).filter((j) => !lockedIds.has(j.id));
+  const lockedParcels = (active ?? []).filter((j) => lockedIds.has(j.id));
+
+  async function handleReorder(orderedIds: string[]) {
+    // Deliberately no reload: the list already shows the new order, and the
+    // refetch settling behind it will agree — it's the same order we just
+    // told the server to keep.
+    await setStopOrder(orderedIds);
+    await invalidateDeliveryData();
+    showToast(t('runsheets.reorderedToast'));
+  }
+
+  async function handleToggleNearestFirst(next: boolean) {
+    await setNearestFirst(next);
+    await invalidateDeliveryData();
+  }
 
   async function handleConfirmReceipt(runsheet: Runsheet) {
     const isRecount = runsheet.status !== 'A_CONFIRMER';
@@ -295,31 +323,28 @@ export default function RunsheetsScreen() {
     filter === 'all' ? true : j.status === filter
   );
   const codTotal = (active ?? []).reduce((sum, j) => sum + j.cashToCollect, 0);
+  const currentCount = workable.length + lockedParcels.length;
 
-  const rows = toggle === 'current' ? (active ?? []) : filteredHistory;
-
-  // Bring the linked parcel into view. Highlighting alone only helps if the
-  // card is on screen, and a history list runs well past one screenful.
+  // Bring the linked parcel into view in history, which can run well past a
+  // screenful. The current list is a driver's own day — short enough that
+  // whatever a notification points to is already on screen without a jump,
+  // and jumping mid-drag is exactly what a manual reorder shouldn't do.
   useEffect(() => {
-    if (!highlightedId) return;
-    const index = rows.findIndex((job) => job.id === highlightedId);
+    if (!highlightedId || toggle !== 'history') return;
+    const index = filteredHistory.findIndex((job) => job.id === highlightedId);
     if (index < 0) return;
     const timer = setTimeout(() => {
       listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.35 });
     }, 250);
     return () => clearTimeout(timer);
-  }, [highlightedId, rows]);
+  }, [highlightedId, toggle, filteredHistory]);
   const pending = toggle === 'current' ? !active : !history;
 
-  // Everything above the rows scrolls with them, so it lives in the list's
-  // header rather than wrapping the list in a ScrollView — nesting the two
-  // would hand scrolling back to the outer view and undo the virtualisation.
-  const header = (
-    <View style={styles.headerBlock}>
+  const titleAndToggle = (
+    <>
       <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
         {t('runsheets.headerTitle')}
       </Text>
-
       <SegmentedControl
         segments={[
           { value: 'current', label: t('runsheets.toggleCurrent') },
@@ -328,9 +353,111 @@ export default function RunsheetsScreen() {
         value={toggle}
         onChange={setToggle}
       />
+    </>
+  );
 
-      {toggle === 'current' ? (
-        <>
+  if (toggle === 'history') {
+    const empty = screen.isError ? (
+      <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+    ) : pending ? (
+      <View style={styles.skeletonGroup}>
+        <SkeletonRow />
+        <SkeletonRow />
+        <SkeletonRow />
+      </View>
+    ) : (
+      <EmptyState icon="file-tray-outline" title={t('runsheets.empty.history')} />
+    );
+
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+        <FlashList
+          ref={listRef}
+          data={filteredHistory}
+          keyExtractor={(job) => job.id}
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={styles.content}
+          ListHeaderComponent={
+            <View style={styles.headerBlock}>
+              {titleAndToggle}
+              <View style={styles.filterRow}>
+                {(['all', 'DELIVERED', 'FAILED'] as HistoryFilter[]).map((value) => {
+                  const selected = filter === value;
+                  const label =
+                    value === 'all'
+                      ? t('runsheets.filters.all')
+                      : value === 'DELIVERED'
+                        ? t('runsheets.filters.delivered')
+                        : t('runsheets.filters.failed');
+                  return (
+                    <AnimatedPressable
+                      key={value}
+                      scaleTo={0.95}
+                      onPress={() => setFilter(value)}
+                      style={[
+                        styles.filterChip,
+                        {
+                          backgroundColor: selected ? colors.accent : colors.bgElevated,
+                          borderColor: selected ? colors.accent : colors.separator,
+                        },
+                      ]}>
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          { color: selected ? '#fff' : colors.textSecondary },
+                        ]}>
+                        {label}
+                      </Text>
+                    </AnimatedPressable>
+                  );
+                })}
+              </View>
+            </View>
+          }
+          ListEmptyComponent={empty}
+          renderItem={({ item: job }) => (
+            <View style={styles.row}>
+              <ParcelCard
+                job={job}
+                colors={colors}
+                scheme={scheme}
+                highlighted={job.id === highlightedId}
+                readOnly
+                updateLabel={t('runsheets.update')}
+                callLabel={t('runsheets.call')}
+                lockedLabel={t('runsheets.confirm.lockedTag')}
+                t={t}
+              />
+            </View>
+          )}
+        />
+
+        <StatusUpdateSheet job={sheetJob} onClose={() => setSheetJob(null)} onDone={handleSheetDone} />
+      </View>
+    );
+  }
+
+  const empty = screen.isError ? (
+    <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+  ) : pending ? (
+    <View style={styles.skeletonGroup}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
+  ) : (
+    <EmptyState icon="checkmark-done-outline" title={t('runsheets.empty.current')} />
+  );
+
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        scrollEnabled={!dragging}
+        contentContainerStyle={styles.content}>
+        <View style={styles.headerBlock}>
+          {titleAndToggle}
+
           {unconfirmed.map((runsheet) => {
             const isRecount = runsheet.status !== 'A_CONFIRMER';
             return (
@@ -372,10 +499,10 @@ export default function RunsheetsScreen() {
             );
           })}
 
-          {rows.length > 0 && (
+          {currentCount > 0 && (
             <View style={styles.summaryRow}>
               <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
-                <Text style={[monoStyle(20, 'medium'), { color: colors.text }]}>{rows.length}</Text>
+                <Text style={[monoStyle(20, 'medium'), { color: colors.text }]}>{currentCount}</Text>
                 <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
                   {t('runsheets.summary.toDeliver')}
                 </Text>
@@ -394,92 +521,79 @@ export default function RunsheetsScreen() {
               </View>
             </View>
           )}
-        </>
-      ) : (
-        <View style={styles.filterRow}>
-          {(['all', 'DELIVERED', 'FAILED'] as HistoryFilter[]).map((value) => {
-            const selected = filter === value;
-            const label =
-              value === 'all'
-                ? t('runsheets.filters.all')
-                : value === 'DELIVERED'
-                  ? t('runsheets.filters.delivered')
-                  : t('runsheets.filters.failed');
-            return (
-              <AnimatedPressable
-                key={value}
-                scaleTo={0.95}
-                onPress={() => setFilter(value)}
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor: selected ? colors.accent : colors.bgElevated,
-                    borderColor: selected ? colors.accent : colors.separator,
-                  },
-                ]}>
-                <Text
-                  style={[styles.filterChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
-                  {label}
+
+          {workable.length > 1 && (
+            <View style={[styles.nearestFirstRow, { backgroundColor: colors.bgElevated }]}>
+              <View style={styles.nearestFirstText}>
+                <Ionicons name="navigate-outline" size={15} color={colors.textSecondary} />
+                <Text style={[Typography.footnote, { color: colors.text }]}>
+                  {t('runsheets.nearestFirst')}
                 </Text>
-              </AnimatedPressable>
-            );
-          })}
+              </View>
+              <Switch
+                value={nearestFirst}
+                onValueChange={handleToggleNearestFirst}
+                trackColor={{ true: colors.accent }}
+              />
+            </View>
+          )}
         </View>
-      )}
-    </View>
-  );
 
-  const empty = screen.isError ? (
-    <LoadError onRetry={screen.retry} retrying={screen.retrying} />
-  ) : pending ? (
-    <View style={styles.skeletonGroup}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
-  ) : (
-    <EmptyState
-      icon={toggle === 'current' ? 'checkmark-done-outline' : 'file-tray-outline'}
-      title={toggle === 'current' ? t('runsheets.empty.current') : t('runsheets.empty.history')}
-    />
-  );
-
-  return (
-    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <FlashList
-        ref={listRef}
-        data={rows}
-        extraData={lockedIds}
-        keyExtractor={(job) => job.id}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}
-        ListHeaderComponent={header}
-        ListEmptyComponent={empty}
-        renderItem={({ item: job, index }) => (
-          <View style={styles.row}>
-            <ParcelCard
-              job={job}
-              colors={colors}
-              scheme={scheme}
-              highlighted={job.id === highlightedId}
-              stopNumber={toggle === 'current' ? index + 1 : undefined}
-              readOnly={toggle === 'history'}
-              locked={lockedIds.has(job.id)}
-              onOpen={
-                toggle === 'current'
-                  ? () => router.push({ pathname: '/job/[id]', params: { id: job.id } })
-                  : undefined
-              }
-              onCall={toggle === 'current' ? () => handleCall(job) : undefined}
-              onUpdate={() => setSheetJob(job)}
-              updateLabel={t('runsheets.update')}
-              callLabel={t('runsheets.call')}
-              lockedLabel={t('runsheets.confirm.lockedTag')}
-              t={t}
-            />
+        {screen.isError && !active ? (
+          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+        ) : pending ? (
+          <View style={styles.skeletonGroup}>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
           </View>
+        ) : currentCount === 0 ? (
+          empty
+        ) : (
+          <>
+            <DraggableList
+              data={workable}
+              idOf={(job) => job.id}
+              onReorder={handleReorder}
+              onDragStateChange={setDragging}
+              renderItem={(job, index, drag) => (
+                <ParcelCard
+                  job={job}
+                  colors={colors}
+                  scheme={scheme}
+                  highlighted={job.id === highlightedId}
+                  stopNumber={index + 1}
+                  drag={drag}
+                  onOpen={() => router.push({ pathname: '/job/[id]', params: { id: job.id } })}
+                  onCall={() => handleCall(job)}
+                  onUpdate={() => setSheetJob(job)}
+                  updateLabel={t('runsheets.update')}
+                  callLabel={t('runsheets.call')}
+                  lockedLabel={t('runsheets.confirm.lockedTag')}
+                  t={t}
+                />
+              )}
+            />
+            {lockedParcels.map((job, i) => (
+              <View key={job.id} style={styles.row}>
+                <ParcelCard
+                  job={job}
+                  colors={colors}
+                  scheme={scheme}
+                  highlighted={job.id === highlightedId}
+                  stopNumber={workable.length + i + 1}
+                  locked
+                  onUpdate={() => setSheetJob(job)}
+                  updateLabel={t('runsheets.update')}
+                  callLabel={t('runsheets.call')}
+                  lockedLabel={t('runsheets.confirm.lockedTag')}
+                  t={t}
+                />
+              </View>
+            ))}
+          </>
         )}
-      />
+      </ScrollView>
 
       <StatusUpdateSheet job={sheetJob} onClose={() => setSheetJob(null)} onDone={handleSheetDone} />
     </View>
@@ -536,6 +650,19 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingVertical: Spacing.smd,
     borderRadius: Radii.lg,
+  },
+  nearestFirstRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.mlg,
+    borderRadius: Radii.lg,
+  },
+  nearestFirstText: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
 
   cardHead: {

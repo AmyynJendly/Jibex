@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
+import { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -114,6 +115,16 @@ export default function AlertsScreen() {
   const screen = useScreenState([notificationsQuery]);
   const notifications = notificationsQuery.data ?? null;
 
+  /**
+   * A horizontal swipe never leaves the row's own bounds, so it never trips
+   * `pressRetentionOffset` — the row's `AnimatedPressable` still sees a clean
+   * press-in/press-out and fires `onPress` on release, even though the
+   * swipe already revealed the delete action. Set the instant a real drag
+   * starts (`onSwipeableOpenStartDrag`, ~10px — well past anything a tap's
+   * finger jitter would trigger), consumed once by the next `handlePress`.
+   */
+  const swipeGuard = useRef<string | null>(null);
+
   function formatTime(iso: string) {
     const date = new Date(iso);
     if (isToday(iso)) {
@@ -133,6 +144,10 @@ export default function AlertsScreen() {
    * moving made a tap feel like it had missed.
    */
   function handlePress(notification: Notification) {
+    if (swipeGuard.current === notification.id) {
+      swipeGuard.current = null;
+      return;
+    }
     if (notification.target) goToTarget(notification.target);
     markNotificationRead(notification.id).then(invalidateNotifications);
   }
@@ -194,6 +209,9 @@ export default function AlertsScreen() {
           rightThreshold={40}
           overshootRight={false}
           containerStyle={styles.swipeContainer}
+          onSwipeableOpenStartDrag={() => {
+            swipeGuard.current = notification.id;
+          }}
           renderRightActions={() => (
             <AnimatedPressable
               haptic="medium"

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,7 @@ import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { PackageCube } from '../components/PackageCube';
 import { useConfirm } from '../components/ConfirmDialog';
+import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { LoadError } from '../components/LoadError';
 import { GlassIconButton } from '../components/GlassIconButton';
@@ -33,7 +34,7 @@ import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
 import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
-import { completePickups } from '../services/mock-api';
+import { completePickups, setPickupOrder } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
 
 /**
@@ -71,6 +72,8 @@ interface PickupCardProps {
   selected?: boolean;
   /** Arrived here from a notification about this pickup. */
   highlighted?: boolean;
+  /** Present only for a scheduled stop — spreads onto `DragHandle`. */
+  drag?: DragBinding;
   onToggle: () => void;
   onSelect?: () => void;
   t: TFunction;
@@ -92,6 +95,7 @@ function PickupCard({
   readOnly = false,
   selected = false,
   highlighted = false,
+  drag,
   onToggle,
   onSelect,
   t,
@@ -108,6 +112,7 @@ function PickupCard({
       }>
 
       <View style={styles.headRow}>
+        {drag && <DragHandle drag={drag} />}
         {/* Ticking a stop is what marks it collected — deliberately its own
             control, so expanding to check the parcels never commits anything. */}
         {onSelect && (
@@ -241,6 +246,7 @@ export default function PickupsScreen() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
   const completed = pickups?.filter((p) => p.status === 'COMPLETED') ?? [];
@@ -278,6 +284,12 @@ export default function PickupsScreen() {
     setExpandedIds(forget);
     setCompleting(false);
     showToast(t('pickups.doneToast', { count: ids.length }));
+  }
+
+  async function handleReorder(orderedIds: string[]) {
+    await setPickupOrder(orderedIds);
+    await invalidatePickups();
+    showToast(t('pickups.reorderedToast'));
   }
 
   function toggleIn(setter: typeof setExpandedIds, id: string) {
@@ -318,12 +330,53 @@ export default function PickupsScreen() {
         </View>
       </View>
 
-      <FlashList
-        data={displayed}
-        extraData={[expandedIds, selectedIds]}
-        keyExtractor={(pickup) => pickup.id}
-        contentContainerStyle={styles.content}
-        ListHeaderComponent={
+      {segment === 'COMPLETED' ? (
+        <FlashList
+          data={displayed}
+          keyExtractor={(pickup) => pickup.id}
+          contentContainerStyle={styles.content}
+          ListHeaderComponent={
+            <View style={styles.headerBlock}>
+              <SegmentedControl
+                segments={[
+                  { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
+                  { value: 'COMPLETED', label: t('pickups.segments.completed') },
+                ]}
+                value={segment}
+                onChange={setSegment}
+              />
+            </View>
+          }
+          ListEmptyComponent={
+            screen.isError && !pickups ? (
+              <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+            ) : !pickups ? (
+              <View style={styles.skeletonGroup}>
+                <SkeletonBlock height={140} radius={Radii.card} />
+                <SkeletonRow />
+                <SkeletonRow />
+              </View>
+            ) : (
+              <EmptyState icon="checkmark-done-outline" title={t('pickups.empty.completed')} />
+            )
+          }
+          renderItem={({ item: pickup }) => (
+            <View style={styles.row}>
+              <PickupCard
+                pickup={pickup}
+                colors={colors}
+                scheme={scheme}
+                readOnly
+                expanded={expandedIds.has(pickup.id)}
+                highlighted={pickup.id === highlightedId}
+                onToggle={() => toggleIn(setExpandedIds, pickup.id)}
+                t={t}
+              />
+            </View>
+          )}
+        />
+      ) : (
+        <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
           <View style={styles.headerBlock}>
             <SegmentedControl
               segments={[
@@ -334,9 +387,8 @@ export default function PickupsScreen() {
               onChange={setSegment}
             />
           </View>
-        }
-        ListEmptyComponent={
-          screen.isError && !pickups ? (
+
+          {screen.isError && !pickups ? (
             <LoadError onRetry={screen.retry} retrying={screen.retrying} />
           ) : !pickups ? (
             <View style={styles.skeletonGroup}>
@@ -344,37 +396,35 @@ export default function PickupsScreen() {
               <SkeletonRow />
               <SkeletonRow />
             </View>
-          ) : (
+          ) : scheduled.length === 0 ? (
             <EmptyState
-              icon={segment === 'SCHEDULED' ? undefined : 'checkmark-done-outline'}
-              illustration={segment === 'SCHEDULED' ? <PackageCube size={34} /> : undefined}
-              title={
-                segment === 'SCHEDULED'
-                  ? t('pickups.empty.scheduled')
-                  : t('pickups.empty.completed')
-              }
+              illustration={<PackageCube size={34} />}
+              title={t('pickups.empty.scheduled')}
             />
-          )
-        }
-        renderItem={({ item: pickup }) => (
-          <View style={styles.row}>
-            <PickupCard
-              pickup={pickup}
-              colors={colors}
-              scheme={scheme}
-              readOnly={segment === 'COMPLETED'}
-              expanded={expandedIds.has(pickup.id)}
-              selected={selectedIds.has(pickup.id)}
-              highlighted={pickup.id === highlightedId}
-              onToggle={() => toggleIn(setExpandedIds, pickup.id)}
-              onSelect={
-                segment === 'SCHEDULED' ? () => toggleIn(setSelectedIds, pickup.id) : undefined
-              }
-              t={t}
+          ) : (
+            <DraggableList
+              data={scheduled}
+              idOf={(pickup) => pickup.id}
+              onReorder={handleReorder}
+              onDragStateChange={setDragging}
+              renderItem={(pickup, _index, drag) => (
+                <PickupCard
+                  pickup={pickup}
+                  colors={colors}
+                  scheme={scheme}
+                  expanded={expandedIds.has(pickup.id)}
+                  selected={selectedIds.has(pickup.id)}
+                  highlighted={pickup.id === highlightedId}
+                  drag={drag}
+                  onToggle={() => toggleIn(setExpandedIds, pickup.id)}
+                  onSelect={() => toggleIn(setSelectedIds, pickup.id)}
+                  t={t}
+                />
+              )}
             />
-          </View>
-        )}
-      />
+          )}
+        </ScrollView>
+      )}
 
       {segment === 'SCHEDULED' && scheduled.length > 0 && (
         <View

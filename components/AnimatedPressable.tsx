@@ -1,6 +1,15 @@
 import * as Haptics from 'expo-haptics';
 import { forwardRef, useEffect, useRef, type ComponentRef } from 'react';
 import { Pressable, type PressableProps } from 'react-native';
+// Tried swapping this for gesture-handler's own Pressable, since it shares
+// the gesture arena with Pan gestures (swipe-to-delete, drag) and should
+// lose arbitration cleanly instead of still firing onPress. It broke plain
+// taps wherever a Pressable sits inside another gesture-handler recognizer
+// (e.g. every row in a Swipeable) — nested gesture-handler recognizers need
+// explicit relations (simultaneousHandlers/blocksExternalGesture) to resolve
+// correctly, and without that wiring the outer recognizer can just eat the
+// tap. Not worth that coupling for one screen — see the swipe-guard ref in
+// alerts/index.tsx for how that case is actually handled.
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

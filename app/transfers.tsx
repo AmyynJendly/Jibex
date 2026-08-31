@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
+import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
@@ -18,6 +19,7 @@ import { MetaChip } from '../components/MetaChip';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import {
   Fonts,
   Radii,
@@ -31,6 +33,7 @@ import {
 import { localeTag } from '../lib/date';
 import { useScreenState, useTransfers } from '../lib/query';
 import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
+import { setTransferOrder } from '../services/mock-api';
 import type { Transfer } from '../types';
 
 type Toggle = 'current' | 'history';
@@ -38,6 +41,7 @@ type Toggle = 'current' | 'history';
 export default function TransfersScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
@@ -50,6 +54,7 @@ export default function TransfersScreen() {
     if (tabParam) setToggle(tabParam);
   }, [tabParam]);
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
@@ -58,12 +63,103 @@ export default function TransfersScreen() {
     });
   }
 
+  async function handleReorder(orderedIds: string[]) {
+    await setTransferOrder(orderedIds);
+    showToast(t('transfers.reorderedToast'));
+  }
+
   const current = transfers?.filter((tr) => tr.status === 'IN_PROGRESS') ?? [];
   const history = transfers?.filter((tr) => tr.status === 'COMPLETED') ?? [];
   // History is read-only: no QR, no actions of any kind.
   const isHistory = toggle === 'history';
   const displayed = isHistory ? history : current;
   const parcelsMoving = current.reduce((sum, tr) => sum + tr.parcelCount, 0);
+
+  function renderCard(transfer: Transfer, drag?: DragBinding) {
+    const completed = transfer.status === 'COMPLETED';
+    const accent = completed ? colors.success : colors.accent;
+    const showingQr = qrTransferId === transfer.id;
+
+    return (
+      <Card
+        key={transfer.id}
+        accent={accent}
+        gap={Spacing.md}
+        borderColor={transfer.id === highlightedId ? colors.accent : undefined}>
+        <View style={styles.cardTopRow}>
+          <View style={styles.cardTopLeft}>
+            {drag && <DragHandle drag={drag} />}
+            <TrackingId value={transfer.id} size="inline" />
+          </View>
+          <Text
+            style={[
+              styles.statusChip,
+              {
+                color: accent,
+                backgroundColor: completed ? colors.successSoft : colors.accentSoft,
+              },
+            ]}
+            numberOfLines={1}>
+            {completed ? t('transfers.status.completed') : t('transfers.status.awaitingHandoff')}
+          </Text>
+        </View>
+
+        <AgencyFlow
+          fromLabel={t('transfers.from')}
+          from={transfer.originAgency}
+          toLabel={t('transfers.to')}
+          to={transfer.destinationAgency}
+        />
+
+        <View style={styles.metaRow}>
+          <MetaChip
+            icon="cube-outline"
+            tone="accent"
+            label={t('common.package', { count: transfer.parcelCount })}
+          />
+          <MetaChip icon="business-outline" label={transfer.location} />
+          <MetaChip icon="time-outline" label={formatTime(transfer.scheduledAt)} />
+        </View>
+
+        {!isHistory && (
+          <View style={[styles.actions, { borderTopColor: colors.separator }]}>
+            {showingQr ? (
+              <Animated.View entering={morphIn(0, 8)} style={styles.qrBlock}>
+                <View style={styles.qrCard}>
+                  <QRCode value={`JIBEX-TRANSFER:${transfer.id}`} size={150} />
+                </View>
+                <Text style={[Typography.caption2, styles.qrHint, { color: colors.textSecondary }]}>
+                  {t('transfers.qrInfoNote')}
+                </Text>
+                <AnimatedPressable scaleTo={0.95} onPress={() => setQrTransferId(null)}>
+                  <Text style={[Typography.footnote, { color: colors.accent }]}>
+                    {t('transfers.hideQr')}
+                  </Text>
+                </AnimatedPressable>
+              </Animated.View>
+            ) : (
+              <>
+                <PrimaryButton
+                  label={t('transfers.showQr')}
+                  height={46}
+                  onPress={() => setQrTransferId(transfer.id)}
+                />
+                <AnimatedPressable
+                  scaleTo={0.97}
+                  style={[styles.scanButton, { borderColor: colors.separator }]}
+                  onPress={() => router.push('/scanner')}>
+                  <Ionicons name="scan-outline" size={16} color={colors.textSecondary} />
+                  <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
+                    {t('transfers.scanToConfirm')}
+                  </Text>
+                </AnimatedPressable>
+              </>
+            )}
+          </View>
+        )}
+      </Card>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -89,7 +185,7 @@ export default function TransfersScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
         <SegmentedControl
           segments={[
             { value: 'current', label: t('transfers.toggleCurrent') },
@@ -112,93 +208,16 @@ export default function TransfersScreen() {
             icon="swap-horizontal-outline"
             title={isHistory ? t('transfers.emptyHistory') : t('transfers.empty')}
           />
+        ) : isHistory ? (
+          history.map((transfer) => renderCard(transfer))
         ) : (
-          displayed.map((transfer, i) => {
-            const completed = transfer.status === 'COMPLETED';
-            const accent = completed ? colors.success : colors.accent;
-            const showingQr = qrTransferId === transfer.id;
-
-            return (
-              <Card
-                key={transfer.id}
-                accent={accent}
-                gap={Spacing.md}
-                borderColor={transfer.id === highlightedId ? colors.accent : undefined}>
-
-                <View style={styles.cardTopRow}>
-                  <TrackingId value={transfer.id} size="inline" />
-                  <Text
-                    style={[
-                      styles.statusChip,
-                      {
-                        color: accent,
-                        backgroundColor: completed ? colors.successSoft : colors.accentSoft,
-                      },
-                    ]}
-                    numberOfLines={1}>
-                    {completed
-                      ? t('transfers.status.completed')
-                      : t('transfers.status.awaitingHandoff')}
-                  </Text>
-                </View>
-
-                <AgencyFlow
-                  fromLabel={t('transfers.from')}
-                  from={transfer.originAgency}
-                  toLabel={t('transfers.to')}
-                  to={transfer.destinationAgency}
-                />
-
-                <View style={styles.metaRow}>
-                  <MetaChip
-                    icon="cube-outline"
-                    tone="accent"
-                    label={t('common.package', { count: transfer.parcelCount })}
-                  />
-                  <MetaChip icon="business-outline" label={transfer.location} />
-                  <MetaChip icon="time-outline" label={formatTime(transfer.scheduledAt)} />
-                </View>
-
-                {!isHistory && (
-                  <View style={[styles.actions, { borderTopColor: colors.separator }]}>
-                    {showingQr ? (
-                      <Animated.View entering={morphIn(0, 8)} style={styles.qrBlock}>
-                        <View style={styles.qrCard}>
-                          <QRCode value={`JIBEX-TRANSFER:${transfer.id}`} size={150} />
-                        </View>
-                        <Text
-                          style={[Typography.caption2, styles.qrHint, { color: colors.textSecondary }]}>
-                          {t('transfers.qrInfoNote')}
-                        </Text>
-                        <AnimatedPressable scaleTo={0.95} onPress={() => setQrTransferId(null)}>
-                          <Text style={[Typography.footnote, { color: colors.accent }]}>
-                            {t('transfers.hideQr')}
-                          </Text>
-                        </AnimatedPressable>
-                      </Animated.View>
-                    ) : (
-                      <>
-                        <PrimaryButton
-                          label={t('transfers.showQr')}
-                          height={46}
-                          onPress={() => setQrTransferId(transfer.id)}
-                        />
-                        <AnimatedPressable
-                          scaleTo={0.97}
-                          style={[styles.scanButton, { borderColor: colors.separator }]}
-                          onPress={() => router.push('/scanner')}>
-                          <Ionicons name="scan-outline" size={16} color={colors.textSecondary} />
-                          <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
-                            {t('transfers.scanToConfirm')}
-                          </Text>
-                        </AnimatedPressable>
-                      </>
-                    )}
-                  </View>
-                )}
-              </Card>
-            );
-          })
+          <DraggableList
+            data={current}
+            idOf={(transfer) => transfer.id}
+            onReorder={handleReorder}
+            onDragStateChange={setDragging}
+            renderItem={(transfer, _index, drag) => renderCard(transfer, drag)}
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -236,6 +255,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  cardTopLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
   },
   statusChip: {

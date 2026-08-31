@@ -9,6 +9,7 @@ import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
+import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
@@ -31,7 +32,7 @@ import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
-import { confirmReturns } from '../services/mock-api';
+import { confirmReturns, setReturnOrder } from '../services/mock-api';
 import type { Return } from '../types';
 
 type Toggle = 'current' | 'history';
@@ -54,6 +55,7 @@ export default function ReturnsScreen() {
     if (tabParam) setToggle(tabParam);
   }, [tabParam]);
   const [confirming, setConfirming] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
@@ -93,6 +95,92 @@ export default function ReturnsScreen() {
     showToast(t('returns.confirmToast', { count: batches.length }));
   }
 
+  async function handleReorder(orderedIds: string[]) {
+    await setReturnOrder(orderedIds);
+    showToast(t('returns.reorderedToast'));
+  }
+
+  function renderCard(item: Return, drag?: DragBinding) {
+    const accent = isHistory ? colors.success : colors.warning;
+    return (
+      <Card
+        key={item.id}
+        accent={accent}
+        gap={Spacing.md}
+        borderColor={item.id === highlightedId ? colors.accent : undefined}>
+        <View style={styles.cardTopRow}>
+          <View style={styles.cardTopLeft}>
+            {drag && <DragHandle drag={drag} />}
+            <TrackingId value={item.id} size="inline" />
+          </View>
+          <Text
+            style={[
+              styles.statusChip,
+              {
+                color: accent,
+                backgroundColor: isHistory ? colors.successSoft : colors.warningSoft,
+              },
+            ]}
+            numberOfLines={1}>
+            {enumLabel(t, 'returnStatus', item.status)}
+          </Text>
+        </View>
+
+        <AgencyFlow
+          fromLabel={t('returns.from')}
+          from={item.fromAgency}
+          toLabel={t('returns.to')}
+          to={item.toAgency}
+        />
+
+        <View style={styles.metaRow}>
+          <MetaChip
+            icon="arrow-undo-outline"
+            tone={isHistory ? 'success' : 'warning'}
+            label={t('common.package', { count: item.parcelCount })}
+          />
+          <MetaChip icon="business-outline" label={item.location} />
+          <MetaChip icon="time-outline" label={formatTime(item.scheduledAt)} />
+        </View>
+
+        {item.relatedTransferId && (
+          <View style={styles.sourceRow}>
+            <Ionicons name="git-branch-outline" size={13} color={colors.textTertiary} />
+            <Text style={[monoStyle(11), { color: colors.textTertiary }]} numberOfLines={1}>
+              {t('returns.relatedTransfer', { id: item.relatedTransferId })}
+            </Text>
+          </View>
+        )}
+
+        {/* History is read-only — no actions there. */}
+        {!isHistory && (
+          <View style={[styles.actions, { borderTopColor: colors.separator }]}>
+            <AnimatedPressable
+              scaleTo={0.96}
+              style={[styles.confirmButton, { backgroundColor: colors.success }]}
+              onPress={() => handleConfirm([item])}>
+              <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />
+              <Text style={styles.confirmButtonText}>{t('returns.confirmOne')}</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              scaleTo={0.94}
+              accessibilityRole="button"
+              accessibilityLabel={t('returns.scan')}
+              style={[styles.scanIconButton, { borderColor: colors.separator }]}
+              onPress={() =>
+                router.push({
+                  pathname: '/scanner',
+                  params: { batchIds: JSON.stringify([item.id]) },
+                })
+              }>
+              <Ionicons name="scan-outline" size={18} color={colors.textSecondary} />
+            </AnimatedPressable>
+          </View>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.backRow}>
@@ -117,7 +205,7 @@ export default function ReturnsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
         <SegmentedControl
           segments={[
             { value: 'current', label: t('returns.toggleCurrent') },
@@ -149,85 +237,16 @@ export default function ReturnsScreen() {
             icon="arrow-undo-outline"
             title={isHistory ? t('returns.emptyHistory') : t('returns.empty')}
           />
+        ) : isHistory ? (
+          processed.map((item) => renderCard(item))
         ) : (
-          displayed.map((item, i) => {
-            const accent = isHistory ? colors.success : colors.warning;
-            return (
-              <Card
-                key={item.id}
-                accent={accent}
-                gap={Spacing.md}
-                borderColor={item.id === highlightedId ? colors.accent : undefined}>
-
-                <View style={styles.cardTopRow}>
-                  <TrackingId value={item.id} size="inline" />
-                  <Text
-                    style={[
-                      styles.statusChip,
-                      {
-                        color: accent,
-                        backgroundColor: isHistory ? colors.successSoft : colors.warningSoft,
-                      },
-                    ]}
-                    numberOfLines={1}>
-                    {enumLabel(t, 'returnStatus', item.status)}
-                  </Text>
-                </View>
-
-                <AgencyFlow
-                  fromLabel={t('returns.from')}
-                  from={item.fromAgency}
-                  toLabel={t('returns.to')}
-                  to={item.toAgency}
-                />
-
-                <View style={styles.metaRow}>
-                  <MetaChip
-                    icon="arrow-undo-outline"
-                    tone={isHistory ? 'success' : 'warning'}
-                    label={t('common.package', { count: item.parcelCount })}
-                  />
-                  <MetaChip icon="business-outline" label={item.location} />
-                  <MetaChip icon="time-outline" label={formatTime(item.scheduledAt)} />
-                </View>
-
-                {item.relatedTransferId && (
-                  <View style={styles.sourceRow}>
-                    <Ionicons name="git-branch-outline" size={13} color={colors.textTertiary} />
-                    <Text style={[monoStyle(11), { color: colors.textTertiary }]} numberOfLines={1}>
-                      {t('returns.relatedTransfer', { id: item.relatedTransferId })}
-                    </Text>
-                  </View>
-                )}
-
-                {/* History is read-only — no actions there. */}
-                {!isHistory && (
-                  <View style={[styles.actions, { borderTopColor: colors.separator }]}>
-                    <AnimatedPressable
-                      scaleTo={0.96}
-                      style={[styles.confirmButton, { backgroundColor: colors.success }]}
-                      onPress={() => handleConfirm([item])}>
-                      <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />
-                      <Text style={styles.confirmButtonText}>{t('returns.confirmOne')}</Text>
-                    </AnimatedPressable>
-                    <AnimatedPressable
-                      scaleTo={0.94}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('returns.scan')}
-                      style={[styles.scanIconButton, { borderColor: colors.separator }]}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/scanner',
-                          params: { batchIds: JSON.stringify([item.id]) },
-                        })
-                      }>
-                      <Ionicons name="scan-outline" size={18} color={colors.textSecondary} />
-                    </AnimatedPressable>
-                  </View>
-                )}
-              </Card>
-            );
-          })
+          <DraggableList
+            data={pending}
+            idOf={(item) => item.id}
+            onReorder={handleReorder}
+            onDragStateChange={setDragging}
+            renderItem={(item, _index, drag) => renderCard(item, drag)}
+          />
         )}
       </ScrollView>
 
@@ -315,6 +334,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  cardTopLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
   },
   statusChip: {

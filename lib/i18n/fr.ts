@@ -116,6 +116,9 @@ const fr: TranslationResource = {
     paidTag: 'Payé',
     call: 'Appeler',
     update: 'Maj',
+    reorderedToast: 'Ordre enregistré',
+    nearestFirst: 'Plus proche d\'abord',
+    nearestFirstHint: 'Glissez un arrêt pour définir votre propre ordre',
     confirm: {
       title_one: '{{count}} colis à confirmer',
       title_other: '{{count}} colis à confirmer',
@@ -283,6 +286,7 @@ const fr: TranslationResource = {
     doneConfirmAction: 'Marquer collecté',
     doneToast_one: '{{count}} collecte marquée',
     doneToast_other: '{{count}} collectes marquées',
+    reorderedToast: 'Ordre enregistré',
     empty: {
       scheduled: 'Aucune collecte prévue',
       completed: 'Aucune collecte terminée',
@@ -305,6 +309,7 @@ const fr: TranslationResource = {
     toggleCurrent: 'En cours',
     toggleHistory: 'Historique',
     emptyHistory: 'Aucun transfert passé',
+    reorderedToast: 'Ordre enregistré',
   },
 
   returns: {
@@ -332,6 +337,7 @@ const fr: TranslationResource = {
     toggleCurrent: 'En cours',
     toggleHistory: 'Historique',
     emptyHistory: 'Aucun retour passé',
+    reorderedToast: 'Ordre enregistré',
   },
 
   alerts: {
@@ -411,6 +417,11 @@ const fr: TranslationResource = {
         question: 'Mon scanner ne lit pas un code-barres',
         answer:
           'Vérifiez que l\'accès à la caméra est activé et que le code-barres est bien éclairé. S\'il ne se scanne toujours pas, utilisez "Saisir le code manuellement" sur l\'écran du scanner.',
+      },
+      {
+        question: "Comment je change l'ordre de mes colis ?",
+        answer:
+          'Dans Tournées, glissez un colis par la poignée sur sa carte pour le monter ou le descendre. Cela désactive automatiquement "Plus proche d\'abord" — votre ordre est enregistré et reste en place jusqu\'à ce que vous le changiez à nouveau ou réactiviez le tri automatique.',
       },
     ],
   },

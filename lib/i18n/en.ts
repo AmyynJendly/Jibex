@@ -115,6 +115,9 @@ const en = {
     paidTag: 'Paid',
     call: 'Call',
     update: 'Update',
+    reorderedToast: 'Order saved',
+    nearestFirst: 'Nearest first',
+    nearestFirstHint: 'Drag a stop to set your own order',
     // Deliberately terse: the driver reads this standing in a van with the
     // packages in front of them, not looking for an explanation.
     confirm: {
@@ -284,6 +287,7 @@ const en = {
     doneConfirmAction: 'Mark Collected',
     doneToast_one: '{{count}} pickup marked collected',
     doneToast_other: '{{count}} pickups marked collected',
+    reorderedToast: 'Order saved',
     empty: {
       scheduled: 'No scheduled pickups',
       completed: 'No completed pickups',
@@ -305,6 +309,7 @@ const en = {
     toggleCurrent: 'Current',
     toggleHistory: 'History',
     emptyHistory: 'No past transfers',
+    reorderedToast: 'Order saved',
   },
 
   returns: {
@@ -333,6 +338,7 @@ const en = {
     toggleCurrent: 'Current',
     toggleHistory: 'History',
     emptyHistory: 'No past returns',
+    reorderedToast: 'Order saved',
   },
 
   alerts: {
@@ -408,6 +414,11 @@ const en = {
         question: "My scanner won't read a barcode",
         answer:
           'Make sure camera access is enabled and the barcode is well-lit. If it still won\'t scan, use "Enter Code Manually" on the scanner screen instead.',
+      },
+      {
+        question: 'How do I change the order of my packages?',
+        answer:
+          'In Runsheets, drag a package by the handle on its card to move it up or down. This turns off "Nearest first" automatically — your order is saved and stays put until you change it again or switch nearest-first back on.',
       },
     ],
   },

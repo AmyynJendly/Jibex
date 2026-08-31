@@ -7,6 +7,7 @@ import {
   getDriverStats,
   getHistoryParcels,
   getJobsByIds,
+  getNearestFirst,
   getNotifications,
   getPickups,
   getReturns,
@@ -75,6 +76,7 @@ export const keys = {
   historyParcels: ['parcels', 'history'] as const,
   jobsByIds: (ids: string[]) => ['jobs', ids.join(',')] as const,
   routeOrder: (ids: string[]) => ['routeOrder', ids.join(',')] as const,
+  nearestFirst: ['nearestFirst'] as const,
   notifications: ['notifications'] as const,
   pickups: ['pickups'] as const,
   transfers: ['transfers'] as const,
@@ -89,7 +91,9 @@ export const keys = {
 export function invalidateDeliveryData() {
   return queryClient.invalidateQueries({
     predicate: ({ queryKey }) =>
-      ['parcels', 'jobs', 'runsheets', 'stats', 'notifications'].includes(queryKey[0] as string),
+      ['parcels', 'jobs', 'runsheets', 'stats', 'notifications', 'routeOrder', 'nearestFirst'].includes(
+        queryKey[0] as string
+      ),
   });
 }
 
@@ -122,6 +126,9 @@ export const useNotifications = () =>
 export const usePickups = () => useQuery({ queryKey: keys.pickups, queryFn: getPickups });
 export const useTransfers = () => useQuery({ queryKey: keys.transfers, queryFn: getTransfers });
 export const useReturns = () => useQuery({ queryKey: keys.returns, queryFn: getReturns });
+
+export const useNearestFirst = () =>
+  useQuery({ queryKey: keys.nearestFirst, queryFn: getNearestFirst });
 
 export const useRouteOrder = (ids: string[]) =>
   useQuery({
