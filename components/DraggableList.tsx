@@ -301,10 +301,23 @@ export function DraggableList<T>({
     (id: string, height: number) => {
       const rounded = Math.round(height);
       if (rounded <= 0) return;
-      const known = heights.get();
-      if (Math.abs((known[id] ?? 0) - rounded) < 0.5) return;
-      heights.set({ ...known, [id]: rounded });
-      setMeasured((prev) => ({ ...prev, [id]: rounded }));
+      // Merged on the UI thread, not read here and written back. From JS,
+      // `set` only schedules the write and `get` keeps returning the last
+      // value JS saw, so rows reporting in the same frame — every row, on
+      // first layout — each wrote {...stale, [id]} and erased the others.
+      // A row with no recorded height counts as zero tall, so the row under
+      // it was placed at the very top, hidden beneath the first card. Web has
+      // no separate UI thread, which is why it only ever showed on a phone.
+      heights.modify((known) => {
+        'worklet';
+        if (Math.abs((known[id] ?? 0) - rounded) < 0.5) return known;
+        return { ...known, [id]: rounded };
+      });
+      setMeasured((prev) =>
+        prev[id] !== undefined && Math.abs(prev[id] - rounded) < 0.5
+          ? prev
+          : { ...prev, [id]: rounded }
+      );
     },
     [heights]
   );
