@@ -27,6 +27,7 @@ import {
   morphIn,
 } from '../../../constants';
 import { localeTag } from '../../../lib/date';
+import { useNow } from '../../../lib/useNow';
 import {
   deleteAllNotifications,
   deleteNotification,
@@ -114,6 +115,7 @@ export default function AlertsScreen() {
   const notificationsQuery = useNotifications();
   const screen = useScreenState([notificationsQuery]);
   const notifications = notificationsQuery.data ?? null;
+  const now = useNow();
 
   /**
    * A horizontal swipe never leaves the row's own bounds, so it never trips
@@ -128,7 +130,7 @@ export default function AlertsScreen() {
   function formatTime(iso: string) {
     const date = new Date(iso);
     if (isToday(iso)) {
-      const minutes = Math.max(1, Math.round((Date.now() - date.getTime()) / 60_000));
+      const minutes = Math.max(1, Math.round((now - date.getTime()) / 60_000));
       if (minutes < 60) return `${minutes}m`;
       return `${Math.round(minutes / 60)}h`;
     }

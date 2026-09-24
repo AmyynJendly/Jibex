@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
@@ -32,7 +32,7 @@ import {
 } from '../constants';
 import { localeTag } from '../lib/date';
 import { useScreenState, useTransfers } from '../lib/query';
-import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
+import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { setTransferOrder } from '../services/mock-api';
 import type { Transfer } from '../types';
 
@@ -46,13 +46,8 @@ export default function TransfersScreen() {
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
   const transfers = transfersQuery.data ?? null;
-  const tabParam = useTabParam(['current', 'history'] as const);
-  const [toggle, setToggle] = useState<Toggle>(tabParam ?? 'current');
+  const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
   const highlightedId = useFocusHighlight();
-
-  useEffect(() => {
-    if (tabParam) setToggle(tabParam);
-  }, [tabParam]);
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 

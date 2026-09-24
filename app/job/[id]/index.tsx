@@ -34,6 +34,7 @@ import { localeTag } from '../../../lib/date';
 import { telUrl } from '../../../lib/phone';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
+import { useNow } from '../../../lib/useNow';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import {
@@ -94,6 +95,7 @@ export default function JobDetailScreen() {
   const [job, setJob] = useState<Job | null>(null);
   const [position, setPosition] = useState<{ index: number; total: number } | null>(null);
   const liveCoords = useLiveCoords();
+  const now = useNow();
   const ripple = useSharedValue(0);
 
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function JobDetailScreen() {
 
   const distanceKm = haversineKm(liveCoords ?? FALLBACK_ORIGIN, job.location);
   const etaMinutes = Math.max(1, Math.round((distanceKm / 35) * 60));
-  const etaTime = new Date(Date.now() + etaMinutes * 60_000).toLocaleTimeString(
+  const etaTime = new Date(now + etaMinutes * 60_000).toLocaleTimeString(
     localeTag(i18n.language),
     { hour: '2-digit', minute: '2-digit' }
   );

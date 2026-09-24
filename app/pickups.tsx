@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,7 +32,7 @@ import {
 import { formatCurrency } from '../lib/currency';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
-import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
+import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { completePickups, setPickupOrder } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
@@ -236,13 +236,8 @@ export default function PickupsScreen() {
   const pickupsQuery = usePickups();
   const screen = useScreenState([pickupsQuery]);
   const pickups = pickupsQuery.data ?? null;
-  const tabParam = useTabParam(['SCHEDULED', 'COMPLETED'] as const);
-  const [segment, setSegment] = useState<PickupStatus>(tabParam ?? 'SCHEDULED');
+  const [segment, setSegment] = useTabSegment<PickupStatus>(['SCHEDULED', 'COMPLETED'], 'SCHEDULED');
   const highlightedId = useFocusHighlight();
-
-  useEffect(() => {
-    if (tabParam) setSegment(tabParam);
-  }, [tabParam]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);

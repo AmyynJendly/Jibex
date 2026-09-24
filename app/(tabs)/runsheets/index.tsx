@@ -34,7 +34,7 @@ import {
 import { formatCurrency } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { telUrl } from '../../../lib/phone';
-import { useFocusHighlight, useTabParam } from '../../../lib/useFocusHighlight';
+import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
   invalidateDeliveryData,
   useActiveParcels,
@@ -252,14 +252,9 @@ export default function RunsheetsScreen() {
   const nearestFirst = nearestFirstQuery.data ?? true;
   // Opened from a notification, the screen lands on the side that alert is
   // about — a refusal belongs in history, not on the current run.
-  const tabParam = useTabParam(['current', 'history'] as const);
-  const [toggle, setToggle] = useState<Toggle>(tabParam ?? 'current');
+  const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
   const highlightedId = useFocusHighlight();
   const listRef = useRef<FlashListRef<Job>>(null);
-
-  useEffect(() => {
-    if (tabParam) setToggle(tabParam);
-  }, [tabParam]);
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sheetJob, setSheetJob] = useState<Job | null>(null);
   // The active list itself follows the finger during a drag, so the

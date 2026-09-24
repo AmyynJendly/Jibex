@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +31,7 @@ import { localeTag } from '../lib/date';
 import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
-import { useFocusHighlight, useTabParam } from '../lib/useFocusHighlight';
+import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { confirmReturns, setReturnOrder } from '../services/mock-api';
 import type { Return } from '../types';
 
@@ -47,13 +47,8 @@ export default function ReturnsScreen() {
   const returnsQuery = useReturns();
   const screen = useScreenState([returnsQuery]);
   const returns = returnsQuery.data ?? null;
-  const tabParam = useTabParam(['current', 'history'] as const);
-  const [toggle, setToggle] = useState<Toggle>(tabParam ?? 'current');
+  const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
   const highlightedId = useFocusHighlight();
-
-  useEffect(() => {
-    if (tabParam) setToggle(tabParam);
-  }, [tabParam]);
   const [confirming, setConfirming] = useState(false);
   const [dragging, setDragging] = useState(false);
 

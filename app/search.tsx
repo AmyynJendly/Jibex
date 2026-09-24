@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -37,16 +37,18 @@ export default function SearchScreen() {
     }
   }
 
-  useEffect(() => {
-    const trimmed = query.trim().toUpperCase();
+  function handleChangeText(text: string) {
+    setQuery(text);
+    const trimmed = text.trim().toUpperCase();
     if (trimmed.length < TRACKING_ID_LENGTH) {
+      // Drops any lookup still in flight for a longer string the driver
+      // has since deleted back from.
       requestIdRef.current++;
       setStatus('idle');
       return;
     }
     runSearch(trimmed);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }
 
   function handleSubmit() {
     const trimmed = query.trim().toUpperCase();
@@ -72,7 +74,7 @@ export default function SearchScreen() {
             label={t('search.label')}
             placeholder={t('search.placeholder')}
             value={query}
-            onChangeText={setQuery}
+            onChangeText={handleChangeText}
             autoCapitalize="characters"
             autoCorrect={false}
             autoFocus

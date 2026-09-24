@@ -1,5 +1,13 @@
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector, type PanGesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -241,11 +249,27 @@ export function DraggableList<T>({
   const ids = useMemo(() => data.map(idOf), [data, idOf]);
   const idKey = ids.join('|');
 
-  /** Committed order — only changes when a drag settles or `data` changes. */
+  /** Committed order — `data`'s, or a settled drag's until `data` catches up to it. */
   const [order, setOrder] = useState<string[]>(ids);
+  const [seenKey, setSeenKey] = useState(idKey);
+  // `data`'s own order is the source of truth — the server merges a driver's
+  // manual order with whatever dispatch changed (see `reseat` in mock-api), so
+  // there's nothing left for this component to reconcile. Re-deriving a merge
+  // here as well meant a remembered drag order silently overrode every fresh
+  // order the server sent — nearest-first included. Adjusted during render
+  // rather than from an effect, so the new order draws in one pass.
+  if (idKey !== seenKey) {
+    setSeenKey(idKey);
+    setOrder(ids);
+  }
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [totalHeight, setTotalHeight] = useState(0);
-  const [positioned, setPositioned] = useState(false);
+  /** Row heights as React sees them — the UI thread keeps its own copy in `heights`. */
+  const [measured, setMeasured] = useState<Record<string, number>>({});
+
+  // Absolute placement only kicks in once every row has reported its height.
+  // A newly arrived row drops the list back to normal flow until it has.
+  const positioned = order.length > 0 && order.every((id) => measured[id] !== undefined);
+  const totalHeight = positioned ? order.reduce((sum, id) => sum + measured[id], 0) : 0;
 
   const slots = useSharedValue<Record<string, number>>({});
   const heights = useSharedValue<Record<string, number>>({});
@@ -254,51 +278,33 @@ export function DraggableList<T>({
   const dragY = useSharedValue(0);
 
   const dragStateRef = useRef(onDragStateChange);
-  dragStateRef.current = onDragStateChange;
   const onReorderRef = useRef(onReorder);
-  onReorderRef.current = onReorder;
+  useLayoutEffect(() => {
+    dragStateRef.current = onDragStateChange;
+    onReorderRef.current = onReorder;
+  });
 
-  const orderRef = useRef(order);
-
-  // `data`'s own order is already the source of truth — the server merges a
-  // driver's manual order with whatever dispatch changed (see `reseat` in
-  // mock-api), so there's nothing left for this component to reconcile.
-  // Re-deriving a merge here as well meant a driver's remembered drag order
-  // silently overrode every *fresh* order the server sent — nearest-first
-  // included, so toggling it back on visibly did nothing.
-  //
-  // This has to run in an effect, not inline in the render body: writing to
-  // a shared value during render — `idsSV.value = …` used to sit right here
-  // — races the UI thread's own scheduling of the animated style, which is
-  // what turned every reorder into a hard cut instead of the spring the Row
-  // below is set up to run.
+  // Hands the new order to the UI thread. This has to be an effect, not the
+  // render body: writing a shared value during render races the UI thread's
+  // own scheduling of the animated style, which is what once turned every
+  // reorder into a hard cut instead of the spring the Row runs.
   useEffect(() => {
-    orderRef.current = ids;
-    idsSV.value = ids;
-    slots.value = Object.fromEntries(ids.map((id, i) => [id, i]));
-    // Heights of departed rows would otherwise keep padding the stack.
-    const keptHeights: Record<string, number> = {};
-    ids.forEach((id) => {
-      if (heights.value[id] !== undefined) keptHeights[id] = heights.value[id];
-    });
-    heights.value = keptHeights;
-    setOrder(ids);
-    if (ids.some((id) => keptHeights[id] === undefined)) setPositioned(false);
-    // `ids` is a fresh array each render; `idKey` is its stable identity.
+    idsSV.set(ids);
+    slots.set(Object.fromEntries(ids.map((id, i) => [id, i])));
+    // `ids` is a fresh array each render; `idKey` is its stable identity. Keyed
+    // on content, a refetch that returns the same order mid-drag can't reset
+    // the slots out from under the finger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idKey]);
 
   const handleMeasure = useCallback(
     (id: string, height: number) => {
       const rounded = Math.round(height);
-      if (rounded <= 0 || Math.abs((heights.value[id] ?? 0) - rounded) < 0.5) return;
-      heights.value = { ...heights.value, [id]: rounded };
-
-      const all = orderRef.current;
-      if (all.every((rowId) => heights.value[rowId] !== undefined)) {
-        setTotalHeight(all.reduce((sum, rowId) => sum + (heights.value[rowId] ?? 0), 0));
-        setPositioned(true);
-      }
+      if (rounded <= 0) return;
+      const known = heights.get();
+      if (Math.abs((known[id] ?? 0) - rounded) < 0.5) return;
+      heights.set({ ...known, [id]: rounded });
+      setMeasured((prev) => ({ ...prev, [id]: rounded }));
     },
     [heights]
   );
@@ -306,7 +312,6 @@ export function DraggableList<T>({
   /** Committed from a worklet once the finger lifts. */
   const commitOrder = useCallback((settled: string[], moved: boolean) => {
     if (!moved) return;
-    orderRef.current = settled;
     setOrder(settled);
     onReorderRef.current(settled);
   }, []);
@@ -332,13 +337,25 @@ export function DraggableList<T>({
    */
   const startOffset = useSharedValue(0);
   const moved = useSharedValue(false);
-  const gestures = useRef(new Map<string, PanGesture>()).current;
 
-  function gestureFor(id: string) {
-    const existing = gestures.get(id);
-    if (existing) return existing;
+  // One pan per row, rebuilt only when the set or order of rows changes —
+  // never mid-drag, since nothing refetches until the finger lifts. Everything
+  // a gesture closes over is a shared value or a callback that never changes.
+  const gestures = useMemo(() => {
+    const byRow = new Map<string, PanGesture>();
+    // The refs `panFor` reaches are read inside gesture callbacks, which only
+    // run once a finger moves — never during this render. They exist so the
+    // gestures can stay built across the parent re-render a drag itself
+    // causes; closing over the callback props instead would rebuild the
+    // gesture under the finger and cancel the drag.
+    // eslint-disable-next-line react-hooks/refs
+    for (const id of ids) byRow.set(id, panFor(id));
+    return byRow;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idKey]);
 
-    const created = Gesture.Pan()
+  function panFor(id: string) {
+    return Gesture.Pan()
       // The handle is a dedicated target, so the drag starts on contact
       // rather than after a hold, and keeps the finger even past the edge.
       .shouldCancelWhenOutside(false)
@@ -408,9 +425,6 @@ export function DraggableList<T>({
         );
         scheduleOnRN(endDrag);
       });
-
-    gestures.set(id, created);
-    return created;
   }
 
   const byId = useMemo(() => new Map(data.map((item) => [idOf(item), item] as const)), [data, idOf]);
@@ -419,7 +433,8 @@ export function DraggableList<T>({
     <View style={positioned ? { height: totalHeight } : undefined}>
       {order.map((id, slot) => {
         const item = byId.get(id);
-        if (!item) return null;
+        const gesture = gestures.get(id);
+        if (!item || !gesture) return null;
         const isActive = activeId === id;
         return (
           <Row
@@ -433,7 +448,7 @@ export function DraggableList<T>({
             positioned={positioned}
             lifted={isActive}
             onMeasure={handleMeasure}>
-            {renderItem(item, slot, { gesture: gestureFor(id), isActive })}
+            {renderItem(item, slot, { gesture, isActive })}
           </Row>
         );
       })}
