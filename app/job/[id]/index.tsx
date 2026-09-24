@@ -1,3 +1,4 @@
+import { MenuView, type MenuAction } from '@expo/ui/community/menu';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,7 +15,7 @@ import Animated, {
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
-import { GlassIconButton } from '../../../components/GlassIconButton';
+import { GlassIcon, GlassIconButton } from '../../../components/GlassIconButton';
 import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
@@ -136,6 +137,27 @@ export default function JobDetailScreen() {
     { hour: '2-digit', minute: '2-digit' }
   );
 
+  /** Logged before dialling so the attempt counts even if the dialler never opens — delivery is gated on it. */
+  async function handleCall() {
+    if (!job) return;
+    setJob(await logCallAttempt(job.id));
+    await invalidateDeliveryData();
+    Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
+  }
+
+  function handleMenuAction(action: string) {
+    if (!job) return;
+    if (action === 'call') handleCall();
+    else if (action === 'navigate') openInMaps(job);
+    else if (action === 'cantDeliver') router.push({ pathname: '/job/[id]/cant-deliver', params: { id } });
+  }
+
+  const menuActions: MenuAction[] = [
+    { id: 'call', title: t('runsheets.call'), image: 'phone' },
+    { id: 'navigate', title: t('jobDetail.navigate'), image: 'arrow.triangle.turn.up.right.diamond' },
+    { id: 'cantDeliver', title: t('jobDetail.cantDeliver'), image: 'xmark.circle' },
+  ];
+
   /**
    * Marks the parcel delivered from the doorstep.
    *
@@ -186,11 +208,23 @@ export default function JobDetailScreen() {
             </Text>
           </View>
         )}
-        <GlassIconButton
-          accessibilityLabel={t('jobDetail.a11yMore')}
-          onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
+        {/* The system menu on iOS and Android. The web drop-in can't open
+            menus, so there the button keeps its old placeholder. */}
+        {Platform.OS === 'web' ? (
+          <GlassIconButton
+            accessibilityLabel={t('jobDetail.a11yMore')}
+            onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
+            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+          </GlassIconButton>
+        ) : (
+          <MenuView
+            actions={menuActions}
+            onPressAction={({ nativeEvent }) => handleMenuAction(nativeEvent.event)}>
+            <GlassIcon>
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+            </GlassIcon>
+          </MenuView>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -256,13 +290,7 @@ export default function JobDetailScreen() {
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.iconButton, { backgroundColor: colors.accentSoft }]}
-                onPress={async () => {
-                  // Logged before dialling so the attempt is recorded even if
-                  // the dialler never opens — delivery is gated on this.
-                  setJob(await logCallAttempt(job.id));
-                  await invalidateDeliveryData();
-                  Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
-                }}>
+                onPress={handleCall}>
                 <Ionicons name="call-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
               <AnimatedPressable
