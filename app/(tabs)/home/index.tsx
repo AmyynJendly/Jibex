@@ -36,25 +36,23 @@ import {
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
+import { useNextStop } from '../../../lib/useNextStop';
 import {
   invalidateDeliveryData,
   useDriverStats,
   useJobsByIds,
   useNotifications,
-  useRouteOrder,
   useRunsheets,
   useScreenState,
   useUser,
 } from '../../../lib/query';
 import { confirmRunsheetReceipt } from '../../../services/mock-api';
-import type { DriverStats, Job, Runsheet, User } from '../../../types';
+import type { DriverStats, Runsheet, User } from '../../../types';
 
 interface HomeData {
   user: User;
   stats: DriverStats;
   hasUnreadNotifications: boolean;
-  nextStop: Job | null;
-  nextStopIndex: number;
   /** Fallback shown until (or unless) a real GPS fix resolves — the driver's assigned runsheet zone. */
   zone: string | null;
   /** Runsheets still awaiting the driver's receipt confirmation — their parcels are excluded from `nextStop` since they're not deliverable yet. */
@@ -116,13 +114,9 @@ export default function HomeScreen() {
   // assigned even if not yet workable — so it moves the moment a stop in
   // Runsheets is delivered or failed.
   const allStopIds = useMemo(() => runsheets.flatMap((r) => r.stopIds), [runsheets]);
-  const workableStopIds = useMemo(
-    () => workableRunsheets.flatMap((r) => r.stopIds),
-    [workableRunsheets]
-  );
 
   const jobsQuery = useJobsByIds(allStopIds);
-  const orderQuery = useRouteOrder(workableStopIds);
+  const { nextStop, index: nextStopIndex } = useNextStop();
 
   const screen = useScreenState([userQuery, statsQuery, runsheetsQuery, notificationsQuery]);
 
@@ -132,17 +126,6 @@ export default function HomeScreen() {
     if (!user || !stats) return null;
 
     const allJobs = jobsQuery.data ?? [];
-    const orderedIds = orderQuery.data ?? [];
-    const jobById = new Map(allJobs.map((j) => [j.id, j] as const));
-
-    const orderedWorkableJobs = orderedIds
-      .map((id) => jobById.get(id))
-      .filter((j): j is Job => !!j);
-    const nextStop =
-      orderedWorkableJobs.find((j) => j.status === 'IN_TRANSIT') ??
-      orderedWorkableJobs.find((j) => j.status === 'PENDING') ??
-      null;
-
     const delivered = allJobs.filter((j) => j.status === 'DELIVERED').length;
     const failed = allJobs.filter((j) => j.status === 'FAILED').length;
 
@@ -157,8 +140,6 @@ export default function HomeScreen() {
           allJobs.length === 0 ? 0 : Math.round((delivered / allJobs.length) * 100),
       },
       hasUnreadNotifications: (notificationsQuery.data ?? []).some((n) => !n.read),
-      nextStop,
-      nextStopIndex: nextStop ? orderedIds.indexOf(nextStop.id) + 1 : 0,
       zone: workableRunsheets[0]?.zone ?? runsheets[0]?.zone ?? null,
       unconfirmedRunsheets,
     };
@@ -166,7 +147,6 @@ export default function HomeScreen() {
     userQuery.data,
     statsQuery.data,
     jobsQuery.data,
-    orderQuery.data,
     notificationsQuery.data,
     workableRunsheets,
     runsheets,
@@ -259,7 +239,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { user, stats, hasUnreadNotifications, nextStop, nextStopIndex, zone } = data;
+  const { user, stats, hasUnreadNotifications, zone } = data;
   const locationLabel = gpsLocation ?? zone;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];

@@ -1,7 +1,9 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
 
+import { NextStopAccessory } from '../../components/NextStopAccessory';
 import { useColors } from '../../constants';
+import { useNextStop } from '../../lib/useNextStop';
 
 /**
  * Native platform tab bar — UITabBar on iOS, BottomNavigationView on Android.
@@ -13,9 +15,18 @@ import { useColors } from '../../constants';
 export default function TabsLayout() {
   const colors = useColors();
   const { t } = useTranslation();
+  const { nextStop, index } = useNextStop();
 
   return (
     <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.accent}>
+      {/* iOS 26+ only — Android and web render nothing here. Gone once the
+          day's last stop is done, rather than showing an empty bar. */}
+      {nextStop && (
+        <NativeTabs.BottomAccessory>
+          <NextStopAccessory stop={nextStop} index={index} />
+        </NativeTabs.BottomAccessory>
+      )}
+
       <NativeTabs.Trigger name="home">
         <NativeTabs.Trigger.Label>{t('tabs.home')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
