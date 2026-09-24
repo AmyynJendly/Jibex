@@ -1,8 +1,11 @@
+import { usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
 
 import { NextStopAccessory } from '../../components/NextStopAccessory';
 import { useColors } from '../../constants';
+import { useNextStopBarEnabled } from '../../lib/nextStopBar';
+import { supports } from '../../lib/platformSupport';
 import { useNextStop } from '../../lib/useNextStop';
 
 /**
@@ -16,12 +19,18 @@ export default function TabsLayout() {
   const colors = useColors();
   const { t } = useTranslation();
   const { nextStop, index } = useNextStop();
+  const { enabled: barEnabled } = useNextStopBarEnabled();
+  const pathname = usePathname();
+
+  // The next-stop bar lives on the Alerts tab only, on iPhones whose tab bar
+  // has the accessory slot (iOS 26+), and only while the driver has it on in
+  // Profile. Anywhere else it simply isn't there — no stand-in to break.
+  const showNextStopBar =
+    supports.tabBarAccessory && barEnabled && pathname.startsWith('/alerts') && !!nextStop;
 
   return (
     <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.accent}>
-      {/* iOS 26+ only — Android and web render nothing here. Gone once the
-          day's last stop is done, rather than showing an empty bar. */}
-      {nextStop && (
+      {showNextStopBar && nextStop && (
         <NativeTabs.BottomAccessory>
           <NextStopAccessory stop={nextStop} index={index} />
         </NativeTabs.BottomAccessory>

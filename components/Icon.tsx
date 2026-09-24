@@ -7,16 +7,49 @@ import {
   type StyleProp,
   type TextStyle,
 } from 'react-native';
-import type { SFSymbol } from 'sf-symbols-typescript';
+import type {
+  SFSymbols1_0,
+  SFSymbols1_1,
+  SFSymbols2_0,
+  SFSymbols2_1,
+  SFSymbols2_2,
+  SFSymbols3_0,
+  SFSymbols3_1,
+  SFSymbols3_2,
+  SFSymbols3_3,
+  SFSymbols4_0,
+  SFSymbols4_1,
+  SFSymbols4_2,
+} from 'sf-symbols-typescript';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
 /**
+ * Every SF Symbol that ships with iOS 16.4 — the oldest iOS the app runs on
+ * (Expo SDK 57). A newer symbol would draw nothing on an older iPhone, so the
+ * table below can't name one without failing to compile.
+ */
+type AvailableSymbol =
+  | SFSymbols1_0
+  | SFSymbols1_1
+  | SFSymbols2_0
+  | SFSymbols2_1
+  | SFSymbols2_2
+  | SFSymbols3_0
+  | SFSymbols3_1
+  | SFSymbols3_2
+  | SFSymbols3_3
+  | SFSymbols4_0
+  | SFSymbols4_1
+  | SFSymbols4_2;
+
+/**
  * The SF Symbol drawn for each Ionicons name the app uses. Outline glyphs map
  * to plain symbols and filled glyphs to `.fill`, matching Ionicons' weights.
- * Typed against the SF Symbols catalogue, so a misspelt symbol won't compile.
+ * Typed against the SF Symbols available on iOS 16.4, so a misspelt or too-new
+ * symbol won't compile.
  */
-const SF_SYMBOLS: Partial<Record<IconName, SFSymbol>> = {
+const SF_SYMBOLS: Partial<Record<IconName, AvailableSymbol>> = {
   'alert-circle': 'exclamationmark.circle.fill',
   'alert-circle-outline': 'exclamationmark.circle',
   'arrow-forward': 'arrow.right',

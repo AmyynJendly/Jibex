@@ -432,6 +432,7 @@ const fr: TranslationResource = {
     sectionSecurity: 'Sécurité',
     biometricLogin: 'Connexion biométrique',
     hapticFeedback: 'Vibrations tactiles',
+    nextStopBar: 'Barre du prochain arrêt',
     sectionNotifications: 'Notifications',
     newJobAlerts: 'Alertes nouvelle course',
     sectionAppearance: 'Apparence',

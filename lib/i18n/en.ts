@@ -429,6 +429,7 @@ const en = {
     sectionSecurity: 'Security',
     biometricLogin: 'Biometric Login',
     hapticFeedback: 'Haptic Feedback',
+    nextStopBar: 'Next Stop Bar',
     sectionNotifications: 'Notifications',
     newJobAlerts: 'New job alerts',
     sectionAppearance: 'Appearance',

@@ -26,6 +26,8 @@ import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
 import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { clearToken } from '../../../lib/token';
 import { useHapticsEnabled } from '../../../lib/haptics';
+import { useNextStopBarEnabled } from '../../../lib/nextStopBar';
+import { supports } from '../../../lib/platformSupport';
 import { useDriverStats, useRunsheets, useUser, useVehicle } from '../../../lib/query';
 import type { DriverStats, User, Vehicle } from '../../../types';
 
@@ -55,6 +57,8 @@ export default function ProfileScreen() {
   const [biometricLogin, setBiometricLogin] = useState(true);
   const [newJobAlerts, setNewJobAlerts] = useState(true);
   const { enabled: hapticsEnabled, setEnabled: setHapticsEnabled } = useHapticsEnabled();
+  const { enabled: nextStopBarEnabled, setEnabled: setNextStopBarEnabled } =
+    useNextStopBarEnabled();
 
   async function handleLogOut() {
     await clearToken();
@@ -279,6 +283,23 @@ export default function ProfileScreen() {
                   onValueChange={setHapticsEnabled}
                 />
               </View>
+              {/* Only on iPhones that can show the bar — a switch for
+                  something that can't appear would just be noise. */}
+              {supports.tabBarAccessory && (
+                <View
+                  style={[
+                    styles.row,
+                    { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
+                  ]}>
+                  <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
+                    <Icon name="navigate-outline" size={15} color={colors.accent} />
+                  </View>
+                  <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                    {t('settings.nextStopBar')}
+                  </Text>
+                  <NativeSwitch value={nextStopBarEnabled} onValueChange={setNextStopBarEnabled} />
+                </View>
+              )}
               <View style={styles.row}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
                   <Icon name="notifications-outline" size={15} color={colors.accent} />

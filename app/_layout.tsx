@@ -27,6 +27,7 @@ import { OfflineBanner } from '../components/OfflineBanner';
 import { ToastProvider } from '../components/Toast';
 import { LanguageProvider } from '../lib/i18n/LanguageProvider';
 import { HapticsProvider } from '../lib/haptics';
+import { NextStopBarProvider } from '../lib/nextStopBar';
 
 // Without this the stack mounts `index` (the `/` -> `/login` redirect) beneath
 // any deep link, and the redirect fires and clobbers the target route.
@@ -65,26 +66,28 @@ export default function RootLayout() {
         <QueryProvider>
           <LanguageProvider>
             <HapticsProvider>
-              <ToastProvider>
-                <ConfirmDialogProvider>
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="job/[id]" />
-                    {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
-                    <Stack.Screen name="pickups" />
-                    <Stack.Screen name="transfers" />
-                    <Stack.Screen name="returns" />
-                    <Stack.Screen name="personal-info" />
-                    <Stack.Screen name="vehicle-details" />
-                    <Stack.Screen name="help-center" />
-                    <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
-                    <Stack.Screen name="search" />
-                  </Stack>
-                  <OfflineBanner />
-                  <StatusBar style="auto" />
-                </ConfirmDialogProvider>
-              </ToastProvider>
+              <NextStopBarProvider>
+                <ToastProvider>
+                  <ConfirmDialogProvider>
+                    <Stack screenOptions={{ headerShown: false }}>
+                      <Stack.Screen name="(auth)" />
+                      <Stack.Screen name="(tabs)" />
+                      <Stack.Screen name="job/[id]" />
+                      {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
+                      <Stack.Screen name="pickups" />
+                      <Stack.Screen name="transfers" />
+                      <Stack.Screen name="returns" />
+                      <Stack.Screen name="personal-info" />
+                      <Stack.Screen name="vehicle-details" />
+                      <Stack.Screen name="help-center" />
+                      <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
+                      <Stack.Screen name="search" />
+                    </Stack>
+                    <OfflineBanner />
+                    <StatusBar style="auto" />
+                  </ConfirmDialogProvider>
+                </ToastProvider>
+              </NextStopBarProvider>
             </HapticsProvider>
           </LanguageProvider>
         </QueryProvider>

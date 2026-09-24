@@ -1,7 +1,8 @@
-import { BottomSheet } from '@expo/ui';
+import { BottomSheet, RNHostView } from '@expo/ui';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactElement } from 'react';
+import { Platform, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from './Icon';
@@ -43,8 +44,19 @@ interface StatusUpdateSheetProps {
  * tool instead, so a wrongly-marked package can always be put back.
  *
  * The sheet itself is the platform's (a SwiftUI sheet on iOS) — its drag,
- * detents, dimming and dismissal are native; only the content is ours.
+ * dimming and dismissal are native; only the content is ours.
+ *
+ * On a phone it opens exactly as tall as its content. The content sits in
+ * `RNHostView` (how React Native views are hosted in SwiftUI) and is measured,
+ * and that height becomes the sheet's only detent. Left to size itself, the
+ * sheet can't see into React Native content — it opened full height and laid
+ * the content out wrongly.
  */
+const PADDING = { top: Spacing.lg, bottom: Spacing.lg, left: Spacing.xxl, right: Spacing.xxl };
+/** Used only until the content has been measured once. */
+const ESTIMATED_CONTENT_HEIGHT = 440;
+const isNative = Platform.OS !== 'web';
+
 export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: StatusUpdateSheetProps) {
   const colors = useColors();
   const { t } = useTranslation();
@@ -57,6 +69,18 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   const [lastJob, setLastJob] = useState(requestedJob);
   if (requestedJob && requestedJob !== lastJob) setLastJob(requestedJob);
   const job = requestedJob ?? lastJob;
+
+  const insets = useSafeAreaInsets();
+  const [contentHeight, setContentHeight] = useState(ESTIMATED_CONTENT_HEIGHT);
+  const sheetHeight = contentHeight + PADDING.top + PADDING.bottom + insets.bottom;
+
+  function handleContentLayout(event: LayoutChangeEvent) {
+    const measured = Math.ceil(event.nativeEvent.layout.height);
+    if (measured > 0 && measured !== contentHeight) setContentHeight(measured);
+  }
+
+  const hosted = (content: ReactElement) =>
+    isNative ? <RNHostView>{content}</RNHostView> : content;
 
   const isResolved = job?.status === 'DELIVERED' || job?.status === 'FAILED';
   const canDeliver = (job?.callAttempts ?? 0) > 0;
@@ -109,88 +133,90 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
       isPresented={!!requestedJob}
       onDismiss={handleClose}
       containerColor={colors.bgElevated}
-      contentPadding={{ top: Spacing.lg, bottom: Spacing.lg, left: Spacing.xxl, right: Spacing.xxl }}>
-      {job && (
-        <View style={styles.sheet}>
-          <Text style={[Typography.title3, { color: colors.text }]}>{t('statusUpdate.title')}</Text>
-          <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-            {job.id} · {job.customerName}
-          </Text>
+      contentPadding={PADDING}
+      snapPoints={isNative ? [{ height: sheetHeight }] : undefined}>
+      {job &&
+        hosted(
+          <View style={styles.sheet} onLayout={handleContentLayout}>
+            <Text style={[Typography.title3, { color: colors.text }]}>{t('statusUpdate.title')}</Text>
+            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+              {job.id} · {job.customerName}
+            </Text>
 
-          {isResolved ? (
-            <>
-              <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-                {t('statusUpdate.correctSection')}
-              </Text>
-              <AnimatedPressable
-                scaleTo={0.97}
-                style={[styles.reopenButton, { borderColor: colors.accent }]}
-                onPress={handleReopen}>
-                <Icon name="arrow-undo-outline" size={18} color={colors.accent} />
-                <Text style={[styles.reopenButtonText, { color: colors.accent }]}>
-                  {t('statusUpdate.markPending')}
+            {isResolved ? (
+              <>
+                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+                  {t('statusUpdate.correctSection')}
                 </Text>
-              </AnimatedPressable>
-            </>
-          ) : (
-            <>
-              <AnimatedPressable
-                scaleTo={0.97}
-                style={[
-                  styles.deliveredButton,
-                  { backgroundColor: colors.success, opacity: canDeliver ? 1 : 0.45 },
-                ]}
-                onPress={handleDelivered}>
-                <Icon name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
-              </AnimatedPressable>
-              {!canDeliver && (
-                <View style={styles.callHintRow}>
-                  <Icon name="call-outline" size={14} color={colors.warning} />
-                  <Text style={[styles.callHintText, { color: colors.warning }]}>
-                    {t('statusUpdate.callHint')}
+                <AnimatedPressable
+                  scaleTo={0.97}
+                  style={[styles.reopenButton, { borderColor: colors.accent }]}
+                  onPress={handleReopen}>
+                  <Icon name="arrow-undo-outline" size={18} color={colors.accent} />
+                  <Text style={[styles.reopenButtonText, { color: colors.accent }]}>
+                    {t('statusUpdate.markPending')}
                   </Text>
+                </AnimatedPressable>
+              </>
+            ) : (
+              <>
+                <AnimatedPressable
+                  scaleTo={0.97}
+                  style={[
+                    styles.deliveredButton,
+                    { backgroundColor: colors.success, opacity: canDeliver ? 1 : 0.45 },
+                  ]}
+                  onPress={handleDelivered}>
+                  <Icon name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
+                </AnimatedPressable>
+                {!canDeliver && (
+                  <View style={styles.callHintRow}>
+                    <Icon name="call-outline" size={14} color={colors.warning} />
+                    <Text style={[styles.callHintText, { color: colors.warning }]}>
+                      {t('statusUpdate.callHint')}
+                    </Text>
+                  </View>
+                )}
+
+                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+                  {t('statusUpdate.failedSection')}
+                </Text>
+                <View style={styles.chipRow}>
+                  {REASONS.map((value) => {
+                    const selected = reason === value;
+                    return (
+                      <AnimatedPressable
+                        key={value}
+                        scaleTo={0.95}
+                        onPress={() => setReason(value)}
+                        style={[
+                          styles.chip,
+                          {
+                            backgroundColor: selected ? colors.danger : colors.dangerSoft,
+                            borderColor: selected ? colors.danger : 'transparent',
+                          },
+                        ]}>
+                        <Text style={[styles.chipText, { color: selected ? '#fff' : colors.danger }]}>
+                          {enumLabel(t, 'failureReason', value)}
+                        </Text>
+                      </AnimatedPressable>
+                    );
+                  })}
                 </View>
-              )}
 
-              <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-                {t('statusUpdate.failedSection')}
-              </Text>
-              <View style={styles.chipRow}>
-                {REASONS.map((value) => {
-                  const selected = reason === value;
-                  return (
-                    <AnimatedPressable
-                      key={value}
-                      scaleTo={0.95}
-                      onPress={() => setReason(value)}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor: selected ? colors.danger : colors.dangerSoft,
-                          borderColor: selected ? colors.danger : 'transparent',
-                        },
-                      ]}>
-                      <Text style={[styles.chipText, { color: selected ? '#fff' : colors.danger }]}>
-                        {enumLabel(t, 'failureReason', value)}
-                      </Text>
-                    </AnimatedPressable>
-                  );
-                })}
-              </View>
-
-              <PrimaryButton
-                label={t('statusUpdate.confirmFailed')}
-                height={52}
-                disabled={!reason}
-                loading={submitting}
-                onPress={handleConfirmFailed}
-                style={styles.confirmFailedButton}
-              />
-            </>
-          )}
-        </View>
-      )}
+                <PrimaryButton
+                  label={t('statusUpdate.confirmFailed')}
+                  height={52}
+                  disabled={!reason}
+                  loading={submitting}
+                  onPress={handleConfirmFailed}
+                  style={styles.confirmFailedButton}
+                />
+              </>
+            )}
+          </View>
+        )}
     </BottomSheet>
   );
 }
