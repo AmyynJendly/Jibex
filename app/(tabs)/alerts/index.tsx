@@ -172,6 +172,7 @@ export default function AlertsScreen() {
       message: t('alerts.deleteAllMessage'),
       confirmLabel: t('alerts.deleteAllConfirm'),
       cancelLabel: t('common.cancel'),
+      destructive: true,
     });
     if (!confirmed) return;
     await deleteAllNotifications();
