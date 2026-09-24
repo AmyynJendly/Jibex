@@ -39,8 +39,8 @@ type GlassSurfaceProps = ViewProps & {
  * Translucent surface for chrome (tab bars, headers, floating cards, buttons).
  *
  * Renders a real UIVisualEffectView Liquid Glass on iOS 26+, and falls back to
- * an expo-blur material everywhere else. Android needs `experimentalBlurMethod`
- * to blur at all — without it BlurView is just a semi-transparent view.
+ * an expo-blur material everywhere else. Android needs `blurMethod` to blur
+ * at all — without it BlurView is just a semi-transparent view.
  */
 export function GlassSurface({
   glassEffectStyle = 'regular',
@@ -72,7 +72,7 @@ export function GlassSurface({
     <BlurView
       tint={tint}
       intensity={intensity}
-      experimentalBlurMethod="dimezisBlurView"
+      blurMethod="dimezisBlurView"
       style={style}
       {...props}>
       {tintColor && (
