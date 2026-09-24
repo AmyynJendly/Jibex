@@ -3,11 +3,12 @@ import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Barcode } from '../../../components/Barcode';
+import { NativeSwitch } from '../../../components/NativeSwitch';
 import { SkeletonBlock, SkeletonRow } from '../../../components/Skeleton';
 import {
   Fonts,
@@ -257,10 +258,9 @@ export default function ProfileScreen() {
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.biometricLogin')}
                 </Text>
-                <Switch
+                <NativeSwitch
                   value={biometricLogin}
                   onValueChange={setBiometricLogin}
-                  trackColor={{ true: colors.accent }}
                 />
               </View>
               <View
@@ -274,10 +274,9 @@ export default function ProfileScreen() {
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.hapticFeedback')}
                 </Text>
-                <Switch
+                <NativeSwitch
                   value={hapticsEnabled}
                   onValueChange={setHapticsEnabled}
-                  trackColor={{ true: colors.accent }}
                 />
               </View>
               <View style={styles.row}>
@@ -287,10 +286,9 @@ export default function ProfileScreen() {
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.newJobAlerts')}
                 </Text>
-                <Switch
+                <NativeSwitch
                   value={newJobAlerts}
                   onValueChange={setNewJobAlerts}
-                  trackColor={{ true: colors.accent }}
                 />
               </View>
             </View>

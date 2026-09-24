@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -12,6 +12,7 @@ import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
 import { DragHandle, DraggableList, type DragBinding } from '../../../components/DraggableList';
 import { EmptyState } from '../../../components/EmptyState';
+import { NativeSwitch } from '../../../components/NativeSwitch';
 import { TrackingId } from '../../../components/TrackingId';
 import { LoadError } from '../../../components/LoadError';
 import { MetaChip } from '../../../components/MetaChip';
@@ -525,10 +526,9 @@ export default function RunsheetsScreen() {
                   {t('runsheets.nearestFirst')}
                 </Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={nearestFirst}
                 onValueChange={handleToggleNearestFirst}
-                trackColor={{ true: colors.accent }}
               />
             </View>
           )}
