@@ -1,15 +1,14 @@
+import { BottomSheet } from '@expo/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedPressable } from './AnimatedPressable';
 import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
-import { Fonts, Radii, Spacing, Typography, sheetIn, useColors } from '../constants';
+import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
 import { markDeliveryFailed, reopenParcel } from '../services/mock-api';
@@ -42,14 +41,22 @@ interface StatusUpdateSheetProps {
  *
  * For a parcel that's already resolved, the sheet turns into a correction
  * tool instead, so a wrongly-marked package can always be put back.
+ *
+ * The sheet itself is the platform's (a SwiftUI sheet on iOS) — its drag,
+ * detents, dimming and dismissal are native; only the content is ours.
  */
-export function StatusUpdateSheet({ job, onClose, onDone }: StatusUpdateSheetProps) {
+export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: StatusUpdateSheetProps) {
   const colors = useColors();
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const insets = useSafeAreaInsets();
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // A native sheet keeps sliding down after it's told to close. Holding on
+  // to the last parcel keeps its content on screen for that slide instead
+  // of the sheet emptying out on the way down.
+  const [lastJob, setLastJob] = useState(requestedJob);
+  if (requestedJob && requestedJob !== lastJob) setLastJob(requestedJob);
+  const job = requestedJob ?? lastJob;
 
   const isResolved = job?.status === 'DELIVERED' || job?.status === 'FAILED';
   const canDeliver = (job?.callAttempts ?? 0) > 0;
@@ -98,125 +105,99 @@ export function StatusUpdateSheet({ job, onClose, onDone }: StatusUpdateSheetPro
   }
 
   return (
-    <Modal visible={!!job} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.backdropWrap}>
-        <Animated.View
-          entering={FadeIn.duration(150)}
-          exiting={FadeOut.duration(120)}
-          style={StyleSheet.absoluteFill}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-        </Animated.View>
-        {job && (
-          <Animated.View
-            entering={sheetIn()}
-            style={[
-              styles.sheet,
-              { backgroundColor: colors.bgElevated, paddingBottom: insets.bottom + Spacing.lg },
-            ]}>
-            <View style={[styles.handle, { backgroundColor: colors.separator }]} />
-            <Text style={[Typography.title3, { color: colors.text }]}>{t('statusUpdate.title')}</Text>
-            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              {job.id} · {job.customerName}
-            </Text>
+    <BottomSheet
+      isPresented={!!requestedJob}
+      onDismiss={handleClose}
+      containerColor={colors.bgElevated}
+      contentPadding={{ top: Spacing.lg, bottom: Spacing.lg, left: Spacing.xxl, right: Spacing.xxl }}>
+      {job && (
+        <View style={styles.sheet}>
+          <Text style={[Typography.title3, { color: colors.text }]}>{t('statusUpdate.title')}</Text>
+          <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
+            {job.id} · {job.customerName}
+          </Text>
 
-            {isResolved ? (
-              <>
-                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-                  {t('statusUpdate.correctSection')}
+          {isResolved ? (
+            <>
+              <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+                {t('statusUpdate.correctSection')}
+              </Text>
+              <AnimatedPressable
+                scaleTo={0.97}
+                style={[styles.reopenButton, { borderColor: colors.accent }]}
+                onPress={handleReopen}>
+                <Ionicons name="arrow-undo-outline" size={18} color={colors.accent} />
+                <Text style={[styles.reopenButtonText, { color: colors.accent }]}>
+                  {t('statusUpdate.markPending')}
                 </Text>
-                <AnimatedPressable
-                  scaleTo={0.97}
-                  style={[styles.reopenButton, { borderColor: colors.accent }]}
-                  onPress={handleReopen}>
-                  <Ionicons name="arrow-undo-outline" size={18} color={colors.accent} />
-                  <Text style={[styles.reopenButtonText, { color: colors.accent }]}>
-                    {t('statusUpdate.markPending')}
+              </AnimatedPressable>
+            </>
+          ) : (
+            <>
+              <AnimatedPressable
+                scaleTo={0.97}
+                style={[
+                  styles.deliveredButton,
+                  { backgroundColor: colors.success, opacity: canDeliver ? 1 : 0.45 },
+                ]}
+                onPress={handleDelivered}>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
+              </AnimatedPressable>
+              {!canDeliver && (
+                <View style={styles.callHintRow}>
+                  <Ionicons name="call-outline" size={14} color={colors.warning} />
+                  <Text style={[styles.callHintText, { color: colors.warning }]}>
+                    {t('statusUpdate.callHint')}
                   </Text>
-                </AnimatedPressable>
-              </>
-            ) : (
-              <>
-                <AnimatedPressable
-                  scaleTo={0.97}
-                  style={[
-                    styles.deliveredButton,
-                    { backgroundColor: colors.success, opacity: canDeliver ? 1 : 0.45 },
-                  ]}
-                  onPress={handleDelivered}>
-                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                  <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
-                </AnimatedPressable>
-                {!canDeliver && (
-                  <View style={styles.callHintRow}>
-                    <Ionicons name="call-outline" size={14} color={colors.warning} />
-                    <Text style={[styles.callHintText, { color: colors.warning }]}>
-                      {t('statusUpdate.callHint')}
-                    </Text>
-                  </View>
-                )}
-
-                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-                  {t('statusUpdate.failedSection')}
-                </Text>
-                <View style={styles.chipRow}>
-                  {REASONS.map((value) => {
-                    const selected = reason === value;
-                    return (
-                      <AnimatedPressable
-                        key={value}
-                        scaleTo={0.95}
-                        onPress={() => setReason(value)}
-                        style={[
-                          styles.chip,
-                          {
-                            backgroundColor: selected ? colors.danger : colors.dangerSoft,
-                            borderColor: selected ? colors.danger : 'transparent',
-                          },
-                        ]}>
-                        <Text style={[styles.chipText, { color: selected ? '#fff' : colors.danger }]}>
-                          {enumLabel(t, 'failureReason', value)}
-                        </Text>
-                      </AnimatedPressable>
-                    );
-                  })}
                 </View>
+              )}
 
-                <PrimaryButton
-                  label={t('statusUpdate.confirmFailed')}
-                  height={52}
-                  disabled={!reason}
-                  loading={submitting}
-                  onPress={handleConfirmFailed}
-                  style={styles.confirmFailedButton}
-                />
-              </>
-            )}
-          </Animated.View>
-        )}
-      </View>
-    </Modal>
+              <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+                {t('statusUpdate.failedSection')}
+              </Text>
+              <View style={styles.chipRow}>
+                {REASONS.map((value) => {
+                  const selected = reason === value;
+                  return (
+                    <AnimatedPressable
+                      key={value}
+                      scaleTo={0.95}
+                      onPress={() => setReason(value)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: selected ? colors.danger : colors.dangerSoft,
+                          borderColor: selected ? colors.danger : 'transparent',
+                        },
+                      ]}>
+                      <Text style={[styles.chipText, { color: selected ? '#fff' : colors.danger }]}>
+                        {enumLabel(t, 'failureReason', value)}
+                      </Text>
+                    </AnimatedPressable>
+                  );
+                })}
+              </View>
+
+              <PrimaryButton
+                label={t('statusUpdate.confirmFailed')}
+                height={52}
+                disabled={!reason}
+                loading={submitting}
+                onPress={handleConfirmFailed}
+                style={styles.confirmFailedButton}
+              />
+            </>
+          )}
+        </View>
+      )}
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdropWrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
   sheet: {
-    borderTopLeftRadius: Radii.xxl,
-    borderTopRightRadius: Radii.xxl,
-    paddingHorizontal: Spacing.xxl,
-    paddingTop: Spacing.md,
     gap: Spacing.md,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: Spacing.sm,
   },
   deliveredButton: {
     flexDirection: 'row',

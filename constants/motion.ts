@@ -105,22 +105,3 @@ export function exitUp(duration = 170) {
 export function exitDown(duration = 170) {
   return FadeOutDown.duration(duration);
 }
-
-/**
- * Sheet entrance — rises from below with a soft settle and no scale.
- *
- * A sheet that scales looks like it's being projected; a sheet that slides
- * looks like it came from off-screen, which is where the user believes it
- * was. Distance is short because the modal's own backdrop fade is already
- * covering the first frames.
- */
-export function sheetIn(delay = 0) {
-  if (useStockBuilders) return FadeInUp.duration(400).delay(delay);
-  return new Keyframe({
-    0: { opacity: 0, transform: [{ translateY: 32 }] },
-    68: { opacity: 1, transform: [{ translateY: -3 }], easing: Ease.sheet },
-    100: { opacity: 1, transform: [{ translateY: 0 }] },
-  })
-    .duration(400)
-    .delay(delay);
-}
