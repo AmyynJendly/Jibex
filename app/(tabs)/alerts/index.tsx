@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { EmptyState } from '../../../components/EmptyState';
@@ -223,7 +223,7 @@ export default function AlertsScreen() {
               accessibilityLabel={t('alerts.deleteOne')}
               style={[styles.deleteAction, { backgroundColor: colors.danger }]}
               onPress={() => handleDelete(notification.id)}>
-              <Ionicons name="trash-outline" size={20} color="#fff" />
+              <Icon name="trash-outline" size={20} color="#fff" />
             </AnimatedPressable>
           )}>
           {children}
@@ -260,7 +260,7 @@ export default function AlertsScreen() {
             },
           ]}>
           <View style={[styles.icon, { backgroundColor: style.soft }]}>
-            <Ionicons name={style.icon} size={17} color={style.color} />
+            <Icon name={style.icon} size={17} color={style.color} />
           </View>
           <View style={styles.textBlock}>
             <Text style={[styles.title, { color: colors.text }]}>{notification.title}</Text>
@@ -274,7 +274,7 @@ export default function AlertsScreen() {
           {/* Only alerts that actually lead somewhere get a chevron —
               otherwise every row promises a destination and some do nothing. */}
           {notification.target && (
-            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
           )}
         </AnimatedPressable>
       </Animated.View>

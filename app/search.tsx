@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../components/Icon';
 import { EmptyState } from '../components/EmptyState';
 import { FormField } from '../components/FormField';
 import { GlassIconButton } from '../components/GlassIconButton';
@@ -63,7 +63,7 @@ export default function SearchScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+            <Icon name="chevron-back" size={20} color={colors.textSecondary} />
           </GlassIconButton>
           <Text style={[Typography.headline, { color: colors.text }]}>{t('search.headerTitle')}</Text>
           <View style={styles.headerSpacer} />

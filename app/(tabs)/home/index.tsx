@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon, type IconName } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { CountUpText } from '../../../components/CountUpText';
 import { GlassIconButton } from '../../../components/GlassIconButton';
@@ -251,7 +251,7 @@ export default function HomeScreen() {
   const compactActions: {
     key: string;
     label: string;
-    icon: keyof typeof Ionicons.glyphMap;
+    icon: IconName;
     color: string;
     soft: ColorValue;
     href: '/runsheets' | '/pickups' | '/transfers' | '/returns';
@@ -315,19 +315,19 @@ export default function HomeScreen() {
           size={40}
           accessibilityLabel={t('home.a11y.search')}
           onPress={() => router.push('/search')}>
-          <Ionicons name="search-outline" size={20} color={colors.text} />
+          <Icon name="search-outline" size={20} color={colors.text} />
         </GlassIconButton>
         <GlassIconButton
           size={40}
           accessibilityLabel={t('home.a11y.scan')}
           onPress={() => router.push('/scanner')}>
-          <Ionicons name="scan-outline" size={20} color={colors.text} />
+          <Icon name="scan-outline" size={20} color={colors.text} />
         </GlassIconButton>
         <GlassIconButton
           size={40}
           accessibilityLabel={t('home.a11y.alerts')}
           onPress={() => router.push('/alerts')}>
-          <Ionicons
+          <Icon
             name={hasUnreadNotifications ? 'notifications' : 'notifications-outline'}
             size={20}
             color={colors.text}
@@ -346,7 +346,7 @@ export default function HomeScreen() {
         </Text>
         {locationLabel && (
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={13} color={colors.accent} />
+            <Icon name="location-outline" size={13} color={colors.accent} />
             <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
               {locationLabel}
             </Text>
@@ -368,7 +368,7 @@ export default function HomeScreen() {
                 getCardShadow(scheme),
               ]}>
               <View style={[styles.toConfirmIcon, { backgroundColor: colors.warningSoft }]}>
-                <Ionicons name="lock-closed" size={16} color={colors.warning} />
+                <Icon name="lock-closed" size={16} color={colors.warning} />
               </View>
               <View style={styles.toConfirmText}>
                 <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
@@ -409,7 +409,7 @@ export default function HomeScreen() {
           scale={0.78}
         />
         <View style={[styles.paceRow, { backgroundColor: colors.bg }]}>
-          <Ionicons name="time-outline" size={14} color={colors.textTertiary} />
+          <Icon name="time-outline" size={14} color={colors.textTertiary} />
           <Text style={[Typography.footnote, styles.paceText, { color: colors.textSecondary }]}>
             {t('home.onPace', { time: stats.onPaceFinishTime })}
           </Text>
@@ -484,7 +484,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <View style={[styles.goPill, { backgroundColor: colors.accent }]}>
-              <Ionicons name="navigate" size={12} color="#fff" />
+              <Icon name="navigate" size={12} color="#fff" />
               <Text style={styles.goPillText}>{t('home.nextStop.go')}</Text>
             </View>
           </View>
@@ -505,7 +505,7 @@ export default function HomeScreen() {
                 getCardShadow(scheme),
               ]}>
               <View style={[styles.compactActionIcon, { backgroundColor: action.soft }]}>
-                <Ionicons name={action.icon} size={20} color={action.color} />
+                <Icon name={action.icon} size={20} color={action.color} />
               </View>
               <Text
                 style={[styles.compactActionLabel, { color: colors.text }]}
@@ -519,7 +519,7 @@ export default function HomeScreen() {
 
       <View style={styles.cashStrip}>
         <View style={styles.cashIcon}>
-          <Ionicons name="card-outline" size={18} color="#F5EEE6" />
+          <Icon name="card-outline" size={18} color="#F5EEE6" />
         </View>
         <View style={styles.cashTextStack}>
           <Text style={[monoStyle(10), styles.cashLabel]}>{t('home.cashCollected')}</Text>

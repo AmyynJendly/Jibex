@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { StyleSheet, Text } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from './Icon';
 import { Fonts, Spacing, exitUp, morphInDown, useColors } from '../constants';
 
 /**
@@ -27,7 +27,7 @@ export function OfflineBanner() {
       entering={morphInDown(0, 12)}
       exiting={exitUp()}
       style={[styles.banner, { top: insets.top, backgroundColor: colors.warning }]}>
-      <Ionicons name="cloud-offline-outline" size={15} color="#fff" />
+      <Icon name="cloud-offline-outline" size={15} color="#fff" />
       <Text style={styles.text}>{t('offlineBanner.message')}</Text>
     </Animated.View>
   );

@@ -1,10 +1,10 @@
 import { BottomSheet } from '@expo/ui';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from './Icon';
 import { AnimatedPressable } from './AnimatedPressable';
 import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
@@ -126,7 +126,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                 scaleTo={0.97}
                 style={[styles.reopenButton, { borderColor: colors.accent }]}
                 onPress={handleReopen}>
-                <Ionicons name="arrow-undo-outline" size={18} color={colors.accent} />
+                <Icon name="arrow-undo-outline" size={18} color={colors.accent} />
                 <Text style={[styles.reopenButtonText, { color: colors.accent }]}>
                   {t('statusUpdate.markPending')}
                 </Text>
@@ -141,12 +141,12 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                   { backgroundColor: colors.success, opacity: canDeliver ? 1 : 0.45 },
                 ]}
                 onPress={handleDelivered}>
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Icon name="checkmark-circle" size={20} color="#fff" />
                 <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
               </AnimatedPressable>
               {!canDeliver && (
                 <View style={styles.callHintRow}>
-                  <Ionicons name="call-outline" size={14} color={colors.warning} />
+                  <Icon name="call-outline" size={14} color={colors.warning} />
                   <Text style={[styles.callHintText, { color: colors.warning }]}>
                     {t('statusUpdate.callHint')}
                   </Text>

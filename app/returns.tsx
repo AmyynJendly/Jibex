@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../components/Icon';
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
@@ -140,7 +140,7 @@ export default function ReturnsScreen() {
 
         {item.relatedTransferId && (
           <View style={styles.sourceRow}>
-            <Ionicons name="git-branch-outline" size={13} color={colors.textTertiary} />
+            <Icon name="git-branch-outline" size={13} color={colors.textTertiary} />
             <Text style={[monoStyle(11), { color: colors.textTertiary }]} numberOfLines={1}>
               {t('returns.relatedTransfer', { id: item.relatedTransferId })}
             </Text>
@@ -154,7 +154,7 @@ export default function ReturnsScreen() {
               scaleTo={0.96}
               style={[styles.confirmButton, { backgroundColor: colors.success }]}
               onPress={() => handleConfirm([item])}>
-              <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />
+              <Icon name="checkmark-circle-outline" size={17} color="#fff" />
               <Text style={styles.confirmButtonText}>{t('returns.confirmOne')}</Text>
             </AnimatedPressable>
             <AnimatedPressable
@@ -168,7 +168,7 @@ export default function ReturnsScreen() {
                   params: { batchIds: JSON.stringify([item.id]) },
                 })
               }>
-              <Ionicons name="scan-outline" size={18} color={colors.textSecondary} />
+              <Icon name="scan-outline" size={18} color={colors.textSecondary} />
             </AnimatedPressable>
           </View>
         )}
@@ -180,7 +180,7 @@ export default function ReturnsScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.backRow}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>
       <View style={styles.header}>
@@ -212,7 +212,7 @@ export default function ReturnsScreen() {
 
         {!isHistory && pending.length > 0 && (
           <View style={[styles.inverseNote, { backgroundColor: colors.warningSoft }]}>
-            <Ionicons name="information-circle-outline" size={16} color={colors.warning} />
+            <Icon name="information-circle-outline" size={16} color={colors.warning} />
             <Text style={[styles.inverseNoteText, { color: colors.text }]}>
               {t('returns.inverseNote')}
             </Text>
@@ -261,7 +261,7 @@ export default function ReturnsScreen() {
               { backgroundColor: colors.success, opacity: confirming ? 0.5 : 1 },
             ]}
             onPress={() => handleConfirm(pending)}>
-            <Ionicons name="checkmark-done" size={18} color="#fff" />
+            <Icon name="checkmark-done" size={18} color="#fff" />
             <Text style={styles.confirmAllButtonText}>
               {t('returns.confirmAllWithCount', { count: pending.length })}
             </Text>
@@ -277,7 +277,7 @@ export default function ReturnsScreen() {
                 params: { batchIds: JSON.stringify(pending.map((r) => r.id)) },
               })
             }>
-            <Ionicons name="scan" size={19} color={colors.warning} />
+            <Icon name="scan" size={19} color={colors.warning} />
           </AnimatedPressable>
         </View>
       )}

@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -13,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { TrackingId } from '../../../components/TrackingId';
@@ -169,7 +169,7 @@ export default function OtpScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         {job && <TrackingId value={job.id} size="inline" />}
       </View>
@@ -233,7 +233,7 @@ export default function OtpScreen() {
                   style={[styles.key, { backgroundColor: colors.bgElevated }]}
                   onPress={() => handleKeyPress(key)}>
                   {key === 'del' ? (
-                    <Ionicons name="backspace-outline" size={20} color={colors.text} />
+                    <Icon name="backspace-outline" size={20} color={colors.text} />
                   ) : key === 'sms' ? (
                     <Text
                       style={[

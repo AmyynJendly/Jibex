@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Redirect, router } from 'expo-router';
@@ -6,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Fonts, Spacing, Typography, useColors } from '../constants';
@@ -133,7 +133,7 @@ export default function Index() {
       ) : (
         <View style={styles.lockBlock}>
           <View style={styles.lockRow}>
-            <Ionicons
+            <Icon
               name={
                 gate.failed
                   ? 'lock-closed'

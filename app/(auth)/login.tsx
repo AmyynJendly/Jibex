@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -7,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../../components/Icon';
 import { AnimatedPressable } from '../../components/AnimatedPressable';
 import { FormField } from '../../components/FormField';
 import { LanguageToggle } from '../../components/LanguageToggle';
@@ -103,7 +103,7 @@ export default function LoginScreen() {
                   }
                   style={styles.eyeButton}
                   onPress={() => setPasswordVisible((v) => !v)}>
-                  <Ionicons
+                  <Icon
                     name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
                     color={passwordVisible ? colors.accent : colors.textTertiary}
@@ -134,7 +134,7 @@ export default function LoginScreen() {
               scaleTo={0.97}
               style={styles.forgotPinRow}
               onPress={() => Linking.openURL(telUrl(DISPATCH_PHONE))}>
-              <Ionicons name="call-outline" size={14} color={colors.textSecondary} />
+              <Icon name="call-outline" size={14} color={colors.textSecondary} />
               <Text style={[styles.forgotPin, { color: colors.textSecondary }]}>
                 {t('auth.login.forgotPassword')}
               </Text>

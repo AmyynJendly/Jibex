@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
@@ -24,7 +24,7 @@ export default function HelpCenterScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         <Text style={[Typography.headline, { color: colors.text }]}>{t('helpCenter.headerTitle')}</Text>
         <View style={styles.headerSpacer} />
@@ -36,13 +36,13 @@ export default function HelpCenterScreen() {
           onPress={() => Linking.openURL('mailto:support@jibex.app')}
           style={[styles.contactRow, { backgroundColor: colors.accent }]}>
           <View style={styles.contactIcon}>
-            <Ionicons name="chatbubbles-outline" size={20} color="#fff" />
+            <Icon name="chatbubbles-outline" size={20} color="#fff" />
           </View>
           <View style={styles.contactText}>
             <Text style={styles.contactTitle}>{t('helpCenter.contactSupport')}</Text>
             <Text style={styles.contactSubtitle}>support@jibex.app</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
+          <Icon name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
         </AnimatedPressable>
 
         <Text style={[Typography.footnote, styles.sectionLabel, { color: colors.textTertiary }]}>
@@ -63,7 +63,7 @@ export default function HelpCenterScreen() {
                 ]}>
                 <View style={styles.faqQuestionRow}>
                   <Text style={[styles.faqQuestion, { color: colors.text }]}>{faq.question}</Text>
-                  <Ionicons
+                  <Icon
                     name={open ? 'chevron-up' : 'chevron-down'}
                     size={16}
                     color={colors.textTertiary}

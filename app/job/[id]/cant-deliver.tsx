@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon, type IconName } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
@@ -24,7 +24,7 @@ import { markDeliveryFailed } from '../../../services/mock-api';
 import type { DeliveryFailureReason } from '../../../types';
 
 /** The real 7 failure reasons — icon per reason, label resolved from `enums.failureReason` (Part A/B). */
-const REASONS: { value: DeliveryFailureReason; icon: keyof typeof Ionicons.glyphMap }[] = [
+const REASONS: { value: DeliveryFailureReason; icon: IconName }[] = [
   { value: 'CUSTOMER_ABSENT', icon: 'home-outline' },
   { value: 'REFUSED', icon: 'close-circle-outline' },
   { value: 'INCORRECT_ADDRESS', icon: 'location-outline' },
@@ -70,7 +70,7 @@ export default function CantDeliverScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>
 
@@ -96,7 +96,7 @@ export default function CantDeliverScreen() {
                     },
                   ]}>
                   <View style={[styles.reasonIcon, { backgroundColor: colors.dangerSoft }]}>
-                    <Ionicons name={option.icon} size={16} color={colors.danger} />
+                    <Icon name={option.icon} size={16} color={colors.danger} />
                   </View>
                   <Text style={[Typography.body, styles.reasonLabel, { color: colors.text }]}>
                     {t(`enums.failureReason.${option.value}`)}
@@ -109,7 +109,7 @@ export default function CantDeliverScreen() {
                         backgroundColor: selected ? colors.danger : 'transparent',
                       },
                     ]}>
-                    {selected && <Ionicons name="checkmark" size={12} color="#fff" />}
+                    {selected && <Icon name="checkmark" size={12} color="#fff" />}
                   </View>
                 </AnimatedPressable>
               </View>

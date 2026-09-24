@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../components/Icon';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { ReadOnlyField } from '../components/ReadOnlyField';
 import { SkeletonRow } from '../components/Skeleton';
@@ -30,7 +30,7 @@ export default function VehicleDetailsScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         <Text style={[Typography.headline, { color: colors.text }]}>
           {t('vehicleDetails.headerTitle')}
@@ -48,7 +48,7 @@ export default function VehicleDetailsScreen() {
         ) : (
           <>
             <View style={[styles.notice, { backgroundColor: colors.bgElevated }]}>
-              <Ionicons name="lock-closed-outline" size={15} color={colors.textSecondary} />
+              <Icon name="lock-closed-outline" size={15} color={colors.textSecondary} />
               <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
                 {t('vehicleDetails.readOnlyNotice')}
               </Text>

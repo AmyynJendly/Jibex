@@ -1,5 +1,4 @@
 import { MenuView, type MenuAction } from '@expo/ui/community/menu';
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -14,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { GlassIcon, GlassIconButton } from '../../../components/GlassIconButton';
 import { TrackingId } from '../../../components/TrackingId';
@@ -199,7 +199,7 @@ export default function JobDetailScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
         {position && (
           <View style={[styles.stopChip, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
@@ -214,14 +214,14 @@ export default function JobDetailScreen() {
           <GlassIconButton
             accessibilityLabel={t('jobDetail.a11yMore')}
             onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
-            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+            <Icon name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
           </GlassIconButton>
         ) : (
           <MenuView
             actions={menuActions}
             onPressAction={({ nativeEvent }) => handleMenuAction(nativeEvent.event)}>
             <GlassIcon>
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+              <Icon name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
             </GlassIcon>
           </MenuView>
         )}
@@ -252,7 +252,7 @@ export default function JobDetailScreen() {
               style={[styles.pinRipple, { backgroundColor: colors.accent }, rippleStyle]}
             />
             <View style={[styles.pin, { backgroundColor: colors.accent }, getAccentGlow(0.35, 12)]}>
-              <Ionicons name="location" size={16} color="#fff" />
+              <Icon name="location" size={16} color="#fff" />
             </View>
           </View>
           <Text style={styles.mapBadge}>
@@ -274,7 +274,7 @@ export default function JobDetailScreen() {
             <TrackingId value={job.id} />
             {job.packageInfo.fragile && (
               <View style={[styles.careChip, { backgroundColor: colors.dangerSoft }]}>
-                <Ionicons name="alert-circle" size={13} color={colors.danger} />
+                <Icon name="alert-circle" size={13} color={colors.danger} />
                 <Text style={[styles.careChipText, { color: colors.danger }]}>
                   {t('jobDetail.fragile')}
                 </Text>
@@ -291,19 +291,19 @@ export default function JobDetailScreen() {
                 scaleTo={0.88}
                 style={[styles.iconButton, { backgroundColor: colors.accentSoft }]}
                 onPress={handleCall}>
-                <Ionicons name="call-outline" size={18} color={colors.accent} />
+                <Icon name="call-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
               <AnimatedPressable
                 scaleTo={0.88}
                 style={[styles.iconButton, { backgroundColor: colors.accentSoft }]}
                 onPress={() => showToast(t('common.messageToast'))}>
-                <Ionicons name="chatbubble-outline" size={18} color={colors.accent} />
+                <Icon name="chatbubble-outline" size={18} color={colors.accent} />
               </AnimatedPressable>
             </View>
           </View>
           {job.callAttempts > 0 && (
             <View style={styles.callDetailRow}>
-              <Ionicons name="call-outline" size={12} color={colors.textTertiary} />
+              <Icon name="call-outline" size={12} color={colors.textTertiary} />
               <Text style={[styles.callDetailText, { color: colors.textTertiary }]}>
                 {t('jobDetail.callDetail', {
                   count: job.callAttempts,
@@ -318,7 +318,7 @@ export default function JobDetailScreen() {
             </View>
           )}
           <View style={styles.addressRow}>
-            <Ionicons
+            <Icon
               name="location-outline"
               size={16}
               color={colors.textTertiary}
@@ -336,14 +336,14 @@ export default function JobDetailScreen() {
               other two swimming in space. */}
           <View style={styles.factRow}>
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
-              <Ionicons name="cube-outline" size={14} color={colors.textSecondary} />
+              <Icon name="cube-outline" size={14} color={colors.textSecondary} />
               <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
                 {t('jobDetail.parcelCount', { count: job.packageInfo.count })} ·{' '}
                 {formatDecimal(job.packageInfo.weightLbs)} KG
               </Text>
             </View>
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
-              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+              <Icon name="time-outline" size={14} color={colors.textSecondary} />
               <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
                 {t('jobDetail.etaLabel', { time: etaTime })}
               </Text>
@@ -355,7 +355,7 @@ export default function JobDetailScreen() {
               read it before knocking, not discover it afterwards. */}
           {job.packageInfo.note && (
             <View style={[styles.noteCallout, { backgroundColor: colors.warningSoft }]}>
-              <Ionicons name="information-circle" size={16} color={colors.warning} />
+              <Icon name="information-circle" size={16} color={colors.warning} />
               <Text style={[styles.note, { color: colors.text }]}>{job.packageInfo.note}</Text>
             </View>
           )}
@@ -381,7 +381,7 @@ export default function JobDetailScreen() {
               </Text>
             </View>
             <View style={styles.codIcon}>
-              <Ionicons name="cash-outline" size={22} color="#fff" />
+              <Icon name="cash-outline" size={22} color="#fff" />
             </View>
           </View>
         )}
@@ -397,7 +397,7 @@ export default function JobDetailScreen() {
           accessibilityRole="button"
           style={[styles.failedButton, { backgroundColor: colors.dangerSoft }]}
           onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
-          <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
+          <Icon name="close-circle-outline" size={18} color={colors.danger} />
           <Text style={[Typography.footnote, { color: colors.danger }]}>
             {t('jobDetail.deliveryFailed')}
           </Text>

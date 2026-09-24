@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -6,6 +5,7 @@ import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon, type IconName } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Barcode } from '../../../components/Barcode';
 import { NativeSwitch } from '../../../components/NativeSwitch';
@@ -32,7 +32,7 @@ import type { DriverStats, User, Vehicle } from '../../../types';
 interface AccountRow {
   key: string;
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   color: string;
   soft: string;
   href: '/personal-info' | '/vehicle-details';
@@ -113,7 +113,7 @@ export default function ProfileScreen() {
             />
             <View style={styles.profileCardTopRow}>
               <View style={styles.avatar}>
-                <Ionicons name="person-outline" size={30} color="#7E5731" />
+                <Icon name="person-outline" size={30} color="#7E5731" />
               </View>
               <View style={styles.nameBlock}>
                 <Text style={styles.name}>{user.name}</Text>
@@ -197,12 +197,12 @@ export default function ProfileScreen() {
                       },
                     ]}>
                     <View style={[styles.rowIcon, { backgroundColor: row.soft }]}>
-                      <Ionicons name={row.icon} size={15} color={row.color} />
+                      <Icon name={row.icon} size={15} color={row.color} />
                     </View>
                     <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                       {row.label}
                     </Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                    <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
                   </AnimatedPressable>
                 </View>
               ))}
@@ -234,7 +234,7 @@ export default function ProfileScreen() {
                     <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                       {t(`settings.languages.${code}`)}
                     </Text>
-                    {selected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                    {selected && <Icon name="checkmark" size={18} color={colors.accent} />}
                   </AnimatedPressable>
                 );
               })}
@@ -253,7 +253,7 @@ export default function ProfileScreen() {
                   { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
                 ]}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
-                  <Ionicons name="finger-print-outline" size={16} color={colors.accent} />
+                  <Icon name="finger-print-outline" size={16} color={colors.accent} />
                 </View>
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.biometricLogin')}
@@ -269,7 +269,7 @@ export default function ProfileScreen() {
                   { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
                 ]}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
-                  <Ionicons name="phone-portrait-outline" size={15} color={colors.accent} />
+                  <Icon name="phone-portrait-outline" size={15} color={colors.accent} />
                 </View>
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.hapticFeedback')}
@@ -281,7 +281,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.row}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
-                  <Ionicons name="notifications-outline" size={15} color={colors.accent} />
+                  <Icon name="notifications-outline" size={15} color={colors.accent} />
                 </View>
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.newJobAlerts')}
@@ -314,12 +314,12 @@ export default function ProfileScreen() {
                   },
                 ]}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.warningSoft }]}>
-                  <Ionicons name="help-circle-outline" size={15} color={colors.warning} />
+                  <Icon name="help-circle-outline" size={15} color={colors.warning} />
                 </View>
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('profile.rows.helpCenter')}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
               </AnimatedPressable>
               <View
                 style={[
@@ -330,7 +330,7 @@ export default function ProfileScreen() {
                   },
                 ]}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.separator }]}>
-                  <Ionicons name="information-circle-outline" size={15} color={colors.textSecondary} />
+                  <Icon name="information-circle-outline" size={15} color={colors.textSecondary} />
                 </View>
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.appVersion')}
@@ -341,7 +341,7 @@ export default function ProfileScreen() {
               </View>
               <AnimatedPressable onPress={handleLogOut} style={styles.row}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.dangerSoft }]}>
-                  <Ionicons name="log-out-outline" size={15} color={colors.danger} />
+                  <Icon name="log-out-outline" size={15} color={colors.danger} />
                 </View>
                 <Text
                   style={[

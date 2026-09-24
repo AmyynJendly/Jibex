@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,6 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useToast } from '../../../components/Toast';
 import { GlassIconButton } from '../../../components/GlassIconButton';
@@ -103,7 +103,7 @@ export default function PhotoProofScreen() {
           forceDark
           accessibilityLabel={t('common.close')}
           onPress={() => router.back()}>
-          <Ionicons name="close" size={20} color="#fff" />
+          <Icon name="close" size={20} color="#fff" />
         </GlassIconButton>
         <Text style={[Typography.headline, styles.title]}>{t('photoProof.title')}</Text>
         <View style={styles.headerSpacer} />
@@ -117,7 +117,7 @@ export default function PhotoProofScreen() {
         <CameraView ref={cameraRef} style={styles.preview} facing="back" />
       ) : (
         <View style={styles.permissionBlock}>
-          <Ionicons name="camera-outline" size={28} color="#fff" />
+          <Icon name="camera-outline" size={28} color="#fff" />
           <Text style={styles.permissionBody}>{t('photoProof.permissionBody')}</Text>
           <PrimaryButton
             label={t('photoProof.enableCamera')}

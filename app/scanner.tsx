@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { GlassIconButton } from '../components/GlassIconButton';
 import { GlassSurface } from '../components/GlassSurface';
@@ -153,7 +153,7 @@ export default function ScannerScreen() {
           forceDark
           accessibilityLabel={t('common.close')}
           onPress={() => router.back()}>
-          <Ionicons name="close" size={20} color="#fff" />
+          <Icon name="close" size={20} color="#fff" />
         </GlassIconButton>
         <Text style={[Typography.headline, styles.title]}>
           {t(isBatchMode ? 'scanner.batchTitle' : 'scanner.title')}
@@ -162,7 +162,7 @@ export default function ScannerScreen() {
           forceDark
           accessibilityLabel={t('scanner.a11yTorch')}
           onPress={() => setTorchOn((v) => !v)}>
-          <Ionicons
+          <Icon
             name={torchOn ? 'flashlight' : 'flashlight-outline'}
             size={20}
             color="#fff"
@@ -181,7 +181,7 @@ export default function ScannerScreen() {
       {batchComplete ? (
         <View style={styles.batchCompleteBlock}>
           <View style={styles.batchCompleteIcon}>
-            <Ionicons name="checkmark" size={32} color="#2E3439" />
+            <Icon name="checkmark" size={32} color="#2E3439" />
           </View>
           <Text style={styles.permissionTitle}>{t('scanner.batchCompleteTitle')}</Text>
           <Text style={styles.permissionBody}>{t('scanner.batchCompleteBody')}</Text>
@@ -194,7 +194,7 @@ export default function ScannerScreen() {
       ) : !permission?.granted ? (
         <View style={styles.permissionBlock}>
           <View style={styles.permissionIcon}>
-            <Ionicons name="camera-outline" size={28} color="#fff" />
+            <Icon name="camera-outline" size={28} color="#fff" />
           </View>
           <Text style={styles.permissionTitle}>{t('scanner.permissionTitle')}</Text>
           <Text style={styles.permissionBody}>{t('scanner.permissionBody')}</Text>
@@ -235,13 +235,13 @@ export default function ScannerScreen() {
               scaleTo={0.92}
               style={styles.manualSubmit}
               onPress={handleManualSubmit}>
-              <Ionicons name="checkmark" size={20} color="#fff" />
+              <Icon name="checkmark" size={20} color="#fff" />
             </AnimatedPressable>
           </View>
         ) : (
           <GlassSurface tint="dark" colorScheme="dark" style={styles.hintCard}>
             <View style={styles.hintIcon}>
-              <Ionicons name="scan-outline" size={18} color={ACCENT} />
+              <Icon name="scan-outline" size={18} color={ACCENT} />
             </View>
             <View style={styles.hintTextStack}>
               <Text style={styles.hintTitle}>

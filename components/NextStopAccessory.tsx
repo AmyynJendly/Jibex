@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { StyleSheet, Text, View } from 'react-native';
@@ -8,6 +7,7 @@ import { Fonts, Spacing, monoStyle, useColors } from '../constants';
 import { formatCurrency } from '../lib/currency';
 import type { Job } from '../types';
 import { AnimatedPressable } from './AnimatedPressable';
+import { Icon } from './Icon';
 import { PackageCube } from './PackageCube';
 
 interface NextStopAccessoryProps {
@@ -39,7 +39,7 @@ export function NextStopAccessory({ stop, index }: NextStopAccessoryProps) {
         accessibilityLabel={`${t('home.nextStop.label')}: ${stop.customerName}`}
         style={styles.inline}
         onPress={open}>
-        <Ionicons name="navigate" size={14} color={colors.accent} />
+        <Icon name="navigate" size={14} color={colors.accent} />
         <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
           {stop.customerName}
         </Text>

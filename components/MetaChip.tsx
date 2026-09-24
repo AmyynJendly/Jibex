@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Icon, type IconName } from './Icon';
 import { Fonts, Radii, Spacing, useColors } from '../constants';
 
 interface MetaChipProps {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label: string;
   /** `accent` marks the one fact that matters most on the card — usually money. */
   tone?: 'neutral' | 'accent' | 'success' | 'warning';
@@ -28,7 +28,7 @@ export function MetaChip({ icon, label, tone = 'neutral' }: MetaChipProps) {
 
   return (
     <View style={[styles.chip, { backgroundColor: palette.bg }]}>
-      <Ionicons name={icon} size={13} color={palette.fg} />
+      <Icon name={icon} size={13} color={palette.fg} />
       <Text style={[styles.label, { color: palette.fg }]} numberOfLines={1}>
         {label}
       </Text>

@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from './Icon';
 import { Fonts, Radii, Spacing, monoLabelStyle, useColors } from '../constants';
 
 interface AgencyFlowProps {
@@ -28,7 +28,7 @@ export function AgencyFlow({ fromLabel, from, toLabel, to }: AgencyFlowProps) {
       </View>
 
       <View style={[styles.arrow, { backgroundColor: colors.bg }]}>
-        <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
+        <Icon name="arrow-forward" size={14} color={colors.textSecondary} />
       </View>
 
       <View style={[styles.side, styles.sideRight]}>

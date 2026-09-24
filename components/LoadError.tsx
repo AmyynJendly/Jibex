@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from './Icon';
 import { PrimaryButton } from './PrimaryButton';
 import { Radii, Spacing, Typography, useColors } from '../constants';
 
@@ -25,7 +25,7 @@ export function LoadError({ onRetry, retrying = false }: LoadErrorProps) {
   return (
     <View style={[styles.card, { backgroundColor: colors.bgElevated }]}>
       <View style={[styles.icon, { backgroundColor: colors.dangerSoft }]}>
-        <Ionicons name="cloud-offline-outline" size={22} color={colors.danger} />
+        <Icon name="cloud-offline-outline" size={22} color={colors.danger} />
       </View>
       <Text style={[Typography.title3, styles.title, { color: colors.text }]}>
         {t('common.loadError.title')}

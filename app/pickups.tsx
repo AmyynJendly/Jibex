@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
@@ -7,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
+import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { PackageCube } from '../components/PackageCube';
@@ -129,7 +129,7 @@ function PickupCard({
                 : { borderColor: colors.separator },
             ]}
             onPress={onSelect}>
-            {selected && <Ionicons name="checkmark" size={17} color="#fff" />}
+            {selected && <Icon name="checkmark" size={17} color="#fff" />}
           </AnimatedPressable>
         )}
         <AnimatedPressable
@@ -149,7 +149,7 @@ function PickupCard({
           </View>
 
           <View style={[styles.chevronWell, { backgroundColor: colors.bg }]}>
-            <Ionicons
+            <Icon
               name={expanded ? 'chevron-up' : 'chevron-down'}
               size={17}
               color={colors.textSecondary}
@@ -170,7 +170,7 @@ function PickupCard({
       <View style={[styles.actionRow, { borderTopColor: colors.separator }]}>
         {readOnly ? (
           <View style={styles.collectedRow}>
-            <Ionicons name="checkmark-circle" size={17} color={colors.success} />
+            <Icon name="checkmark-circle" size={17} color={colors.success} />
             <Text style={[styles.collectedText, { color: colors.success }]}>
               {t('pickups.collected')}
             </Text>
@@ -183,7 +183,7 @@ function PickupCard({
               accessibilityLabel={`${t('pickups.call')} ${pickup.businessName}`}
               style={[styles.actionButton, { backgroundColor: colors.accentSoft }]}
               onPress={() => Linking.openURL(telUrl(pickup.contactPhone)).catch(() => {})}>
-              <Ionicons name="call-outline" size={17} color={colors.accent} />
+              <Icon name="call-outline" size={17} color={colors.accent} />
               <Text style={[styles.actionButtonText, { color: colors.accent }]}>
                 {t('pickups.call')}
               </Text>
@@ -194,7 +194,7 @@ function PickupCard({
               accessibilityLabel={`${t('pickups.navigate')} ${pickup.address}`}
               style={[styles.actionButton, styles.actionButtonWide, { backgroundColor: colors.accent }]}
               onPress={() => openInMaps(pickup.address)}>
-              <Ionicons name="navigate" size={16} color="#fff" />
+              <Icon name="navigate" size={16} color="#fff" />
               <Text style={[styles.actionButtonText, styles.actionButtonTextOn]}>
                 {t('pickups.navigate')}
               </Text>
@@ -305,7 +305,7 @@ export default function PickupsScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.backRow}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>
       <View style={styles.header}>
@@ -443,7 +443,7 @@ export default function PickupsScreen() {
               },
             ]}
             onPress={handleDoneSelected}>
-            <Ionicons name="checkmark-done" size={17} color="#fff" />
+            <Icon name="checkmark-done" size={17} color="#fff" />
             <Text style={styles.doneButtonText}>
               {selected.length > 0
                 ? t('pickups.doneWithCount', { count: selected.length })

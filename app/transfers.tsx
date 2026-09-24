@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
@@ -7,6 +6,7 @@ import Animated from 'react-native-reanimated';
 import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '../components/Icon';
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
@@ -143,7 +143,7 @@ export default function TransfersScreen() {
                   scaleTo={0.97}
                   style={[styles.scanButton, { borderColor: colors.separator }]}
                   onPress={() => router.push('/scanner')}>
-                  <Ionicons name="scan-outline" size={16} color={colors.textSecondary} />
+                  <Icon name="scan-outline" size={16} color={colors.textSecondary} />
                   <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
                     {t('transfers.scanToConfirm')}
                   </Text>
@@ -160,7 +160,7 @@ export default function TransfersScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.backRow}>
         <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
         </GlassIconButton>
       </View>
       <View style={styles.header}>

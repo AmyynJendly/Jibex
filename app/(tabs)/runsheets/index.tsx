@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
+import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Card } from '../../../components/Card';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -124,7 +124,7 @@ function ParcelCard({
         {drag && !locked && <DragHandle drag={drag} />}
         {locked && (
           <View style={styles.lockSlot}>
-            <Ionicons name="lock-closed" size={15} color={colors.textTertiary} />
+            <Icon name="lock-closed" size={15} color={colors.textTertiary} />
           </View>
         )}
         {stopNumber !== undefined && (
@@ -145,7 +145,7 @@ function ParcelCard({
       </View>
 
       <View style={styles.addressRow}>
-        <Ionicons name="location-outline" size={15} color={colors.textSecondary} />
+        <Icon name="location-outline" size={15} color={colors.textSecondary} />
         <Text
           style={[Typography.footnote, styles.addressText, { color: colors.textSecondary }]}
           numberOfLines={1}>
@@ -153,7 +153,7 @@ function ParcelCard({
         </Text>
         {!inert && (
           <View style={[styles.openWell, { backgroundColor: colors.bg }]}>
-            <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
+            <Icon name="chevron-forward" size={15} color={colors.textSecondary} />
           </View>
         )}
       </View>
@@ -173,7 +173,7 @@ function ParcelCard({
 
         {locked ? (
           <View style={styles.lockedRow}>
-            <Ionicons name="lock-closed-outline" size={13} color={colors.textTertiary} />
+            <Icon name="lock-closed-outline" size={13} color={colors.textTertiary} />
             <Text style={[styles.lockedText, { color: colors.textTertiary }]}>{lockedLabel}</Text>
           </View>
         ) : (
@@ -186,7 +186,7 @@ function ParcelCard({
                 accessibilityLabel={callLabel}
                 style={[styles.callButton, { backgroundColor: colors.accentSoft }]}
                 onPress={onCall}>
-                <Ionicons name="call-outline" size={17} color={colors.accent} />
+                <Icon name="call-outline" size={17} color={colors.accent} />
                 {job.callAttempts > 0 && (
                   <View style={[styles.callBadge, { backgroundColor: colors.accent }]}>
                     <Text style={styles.callBadgeText}>{job.callAttempts}</Text>
@@ -201,7 +201,7 @@ function ParcelCard({
                 accessibilityLabel={`${updateLabel} ${job.id}`}
                 style={[styles.updateButton, { backgroundColor: colors.accent }]}
                 onPress={onUpdate}>
-                <Ionicons name="sync-outline" size={14} color="#fff" />
+                <Icon name="sync-outline" size={14} color="#fff" />
                 <Text style={styles.updateButtonText}>{updateLabel}</Text>
               </AnimatedPressable>
             )}
@@ -468,7 +468,7 @@ export default function RunsheetsScreen() {
                 ]}>
                 <View style={styles.confirmHead}>
                   <View style={[styles.confirmIcon, { backgroundColor: colors.warningSoft }]}>
-                    <Ionicons name="lock-closed" size={16} color={colors.warning} />
+                    <Icon name="lock-closed" size={16} color={colors.warning} />
                   </View>
                   <View style={styles.confirmHeadText}>
                     <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
@@ -523,7 +523,7 @@ export default function RunsheetsScreen() {
           {workable.length > 1 && (
             <View style={[styles.nearestFirstRow, { backgroundColor: colors.bgElevated }]}>
               <View style={styles.nearestFirstText}>
-                <Ionicons name="navigate-outline" size={15} color={colors.textSecondary} />
+                <Icon name="navigate-outline" size={15} color={colors.textSecondary} />
                 <Text style={[Typography.footnote, { color: colors.text }]}>
                   {t('runsheets.nearestFirst')}
                 </Text>
