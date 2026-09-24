@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
@@ -20,6 +19,7 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SegmentedControl } from '../../../components/SegmentedControl';
 import { SkeletonRow } from '../../../components/Skeleton';
 import { StatusUpdateSheet } from '../../../components/StatusUpdateSheet';
+import { StopLink } from '../../../components/StopLink';
 import { useToast } from '../../../components/Toast';
 import {
   Fonts,
@@ -77,7 +77,8 @@ interface ParcelCardProps {
   locked?: boolean;
   /** Present only for a workable stop in the current tab — spreads onto `DragHandle`. */
   drag?: DragBinding;
-  onOpen?: () => void;
+  /** Tapping the card opens its stop screen, zooming out of the card on iOS. */
+  opensStop?: boolean;
   onCall?: () => void;
   onUpdate?: () => void;
   updateLabel: string;
@@ -96,7 +97,7 @@ function ParcelCard({
   readOnly = false,
   locked = false,
   drag,
-  onOpen,
+  opensStop = false,
   onCall,
   onUpdate,
   updateLabel,
@@ -221,16 +222,17 @@ function ParcelCard({
   );
 
   // Locked and history cards are display surfaces, not controls.
-  if (inert || !onOpen) return card;
+  if (inert || !opensStop) return card;
 
   // Deliberately not accessibilityRole="button": this card contains Call and
   // Update, and a button inside a button is invalid markup and ambiguous to a
   // screen reader. The card's own text is read normally, and the two real
   // buttons inside it carry their own labels.
+  //
   return (
-    <AnimatedPressable scaleTo={0.985} onPress={onOpen}>
+    <StopLink jobId={job.id} scaleTo={0.985}>
       {card}
-    </AnimatedPressable>
+    </StopLink>
   );
 }
 
@@ -559,7 +561,7 @@ export default function RunsheetsScreen() {
                   highlighted={job.id === highlightedId}
                   stopNumber={index + 1}
                   drag={drag}
-                  onOpen={() => router.push({ pathname: '/job/[id]', params: { id: job.id } })}
+                  opensStop
                   onCall={() => handleCall(job)}
                   onUpdate={() => setSheetJob(job)}
                   updateLabel={t('runsheets.update')}

@@ -18,6 +18,7 @@ import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { CountUpText } from '../../../components/CountUpText';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PackageCube } from '../../../components/PackageCube';
+import { StopLink } from '../../../components/StopLink';
 import { LoadError } from '../../../components/LoadError';
 import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
@@ -456,9 +457,9 @@ export default function HomeScreen() {
       </View>
 
       {nextStop && (
-        <AnimatedPressable
+        <StopLink
+          jobId={nextStop.id}
           scaleTo={0.98}
-          onPress={() => router.push({ pathname: '/job/[id]', params: { id: nextStop.id } })}
           style={[
             styles.nextStopCard,
             { backgroundColor: colors.bgElevated, borderColor: colors.accent },
@@ -507,7 +508,7 @@ export default function HomeScreen() {
               <Text style={styles.goPillText}>{t('home.nextStop.go')}</Text>
             </View>
           </View>
-        </AnimatedPressable>
+        </StopLink>
       )}
 
       <View style={styles.compactRow}>
