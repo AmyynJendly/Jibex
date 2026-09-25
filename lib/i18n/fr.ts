@@ -80,7 +80,7 @@ const fr: TranslationResource = {
   },
 
   home: {
-    a11y: { search: 'Rechercher un numéro de suivi', scan: 'Scanner un colis', alerts: 'Alertes' },
+    a11y: { search: 'Rechercher un numéro de suivi', scan: 'Scanner un colis' },
     greeting: {
       morning: 'Bonjour',
       afternoon: 'Bon après-midi',

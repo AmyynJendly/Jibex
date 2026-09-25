@@ -78,7 +78,7 @@ const en = {
   },
 
   home: {
-    a11y: { search: 'Search a tracking number', scan: 'Scan a package', alerts: 'Alerts' },
+    a11y: { search: 'Search a tracking number', scan: 'Scan a package' },
     greeting: {
       morning: 'Good Morning',
       afternoon: 'Good Afternoon',

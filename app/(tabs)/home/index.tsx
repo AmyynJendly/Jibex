@@ -41,7 +41,6 @@ import {
   invalidateDeliveryData,
   useDriverStats,
   useJobsByIds,
-  useNotifications,
   useRunsheets,
   useScreenState,
   useUser,
@@ -52,7 +51,6 @@ import type { DriverStats, Runsheet, User } from '../../../types';
 interface HomeData {
   user: User;
   stats: DriverStats;
-  hasUnreadNotifications: boolean;
   /** Fallback shown until (or unless) a real GPS fix resolves — the driver's assigned runsheet zone. */
   zone: string | null;
   /** Runsheets still awaiting the driver's receipt confirmation — their parcels are excluded from `nextStop` since they're not deliverable yet. */
@@ -91,7 +89,6 @@ export default function HomeScreen() {
   const userQuery = useUser();
   const statsQuery = useDriverStats();
   const runsheetsQuery = useRunsheets();
-  const notificationsQuery = useNotifications();
 
   const runsheets = useMemo(() => runsheetsQuery.data ?? [], [runsheetsQuery.data]);
 
@@ -118,7 +115,7 @@ export default function HomeScreen() {
   const jobsQuery = useJobsByIds(allStopIds);
   const { nextStop, index: nextStopIndex } = useNextStop();
 
-  const screen = useScreenState([userQuery, statsQuery, runsheetsQuery, notificationsQuery]);
+  const screen = useScreenState([userQuery, statsQuery, runsheetsQuery]);
 
   const data = useMemo<HomeData | null>(() => {
     const user = userQuery.data;
@@ -139,7 +136,6 @@ export default function HomeScreen() {
         completionPercent:
           allJobs.length === 0 ? 0 : Math.round((delivered / allJobs.length) * 100),
       },
-      hasUnreadNotifications: (notificationsQuery.data ?? []).some((n) => !n.read),
       zone: workableRunsheets[0]?.zone ?? runsheets[0]?.zone ?? null,
       unconfirmedRunsheets,
     };
@@ -147,7 +143,6 @@ export default function HomeScreen() {
     userQuery.data,
     statsQuery.data,
     jobsQuery.data,
-    notificationsQuery.data,
     workableRunsheets,
     runsheets,
     unconfirmedRunsheets,
@@ -239,7 +234,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { user, stats, hasUnreadNotifications, zone } = data;
+  const { user, stats, zone } = data;
   const locationLabel = gpsLocation ?? zone;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];
@@ -322,23 +317,6 @@ export default function HomeScreen() {
           accessibilityLabel={t('home.a11y.scan')}
           onPress={() => router.push('/scanner')}>
           <Icon name="scan-outline" size={20} color={colors.text} />
-        </GlassIconButton>
-        <GlassIconButton
-          size={40}
-          accessibilityLabel={t('home.a11y.alerts')}
-          onPress={() => router.push('/alerts')}>
-          <Icon
-            name={hasUnreadNotifications ? 'notifications' : 'notifications-outline'}
-            size={20}
-            color={colors.text}
-            // One bounce when there's something unread — noticeable, then still.
-            effect={hasUnreadNotifications ? 'bounce' : undefined}
-          />
-          {hasUnreadNotifications && (
-            <View
-              style={[styles.badgeDot, { backgroundColor: colors.danger, borderColor: colors.bgElevated }]}
-            />
-          )}
         </GlassIconButton>
       </View>
 
@@ -567,15 +545,6 @@ const styles = StyleSheet.create({
   skeletonGreeting: {
     gap: Spacing.sm,
     marginTop: -6,
-  },
-  badgeDot: {
-    position: 'absolute',
-    top: 7,
-    right: 7,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    borderWidth: 2,
   },
   greeting: {
     marginTop: -8,

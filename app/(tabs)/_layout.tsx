@@ -62,8 +62,9 @@ export default function TabsLayout() {
           sf={{ default: 'bell', selected: 'bell.fill' }}
           drawable="ic_alerts"
         />
+        {/* No text means no badge — passing "0" with `hidden` still drew one. */}
         <NativeTabs.Trigger.Badge hidden={unread === 0}>
-          {unread > 99 ? '99+' : String(unread)}
+          {unread === 0 ? undefined : unread > 99 ? '99+' : String(unread)}
         </NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
 
