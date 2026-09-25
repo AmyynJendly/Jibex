@@ -438,7 +438,7 @@ export default function HomeScreen() {
 
       {nextStop && (
         <StopLink
-          jobId={nextStop.id}
+          job={nextStop}
           scaleTo={0.98}
           style={[
             styles.nextStopCard,

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -32,7 +32,7 @@ import {
 } from '../../../constants';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { localeTag } from '../../../lib/date';
-import { telUrl } from '../../../lib/phone';
+import { callCustomer, openInMaps } from '../../../lib/stopActions';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { useNow } from '../../../lib/useNow';
@@ -43,7 +43,6 @@ import {
   getDriverStats,
   getJobDetail,
   getRunsheets,
-  logCallAttempt,
 } from '../../../services/mock-api';
 import type { Job } from '../../../types';
 
@@ -51,38 +50,11 @@ import type { Job } from '../../../types';
  * No-key static map image — shows the job's real location instead of a
  * placeholder. Yandex's static maps API is used because it needs no API key
  * (Google's Static Maps API does, and none is configured yet — see the
- * "real backend later" note on `openInMaps` above). Swap this for Google's
+ * "real backend later" note on `openInMaps` in lib/stopActions). Swap this for Google's
  * Static Maps API once a key is available, for full parity with `openInMaps`.
  */
 function staticMapUrl({ lat, lng }: { lat: number; lng: number }) {
   return `https://static-maps.yandex.ru/1.x/?ll=${lng},${lat}&z=15&l=map&size=640,300&pt=${lng},${lat},pm2rdl`;
-}
-
-/**
- * Drivers here use Google Maps, not Apple Maps — opens the native Google
- * Maps app when it's installed (registered as a queryable scheme in
- * `app.json`), otherwise falls back to the Google Maps web URL, which still
- * opens in the Google Maps app via universal link if it's present.
- */
-async function openInMaps(job: Job) {
-  const { lat, lng } = job.location;
-  const label = encodeURIComponent(job.customerName);
-  const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-
-  const appUrl = Platform.select({
-    ios: `comgooglemaps://?daddr=${lat},${lng}&q=${label}&directionsmode=driving`,
-    android: `google.navigation:q=${lat},${lng}`,
-  });
-
-  if (appUrl) {
-    const canOpen = await Linking.canOpenURL(appUrl).catch(() => false);
-    if (canOpen) {
-      Linking.openURL(appUrl).catch(() => Linking.openURL(webUrl));
-      return;
-    }
-  }
-
-  Linking.openURL(webUrl);
 }
 
 export default function JobDetailScreen() {
@@ -140,9 +112,7 @@ export default function JobDetailScreen() {
   /** Logged before dialling so the attempt counts even if the dialler never opens — delivery is gated on it. */
   async function handleCall() {
     if (!job) return;
-    setJob(await logCallAttempt(job.id));
-    await invalidateDeliveryData();
-    Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
+    setJob(await callCustomer(job));
   }
 
   function handleMenuAction(action: string) {

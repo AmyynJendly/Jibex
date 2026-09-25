@@ -10,6 +10,8 @@ export const iosMajorVersion =
  * a screen instead of a missing or broken one.
  */
 export const supports = {
+  /** Long-press preview + menu on a link (iOS 13+, so every supported iPhone). */
+  linkPreview: iosMajorVersion >= 13,
   /** Apple's zoom transition into a pushed screen. */
   zoomTransition: iosMajorVersion >= 18,
   /** The tab bar's bottom accessory slot (Liquid Glass tab bars). */

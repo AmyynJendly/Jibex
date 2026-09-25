@@ -230,7 +230,7 @@ function ParcelCard({
   // buttons inside it carry their own labels.
   //
   return (
-    <StopLink jobId={job.id} scaleTo={0.985}>
+    <StopLink job={job} scaleTo={0.985}>
       {card}
     </StopLink>
   );
