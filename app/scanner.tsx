@@ -181,7 +181,7 @@ export default function ScannerScreen() {
       {batchComplete ? (
         <View style={styles.batchCompleteBlock}>
           <View style={styles.batchCompleteIcon}>
-            <Icon name="checkmark" size={32} color="#2E3439" />
+            <Icon name="checkmark" size={32} color="#2E3439" effect="bounce" />
           </View>
           <Text style={styles.permissionTitle}>{t('scanner.batchCompleteTitle')}</Text>
           <Text style={styles.permissionBody}>{t('scanner.batchCompleteBody')}</Text>
@@ -241,7 +241,8 @@ export default function ScannerScreen() {
         ) : (
           <GlassSurface tint="dark" colorScheme="dark" style={styles.hintCard}>
             <View style={styles.hintIcon}>
-              <Icon name="scan-outline" size={18} color={ACCENT} />
+              {/* A slow pulse while it waits for a code — the scanner is live. */}
+              <Icon name="scan-outline" size={18} color={ACCENT} effect={{ effect: 'pulse', repeat: -1 }} />
             </View>
             <View style={styles.hintTextStack}>
               <Text style={styles.hintTitle}>

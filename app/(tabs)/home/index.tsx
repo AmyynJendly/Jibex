@@ -331,6 +331,8 @@ export default function HomeScreen() {
             name={hasUnreadNotifications ? 'notifications' : 'notifications-outline'}
             size={20}
             color={colors.text}
+            // One bounce when there's something unread — noticeable, then still.
+            effect={hasUnreadNotifications ? 'bounce' : undefined}
           />
           {hasUnreadNotifications && (
             <View

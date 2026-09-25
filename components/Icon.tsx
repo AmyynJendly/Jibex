@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import { Image, type SFSymbolEffect } from 'expo-image';
 import {
   Platform,
   type ColorValue,
@@ -7,6 +7,8 @@ import {
   type StyleProp,
   type TextStyle,
 } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
+import { supports } from '../lib/platformSupport';
 import type {
   SFSymbols1_0,
   SFSymbols1_1,
@@ -122,6 +124,11 @@ interface IconProps {
   color: ColorValue;
   /** Positioning only (margins) — the icon's own size and color come from the props above. */
   style?: StyleProp<TextStyle>;
+  /**
+   * An SF Symbol animation (bounce, pulse…), iOS 17+. Older iPhones, Android,
+   * web and anyone with Reduce Motion on see the same icon, still.
+   */
+  effect?: SFSymbolEffect;
 }
 
 /**
@@ -129,7 +136,8 @@ interface IconProps {
  * expo-image) so it matches the system's type and weight. Android, web, and
  * any name without a symbol in the table fall back to the Ionicon itself.
  */
-export function Icon({ name, size, color, style }: IconProps) {
+export function Icon({ name, size, color, style, effect }: IconProps) {
+  const reduceMotion = useReducedMotion();
   const symbol = Platform.OS === 'ios' ? SF_SYMBOLS[name] : undefined;
   if (!symbol) return <Ionicons name={name} size={size} color={color} style={style} />;
   return (
@@ -138,6 +146,7 @@ export function Icon({ name, size, color, style }: IconProps) {
       tintColor={typeof color === 'string' ? color : undefined}
       style={[{ width: size, height: size }, style as StyleProp<ImageStyle>]}
       contentFit="contain"
+      sfEffect={effect && supports.symbolEffects && !reduceMotion ? effect : null}
       accessible={false}
     />
   );
