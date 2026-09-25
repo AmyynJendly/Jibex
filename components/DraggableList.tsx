@@ -174,7 +174,10 @@ function Row({
   );
 
   const animatedStyle = useAnimatedStyle(() => {
-    if (!positioned) return {};
+    // Back in normal flow (a new row is still being measured): clear the
+    // offset too, or a row keeps its old slot's shift on top of its flow
+    // position and lands over its neighbours.
+    if (!positioned) return { transform: [{ translateY: 0 }, { scale: 1 }] };
     const isActive = activeId.get() === id;
     return {
       transform: [

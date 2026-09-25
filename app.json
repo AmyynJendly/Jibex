@@ -12,9 +12,7 @@
       "infoPlist": {
         "UIDesignRequiresCompatibility": false,
         "LSApplicationQueriesSchemes": [
-          "comgooglemaps",
-          "waze",
-          "maps"
+          "comgooglemaps"
         ],
         "CADisableMinimumFrameDurationOnPhone": true,
         "NSFaceIDUsageDescription": "Jibex uses Face ID to unlock your driver session, which holds your route and cash totals."

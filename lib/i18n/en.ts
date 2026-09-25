@@ -15,9 +15,6 @@ const en = {
     message: "You're offline — changes will sync when reconnected",
   },
 
-  maps: {
-    chooseTitle: 'Open directions in',
-  },
   common: {
     close: 'Close',
     offlineAction: "You're offline — reconnect before recording this.",

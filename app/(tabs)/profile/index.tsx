@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Icon, type IconName } from '../../../components/Icon';
+import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Barcode } from '../../../components/Barcode';
 import { NativeSwitch } from '../../../components/NativeSwitch';
@@ -30,15 +30,6 @@ import { useHapticsEnabled } from '../../../lib/haptics';
 import { useNextStopBarEnabled } from '../../../lib/nextStopBar';
 import { supports } from '../../../lib/platformSupport';
 import { useDriverStats, useRunsheets, useUser, useVehicle } from '../../../lib/query';
-
-interface AccountRow {
-  key: string;
-  label: string;
-  icon: IconName;
-  color: string;
-  soft: string;
-  href: '/personal-info' | '/vehicle-details';
-}
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -65,26 +56,6 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   }
 
-  // Both open read-only detail screens — the agency owns this data, the
-  // driver can view it but not edit it.
-  const accountRows: AccountRow[] = [
-    {
-      key: 'personal',
-      label: t('profile.rows.personalInfo'),
-      icon: 'person-outline',
-      color: colors.accent,
-      soft: colors.accentSoft,
-      href: '/personal-info',
-    },
-    {
-      key: 'vehicle',
-      label: t('profile.rows.vehicleDetails'),
-      icon: 'car-outline',
-      color: colors.purple,
-      soft: colors.purpleSoft,
-      href: '/vehicle-details',
-    },
-  ];
 
   const driverSummary =
     user && stats ? (
@@ -172,9 +143,6 @@ export default function ProfileScreen() {
         <ProfileSettingsList
           header={driverSummary}
           labels={{
-            account: t('profile.sectionAccount'),
-            personalInfo: t('profile.rows.personalInfo'),
-            vehicle: t('profile.rows.vehicleDetails'),
             language: t('settings.sectionLanguage'),
             security: t('settings.sectionSecurity'),
             biometric: t('settings.biometricLogin'),
@@ -201,8 +169,6 @@ export default function ProfileScreen() {
           newJobAlerts={newJobAlerts}
           onNewJobAlertsChange={setNewJobAlerts}
           appVersion={Constants.expoConfig?.version ?? '1.0.0'}
-          onOpenPersonalInfo={() => router.push('/personal-info')}
-          onOpenVehicle={() => router.push('/vehicle-details')}
           onOpenHelpCenter={() => router.push('/help-center')}
           onLogOut={handleLogOut}
         />
@@ -227,41 +193,6 @@ export default function ProfileScreen() {
       ) : (
         <>
           {driverSummary}
-
-          <View>
-            <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
-              {t('profile.sectionAccount')}
-            </Text>
-            <View
-              style={[
-                styles.listCard,
-                { backgroundColor: colors.bgElevated },
-                getCardShadow(scheme),
-              ]}>
-              {accountRows.map((row, i) => (
-                <View
-                  key={row.key}>
-                  <AnimatedPressable
-                    onPress={() => router.push(row.href)}
-                    style={[
-                      styles.row,
-                      i < accountRows.length - 1 && {
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                        borderBottomColor: colors.separator,
-                      },
-                    ]}>
-                    <View style={[styles.rowIcon, { backgroundColor: row.soft }]}>
-                      <Icon name={row.icon} size={15} color={row.color} />
-                    </View>
-                    <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                      {row.label}
-                    </Text>
-                    <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
-                  </AnimatedPressable>
-                </View>
-              ))}
-            </View>
-          </View>
 
           {/* Settings live inline here rather than behind their own screen —
               there are few enough of them that a separate route was just an

@@ -10,7 +10,6 @@ import {
 
 import { Typography, getAccentGlow, useColors } from '../constants';
 import { AnimatedPressable } from './AnimatedPressable';
-import { GlassSurface } from './GlassSurface';
 
 interface PrimaryButtonProps {
   label: string;
@@ -25,15 +24,12 @@ interface PrimaryButtonProps {
 }
 
 /**
- * The accent-tinted glass pill button used across nearly every screen in the
- * design (Log In, Continue, Start Delivery, Verify & Complete, ...).
+ * The main action pill used across the app (Log In, Confirm, Show QR, ...).
  *
- * This is real tinted Liquid Glass (`GlassView` with `tintColor`) — the
- * vibrant color shows *through* translucency, not a flat gradient-over-solid
- * fake. The edge glow (`getAccentGlow`) and rim border are genuine shadow/
- * border effects layered on top, and a faint top specular gradient adds the
- * light-catching sheen real glass has — most visible on the BlurView
- * fallback path, where there's no native light response to rely on.
+ * Solid kraft with a soft shine along the top edge and the accent glow
+ * underneath. It used to be tinted glass, which read as a faded clay button
+ * — on iOS 26 the glass let the page through, and elsewhere the tint was a
+ * light wash — so the one thing a driver has to tap never stood out.
  */
 export function PrimaryButton({
   label,
@@ -55,26 +51,24 @@ export function PrimaryButton({
       scaleTo={0.97}
       style={[
         styles.button,
-        { height, borderRadius: radius, opacity: disabled && !loading ? 0.5 : 1 },
+        {
+          height,
+          borderRadius: radius,
+          backgroundColor: colors.accent,
+          opacity: disabled && !loading ? 0.5 : 1,
+        },
         getAccentGlow(),
         style,
       ]}>
-      <GlassSurface
-        style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
-        tintColor={colors.accent}
-        tintOpacity={0.9}
-        glassEffectStyle="regular"
-        isInteractive
-      />
       <LinearGradient
-        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
-        locations={[0, 0.6]}
+        colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0)']}
+        locations={[0, 0.55]}
         style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
       />
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={colors.onAccent} />
       ) : (
-        <Text style={[Typography.headline, styles.label, labelStyle]}>{label}</Text>
+        <Text style={[Typography.headline, { color: colors.onAccent }, labelStyle]}>{label}</Text>
       )}
     </AnimatedPressable>
   );
@@ -86,9 +80,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  label: {
-    color: '#fff',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
 });

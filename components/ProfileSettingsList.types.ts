@@ -4,9 +4,6 @@ export interface ProfileSettingsListProps {
   /** Driver card and stats, shown at the top of the list. */
   header: ReactNode;
   labels: {
-    account: string;
-    personalInfo: string;
-    vehicle: string;
     language: string;
     security: string;
     biometric: string;
@@ -31,8 +28,6 @@ export interface ProfileSettingsListProps {
   newJobAlerts: boolean;
   onNewJobAlertsChange: (on: boolean) => void;
   appVersion: string;
-  onOpenPersonalInfo: () => void;
-  onOpenVehicle: () => void;
   onOpenHelpCenter: () => void;
   onLogOut: () => void;
 }

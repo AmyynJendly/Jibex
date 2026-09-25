@@ -75,6 +75,7 @@ export default function RootLayout() {
 
   const standardHeader = nativeHeaderOptions(colors);
   const largeTitleHeader = nativeHeaderOptions(colors, { largeTitle: true });
+  const solidHeader = nativeHeaderOptions(colors, { solid: true });
 
   // Every screen's `Typography`/`monoStyle` names one of these font families
   // directly (not `fontWeight`, since custom TTFs aren't a single variable
@@ -101,11 +102,9 @@ export default function RootLayout() {
                             push, the back swipe and the title all move the
                             way they do in the system apps. Each screen sets
                             its own (translated) title. */}
-                        <Stack.Screen name="pickups" options={largeTitleHeader} />
+                        <Stack.Screen name="pickups" options={solidHeader} />
                         <Stack.Screen name="transfers" options={largeTitleHeader} />
                         <Stack.Screen name="returns" options={largeTitleHeader} />
-                        <Stack.Screen name="personal-info" options={standardHeader} />
-                        <Stack.Screen name="vehicle-details" options={standardHeader} />
                         <Stack.Screen name="help-center" options={standardHeader} />
                         <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
                         <Stack.Screen name="search" options={standardHeader} />

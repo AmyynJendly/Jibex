@@ -18,9 +18,6 @@ const fr: TranslationResource = {
     message: 'Vous êtes hors ligne — les modifications seront synchronisées une fois reconnecté',
   },
 
-  maps: {
-    chooseTitle: 'Ouvrir l’itinéraire avec',
-  },
   common: {
     close: 'Fermer',
     offlineAction: "Vous êtes hors ligne — reconnectez-vous avant d'enregistrer.",

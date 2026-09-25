@@ -18,21 +18,28 @@ const isIOS = Platform.OS === 'ios';
  * Screens using it scroll with `contentInsetAdjustmentBehavior="automatic"`
  * so their content starts below the bar, and drop any top safe-area padding
  * of their own — the bar already accounts for it.
+ *
+ * `solid` is for screens that swap one list for another (Current / History):
+ * a floating bar and its large title only track the list that was there
+ * first, so the title stayed stuck and a freshly shown list could open
+ * scrolled part-way. A solid bar sits above the content instead, and every
+ * list starts at the top.
  */
 export function nativeHeaderOptions(
   colors: ColorPalette,
-  { largeTitle = false }: { largeTitle?: boolean } = {}
+  { largeTitle = false, solid = false }: { largeTitle?: boolean; solid?: boolean } = {}
 ): NativeStackNavigationOptions {
+  const floating = isIOS && !solid;
   return {
     headerShown: true,
-    headerLargeTitleEnabled: isIOS && largeTitle,
-    headerTransparent: isIOS,
-    headerBlurEffect: isIOS && !supports.liquidGlass ? 'systemChromeMaterial' : undefined,
+    headerLargeTitleEnabled: floating && largeTitle,
+    headerTransparent: floating,
+    headerBlurEffect: floating && !supports.liquidGlass ? 'systemChromeMaterial' : undefined,
     headerShadowVisible: false,
     headerLargeTitleShadowVisible: false,
     headerBackButtonDisplayMode: 'minimal',
     headerTintColor: colors.accent,
-    headerStyle: { backgroundColor: isIOS ? 'transparent' : colors.bg },
+    headerStyle: { backgroundColor: floating ? 'transparent' : colors.bg },
     headerLargeStyle: { backgroundColor: 'transparent' },
     headerTitleStyle: { fontFamily: Fonts.archivoBold, color: colors.text },
     headerLargeTitleStyle: { fontFamily: Fonts.archivoExtraBold, color: colors.text },

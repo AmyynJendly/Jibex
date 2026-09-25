@@ -33,7 +33,7 @@ import {
   useColors,
   type ColorPalette,
 } from '../../../constants';
-import { formatCurrency } from '../../../lib/currency';
+import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { telUrl } from '../../../lib/phone';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
@@ -337,6 +337,12 @@ export default function RunsheetsScreen() {
     }, 250);
     return () => clearTimeout(timer);
   }, [highlightedId, toggle, filteredHistory]);
+
+  // A new filter is a new list: start it from the top, not wherever the
+  // previous one was scrolled to.
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [filter]);
   const pending = toggle === 'current' ? !active : !history;
 
   const titleAndToggle = (
@@ -476,23 +482,42 @@ export default function RunsheetsScreen() {
 
           {currentCount > 0 && (
             <View style={styles.summaryRow}>
-              <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
-                <Text style={[monoStyle(20, 'medium'), { color: colors.text }]}>{currentCount}</Text>
-                <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
-                  {t('runsheets.summary.toDeliver')}
+              <View
+                style={[styles.summaryCell, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+                <View style={styles.summaryHead}>
+                  <View style={[styles.summaryIcon, { backgroundColor: colors.accentSoft }]}>
+                    <Icon name="cube-outline" size={15} color={colors.accent} />
+                  </View>
+                  <Text
+                    style={[monoLabelStyle(11, 0.06), styles.summaryLabel, { color: colors.textSecondary }]}
+                    numberOfLines={1}>
+                    {t('runsheets.summary.toDeliver')}
+                  </Text>
+                </View>
+                <Text style={[monoStyle(28, 'medium'), { color: colors.text }]} numberOfLines={1}>
+                  {currentCount}
                 </Text>
               </View>
-              <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }]}>
-                <Text
-                  style={[monoStyle(20, 'medium'), { color: colors.accent }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.7}>
-                  {formatCurrency(codTotal)}
-                </Text>
-                <Text style={[monoLabelStyle(9, 0.08), { color: colors.textTertiary }]}>
-                  {t('runsheets.summary.toCollect')}
-                </Text>
+              {/* A fixed size, no shrink-to-fit: letting the amount scale
+                  itself made it jump between sizes as the row re-laid out. */}
+              <View
+                style={[styles.summaryCell, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+                <View style={styles.summaryHead}>
+                  <View style={[styles.summaryIcon, { backgroundColor: colors.successSoft }]}>
+                    <Icon name="cash-outline" size={15} color={colors.success} />
+                  </View>
+                  <Text
+                    style={[monoLabelStyle(11, 0.06), styles.summaryLabel, { color: colors.textSecondary }]}
+                    numberOfLines={1}>
+                    {t('runsheets.summary.toCollect')}
+                  </Text>
+                </View>
+                <View style={styles.amountRow}>
+                  <Text style={[monoStyle(24, 'medium'), { color: colors.success }]} numberOfLines={1}>
+                    {formatDecimal(codTotal, CURRENCY_DECIMALS)}
+                  </Text>
+                  <Text style={[monoStyle(11), { color: colors.textSecondary }]}>TND</Text>
+                </View>
               </View>
             </View>
           )}
@@ -614,20 +639,39 @@ const styles = StyleSheet.create({
   },
   summaryRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: -Spacing.xs,
+    gap: Spacing.smd,
   },
   summaryCell: {
     flex: 1,
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radii.xl,
+  },
+  summaryHead: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    paddingVertical: Spacing.smd,
-    borderRadius: Radii.lg,
+    gap: Spacing.sm,
+  },
+  summaryIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: Radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryLabel: {
+    flex: 1,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
   },
   nearestFirstRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 48,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.mlg,
     borderRadius: Radii.lg,

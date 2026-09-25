@@ -119,8 +119,8 @@ const CASCADE_STEP_MS = 45;
 const SLIDE_OUT_MS = 260;
 
 /**
- * Phones get "Mark all read" and "Clear all" from a native ⋯ menu in the
- * navigation bar; the web has no such bar item, so it keeps them on the page.
+ * Phones get "Read all" and "Clear all" as buttons in the navigation bar; the
+ * web has no such bar items, so it keeps them on the page.
  */
 const actionsInBar = Platform.OS !== 'web';
 
@@ -400,19 +400,19 @@ export default function AlertsScreen() {
       contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: t('alerts.headerTitle') }} />
       {actionsInBar && (unreadCount > 0 || hasAlerts) && (
+        // Two plain, labelled buttons rather than a ⋯ menu: drivers should
+        // see both actions without having to go looking for them.
         <Stack.Toolbar placement="right">
-          <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel={t('alerts.a11yActions')}>
-            {unreadCount > 0 && (
-              <Stack.Toolbar.MenuAction icon="checkmark.circle" onPress={handleMarkAllRead}>
-                {t('alerts.markAllRead')}
-              </Stack.Toolbar.MenuAction>
-            )}
-            {hasAlerts && (
-              <Stack.Toolbar.MenuAction icon="trash" destructive onPress={handleDeleteAll}>
-                {t('alerts.deleteAll')}
-              </Stack.Toolbar.MenuAction>
-            )}
-          </Stack.Toolbar.Menu>
+          {unreadCount > 0 && (
+            <Stack.Toolbar.Button tintColor={colors.accent} onPress={handleMarkAllRead}>
+              {t('alerts.markAllRead')}
+            </Stack.Toolbar.Button>
+          )}
+          {hasAlerts && (
+            <Stack.Toolbar.Button tintColor={colors.danger} onPress={handleDeleteAll}>
+              {t('alerts.deleteAll')}
+            </Stack.Toolbar.Button>
+          )}
         </Stack.Toolbar>
       )}
 

@@ -86,11 +86,6 @@ export function ProfileSettingsList(props: ProfileSettingsListProps) {
           </RNHostView>
         </Section>
 
-        <Section title={props.labels.account}>
-          {navRow(props.labels.personalInfo, 'person', props.onOpenPersonalInfo)}
-          {navRow(props.labels.vehicle, 'car', props.onOpenVehicle)}
-        </Section>
-
         <Section>
           <Picker
             label={props.labels.language}

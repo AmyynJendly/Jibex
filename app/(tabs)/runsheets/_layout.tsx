@@ -12,7 +12,7 @@ export default function RunsheetsStackLayout() {
     // otherwise offer a way back to the login screen).
     <Stack
       screenOptions={{
-        ...nativeHeaderOptions(colors, { largeTitle: true }),
+        ...nativeHeaderOptions(colors, { solid: true }),
         headerBackVisible: false,
         ...(Platform.OS === 'web' && { headerLeft: () => null }),
       }}>
