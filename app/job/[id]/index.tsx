@@ -1,7 +1,7 @@
 import { MenuView, type MenuAction } from '@expo/ui/community/menu';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsPreview, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, {
@@ -65,6 +65,9 @@ export default function JobDetailScreen() {
   const requireOnline = useOnlineGuard();
   const [delivering, setDelivering] = useState(false);
   const { id } = useLocalSearchParams<{ id: string }>();
+  // Shown inside a long-press preview: the actions sit in the menu below it
+  // there, so the Delivered / Failed buttons would only be clutter.
+  const isPreview = useIsPreview();
   const [job, setJob] = useState<Job | null>(null);
   const [position, setPosition] = useState<{ index: number; total: number } | null>(null);
   const liveCoords = useLiveCoords();
@@ -361,25 +364,27 @@ export default function JobDetailScreen() {
           wrong on the left, it went right on the left-to-right reading order's
           end. Delivered is the wider of the two because it is the one pressed
           on almost every stop. */}
-      <View style={styles.footer}>
-        <AnimatedPressable
-          scaleTo={0.97}
-          accessibilityRole="button"
-          style={[styles.failedButton, { backgroundColor: colors.dangerSoft }]}
-          onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
-          <Icon name="close-circle-outline" size={18} color={colors.danger} />
-          <Text style={[Typography.footnote, { color: colors.danger }]}>
-            {t('jobDetail.deliveryFailed')}
-          </Text>
-        </AnimatedPressable>
-        <PrimaryButton
-          label={t('jobDetail.markDelivered')}
-          height={56}
-          loading={delivering}
-          style={styles.deliveredButton}
-          onPress={handleDelivered}
-        />
-      </View>
+      {!isPreview && (
+        <View style={styles.footer}>
+          <AnimatedPressable
+            scaleTo={0.97}
+            accessibilityRole="button"
+            style={[styles.failedButton, { backgroundColor: colors.dangerSoft }]}
+            onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
+            <Icon name="close-circle-outline" size={18} color={colors.danger} />
+            <Text style={[Typography.footnote, { color: colors.danger }]}>
+              {t('jobDetail.deliveryFailed')}
+            </Text>
+          </AnimatedPressable>
+          <PrimaryButton
+            label={t('jobDetail.markDelivered')}
+            height={56}
+            loading={delivering}
+            style={styles.deliveredButton}
+            onPress={handleDelivered}
+          />
+        </View>
+      )}
     </View>
   );
 }

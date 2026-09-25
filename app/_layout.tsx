@@ -11,18 +11,19 @@ import {
 } from '@expo-google-fonts/archivo';
 import { DMMono_400Regular, DMMono_500Medium } from '@expo-google-fonts/dm-mono';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { QueryProvider } from '../lib/query';
 
 import { ConfirmDialogProvider } from '../components/ConfirmDialog';
+import { useColors } from '../constants';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { ToastProvider } from '../components/Toast';
 import { LanguageProvider } from '../lib/i18n/LanguageProvider';
@@ -53,6 +54,24 @@ export default function RootLayout() {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
+  // The navigator paints its own layer behind every screen. Left on the
+  // library default it was plain white, which showed around the edges while
+  // a screen zoomed or slid in — glaring in dark mode. It now uses the app's
+  // own light/dark colours.
+  const colors = useColors();
+  const baseTheme = useColorScheme() === 'dark' ? DarkTheme : DefaultTheme;
+  const navigationTheme = {
+    ...baseTheme,
+    colors: {
+      ...baseTheme.colors,
+      background: colors.bg,
+      card: colors.bgElevated,
+      text: colors.text,
+      border: colors.separator,
+      primary: colors.accent,
+    },
+  };
+
   // Every screen's `Typography`/`monoStyle` names one of these font families
   // directly (not `fontWeight`, since custom TTFs aren't a single variable
   // family) — so nothing should render until they're actually loaded.
@@ -62,36 +81,38 @@ export default function RootLayout() {
     // Gesture handler needs a root view above anything using a gesture, and
     // the navigators themselves rely on it.
     <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        <QueryProvider>
-          <LanguageProvider>
-            <HapticsProvider>
-              <NextStopBarProvider>
-                <ToastProvider>
-                  <ConfirmDialogProvider>
-                    <Stack screenOptions={{ headerShown: false }}>
-                      <Stack.Screen name="(auth)" />
-                      <Stack.Screen name="(tabs)" />
-                      <Stack.Screen name="job/[id]" />
-                      {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
-                      <Stack.Screen name="pickups" />
-                      <Stack.Screen name="transfers" />
-                      <Stack.Screen name="returns" />
-                      <Stack.Screen name="personal-info" />
-                      <Stack.Screen name="vehicle-details" />
-                      <Stack.Screen name="help-center" />
-                      <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
-                      <Stack.Screen name="search" />
-                    </Stack>
-                    <OfflineBanner />
-                    <StatusBar style="auto" />
-                  </ConfirmDialogProvider>
-                </ToastProvider>
-              </NextStopBarProvider>
-            </HapticsProvider>
-          </LanguageProvider>
-        </QueryProvider>
-      </SafeAreaProvider>
+      <ThemeProvider value={navigationTheme}>
+        <SafeAreaProvider>
+          <QueryProvider>
+            <LanguageProvider>
+              <HapticsProvider>
+                <NextStopBarProvider>
+                  <ToastProvider>
+                    <ConfirmDialogProvider>
+                      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+                        <Stack.Screen name="(auth)" />
+                        <Stack.Screen name="(tabs)" />
+                        <Stack.Screen name="job/[id]" />
+                        {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
+                        <Stack.Screen name="pickups" />
+                        <Stack.Screen name="transfers" />
+                        <Stack.Screen name="returns" />
+                        <Stack.Screen name="personal-info" />
+                        <Stack.Screen name="vehicle-details" />
+                        <Stack.Screen name="help-center" />
+                        <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
+                        <Stack.Screen name="search" />
+                      </Stack>
+                      <OfflineBanner />
+                      <StatusBar style="auto" />
+                    </ConfirmDialogProvider>
+                  </ToastProvider>
+                </NextStopBarProvider>
+              </HapticsProvider>
+            </LanguageProvider>
+          </QueryProvider>
+        </SafeAreaProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }
