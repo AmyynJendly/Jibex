@@ -24,6 +24,7 @@ import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { useToast } from '../../../components/Toast';
+import { WalletChip } from '../../../components/WalletChip';
 import {
   Fonts,
   Radii,
@@ -213,8 +214,11 @@ export default function HomeScreen() {
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}>
           <View style={styles.topRow}>
-            <SkeletonBlock width={40} height={40} radius={20} />
-            <SkeletonBlock width={40} height={40} radius={20} />
+            <View style={styles.topActions}>
+              <SkeletonBlock width={40} height={40} radius={20} />
+              <SkeletonBlock width={40} height={40} radius={20} />
+            </View>
+            <SkeletonBlock width={128} height={40} radius={20} />
           </View>
           <View style={styles.skeletonGreeting}>
             <SkeletonBlock width={160} height={30} radius={6} />
@@ -241,6 +245,7 @@ export default function HomeScreen() {
   const nextStopDistanceKm = nextStop
     ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, nextStop.location)
     : 0;
+  const cashLabel = `${t('home.cashCollected')} · ${formatCurrency(stats.cashCollectedTotal)}`;
   const nextStopEtaMinutes = nextStop ? Math.max(1, Math.round((nextStopDistanceKm / 35) * 60)) : 0;
 
   const compactActions: {
@@ -306,19 +311,28 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <View style={styles.topRow}>
-        <GlassIconButton
-          size={40}
-          accessibilityLabel={t('home.a11y.search')}
-          onPress={() => router.push('/search')}>
-          <Icon name="search-outline" size={20} color={colors.text} />
-        </GlassIconButton>
-        <GlassIconButton
-          size={40}
-          accessibilityLabel={t('home.a11y.scan')}
-          onPress={() => router.push('/scanner')}>
-          <Icon name="scan-outline" size={20} color={colors.text} />
-        </GlassIconButton>
-      </View>
+          <View style={styles.topActions}>
+            <GlassIconButton
+              size={40}
+              accessibilityLabel={t('home.a11y.search')}
+              onPress={() => router.push('/search')}>
+              <Icon name="search-outline" size={20} color={colors.text} />
+            </GlassIconButton>
+            <GlassIconButton
+              size={40}
+              accessibilityLabel={t('home.a11y.scan')}
+              onPress={() => router.push('/scanner')}>
+              <Icon name="scan-outline" size={20} color={colors.text} />
+            </GlassIconButton>
+          </View>
+          {/* Read-only: cash is reconciled with the agency at the depot, not
+              cleared from the driver's phone. A tap just names the figure. */}
+          <WalletChip
+            amount={stats.cashCollectedTotal}
+            accessibilityLabel={cashLabel}
+            onPress={() => showToast(cashLabel)}
+          />
+        </View>
 
       <View style={styles.greeting}>
         <Text style={[Typography.largeTitle, styles.name, { color: colors.text }]}>
@@ -497,21 +511,6 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      <View style={styles.cashStrip}>
-        <View style={styles.cashIcon}>
-          <Icon name="card-outline" size={18} color="#F5EEE6" />
-        </View>
-        <View style={styles.cashTextStack}>
-          <Text style={[monoStyle(10), styles.cashLabel]}>{t('home.cashCollected')}</Text>
-          <CountUpText
-            value={stats.cashCollectedTotal}
-            formatter={formatCurrency}
-            style={[monoStyle(22, 'medium'), styles.cashAmount]}
-          />
-        </View>
-        {/* Read-only: cash is reconciled with the agency at the depot, not
-            cleared from the driver's phone. */}
-      </View>
       </ScrollView>
     </View>
   );
@@ -539,7 +538,12 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  topActions: {
+    flexDirection: 'row',
     gap: Spacing.sm,
   },
   skeletonGreeting: {
@@ -637,36 +641,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 3,
-  },
-  // Fixed dark-charcoal card, not theme-adaptive — same reasoning as
-  // `getAccentGlow`: the design hardcodes this regardless of light/dark.
-  cashStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    borderRadius: Radii.xxl,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    backgroundColor: '#4E565F',
-  },
-  cashIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(245,238,230,0.16)',
-  },
-  cashTextStack: {
-    flex: 1,
-    gap: 1,
-  },
-  cashLabel: {
-    letterSpacing: 0.14 * 10,
-    color: 'rgba(245,238,230,0.7)',
-  },
-  cashAmount: {
-    color: '#F5EEE6',
   },
   nextStopCard: {
     borderRadius: Radii.card,
