@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
+  type TextInputProps,
+} from 'react-native';
 
 import { Radii, Spacing, monoLabelStyle, useColors, Typography } from '../constants';
 
@@ -23,6 +30,9 @@ export function FormField({
   ...inputProps
 }: FormFieldProps) {
   const colors = useColors();
+  // Left to itself the iOS keyboard guesses its color and can flip between
+  // light and dark as it opens; matching the app's theme settles it.
+  const keyboardAppearance = useColorScheme() === 'dark' ? 'dark' : 'light';
 
   return (
     <View style={styles.container}>
@@ -37,6 +47,7 @@ export function FormField({
       <View>
         <TextInput
           placeholderTextColor={colors.textTertiary}
+          keyboardAppearance={keyboardAppearance}
           autoCapitalize="none"
           autoCorrect={false}
           style={[

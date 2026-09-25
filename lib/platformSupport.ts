@@ -18,4 +18,6 @@ export const supports = {
   zoomTransition: iosMajorVersion >= 18,
   /** The tab bar's bottom accessory slot (Liquid Glass tab bars). */
   tabBarAccessory: iosMajorVersion >= 26,
+  /** Liquid Glass bars that draw their own scroll-edge effect (iOS 26+). */
+  liquidGlass: iosMajorVersion >= 26,
 };

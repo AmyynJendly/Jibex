@@ -1,15 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { AnimatedPressable } from './AnimatedPressable';
 import { CountUpText } from './CountUpText';
@@ -33,31 +23,10 @@ const formatAmount = (n: number) => formatDecimal(n, CURRENCY_DECIMALS);
 /**
  * The driver's cash on hand, as a small wallet with the total beside it.
  *
- * A banknote sits tucked in the wallet, and pops up and settles back whenever
- * the total grows (a cash-on-delivery stop just paid). Drawn from plain views
- * rather than an SF Symbol, so it looks the same on every iPhone and iOS.
+ * A banknote sits tucked in the wallet. Drawn from plain views rather than
+ * an SF Symbol, so it looks the same on every iPhone and iOS.
  */
 export function WalletChip({ amount, accessibilityLabel, onPress }: WalletChipProps) {
-  const reduceMotion = useReducedMotion();
-  const noteLift = useSharedValue(0);
-  const previous = useRef(amount);
-
-  useEffect(() => {
-    const grew = amount > previous.current;
-    previous.current = amount;
-    if (!grew || reduceMotion) return;
-    noteLift.set(
-      withSequence(
-        withTiming(-5, { duration: 180, easing: Easing.bezier(0.23, 1, 0.32, 1) }),
-        withSpring(0, { duration: 400, dampingRatio: 0.6 })
-      )
-    );
-  }, [amount, reduceMotion, noteLift]);
-
-  const noteStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: noteLift.get() }, { rotate: '-10deg' }],
-  }));
-
   return (
     <AnimatedPressable
       scaleTo={0.95}
@@ -71,9 +40,9 @@ export function WalletChip({ amount, accessibilityLabel, onPress }: WalletChipPr
         end={{ x: 1, y: 1 }}
         style={styles.chip}>
         <View style={styles.wallet}>
-          <Animated.View style={[styles.note, noteStyle]}>
+          <View style={styles.note}>
             <View style={styles.noteMark} />
-          </Animated.View>
+          </View>
           <View style={styles.body}>
             <View style={styles.stitch} />
           </View>
@@ -117,6 +86,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 2,
     backgroundColor: NOTE,
+    transform: [{ rotate: '-10deg' }],
     alignItems: 'center',
     justifyContent: 'center',
   },

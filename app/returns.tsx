@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +13,6 @@ import { DragHandle, DraggableList, type DragBinding } from '../components/Dragg
 import { EmptyState } from '../components/EmptyState';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
-import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
@@ -22,7 +21,6 @@ import {
   Fonts,
   Radii,
   Spacing,
-  Typography,
   monoLabelStyle,
   monoStyle,
   useColors,
@@ -177,30 +175,29 @@ export default function ReturnsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.backRow}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-      </View>
-      <View style={styles.header}>
-        <View>
-          <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-            {t('returns.eyebrow')}
-          </Text>
-          <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
-            {t('returns.headerTitle')}
-          </Text>
-        </View>
-        <View style={styles.headerCount}>
-          <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
-          <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
-            {t('returns.parcelsLabel')}
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView
+      edges={['bottom', 'left', 'right']}
+      style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <Stack.Screen options={{ title: t('returns.headerTitle') }} />
 
-      <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        scrollEnabled={!dragging}
+        contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <View>
+            <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
+              {t('returns.eyebrow')}
+            </Text>
+          </View>
+          <View style={styles.headerCount}>
+            <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
+            <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
+              {t('returns.parcelsLabel')}
+            </Text>
+          </View>
+        </View>
+
         <SegmentedControl
           segments={[
             { value: 'current', label: t('returns.toggleCurrent') },
@@ -289,19 +286,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  backRow: {
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.sm,
-  },
-  headerTitle: {
-    fontSize: 28,
   },
   headerCount: {
     alignItems: 'flex-end',

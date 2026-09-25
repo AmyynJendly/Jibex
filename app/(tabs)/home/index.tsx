@@ -214,11 +214,11 @@ export default function HomeScreen() {
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}>
           <View style={styles.topRow}>
+            <SkeletonBlock width={128} height={40} radius={20} />
             <View style={styles.topActions}>
               <SkeletonBlock width={40} height={40} radius={20} />
               <SkeletonBlock width={40} height={40} radius={20} />
             </View>
-            <SkeletonBlock width={128} height={40} radius={20} />
           </View>
           <View style={styles.skeletonGreeting}>
             <SkeletonBlock width={160} height={30} radius={6} />
@@ -311,6 +311,13 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <View style={styles.topRow}>
+          {/* Read-only: cash is reconciled with the agency at the depot, not
+              cleared from the driver's phone. A tap just names the figure. */}
+          <WalletChip
+            amount={stats.cashCollectedTotal}
+            accessibilityLabel={cashLabel}
+            onPress={() => showToast(cashLabel)}
+          />
           <View style={styles.topActions}>
             <GlassIconButton
               size={40}
@@ -325,13 +332,6 @@ export default function HomeScreen() {
               <Icon name="scan-outline" size={20} color={colors.text} />
             </GlassIconButton>
           </View>
-          {/* Read-only: cash is reconciled with the agency at the depot, not
-              cleared from the driver's phone. A tap just names the figure. */}
-          <WalletChip
-            amount={stats.cashCollectedTotal}
-            accessibilityLabel={cashLabel}
-            onPress={() => showToast(cashLabel)}
-          />
         </View>
 
       <View style={styles.greeting}>

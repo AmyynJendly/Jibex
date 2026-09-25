@@ -29,6 +29,7 @@ import { ToastProvider } from '../components/Toast';
 import { LanguageProvider } from '../lib/i18n/LanguageProvider';
 import { HapticsProvider } from '../lib/haptics';
 import { NextStopBarProvider } from '../lib/nextStopBar';
+import { nativeHeaderOptions } from '../lib/nativeHeader';
 
 // Without this the stack mounts `index` (the `/` -> `/login` redirect) beneath
 // any deep link, and the redirect fires and clobbers the target route.
@@ -72,6 +73,9 @@ export default function RootLayout() {
     },
   };
 
+  const standardHeader = nativeHeaderOptions(colors);
+  const largeTitleHeader = nativeHeaderOptions(colors, { largeTitle: true });
+
   // Every screen's `Typography`/`monoStyle` names one of these font families
   // directly (not `fontWeight`, since custom TTFs aren't a single variable
   // family) — so nothing should render until they're actually loaded.
@@ -93,15 +97,18 @@ export default function RootLayout() {
                         <Stack.Screen name="(auth)" />
                         <Stack.Screen name="(tabs)" />
                         <Stack.Screen name="job/[id]" />
-                        {/* Pickups/Transfers/Returns each build their own glass back-button header, matching the design. */}
-                        <Stack.Screen name="pickups" />
-                        <Stack.Screen name="transfers" />
-                        <Stack.Screen name="returns" />
-                        <Stack.Screen name="personal-info" />
-                        <Stack.Screen name="vehicle-details" />
-                        <Stack.Screen name="help-center" />
+                        {/* Apple's navigation bar on pushed screens, so the
+                            push, the back swipe and the title all move the
+                            way they do in the system apps. Each screen sets
+                            its own (translated) title. */}
+                        <Stack.Screen name="pickups" options={largeTitleHeader} />
+                        <Stack.Screen name="transfers" options={largeTitleHeader} />
+                        <Stack.Screen name="returns" options={largeTitleHeader} />
+                        <Stack.Screen name="personal-info" options={standardHeader} />
+                        <Stack.Screen name="vehicle-details" options={standardHeader} />
+                        <Stack.Screen name="help-center" options={standardHeader} />
                         <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
-                        <Stack.Screen name="search" />
+                        <Stack.Screen name="search" options={standardHeader} />
                       </Stack>
                       <OfflineBanner />
                       <StatusBar style="auto" />

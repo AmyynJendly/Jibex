@@ -7,13 +7,13 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useColorScheme,
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Icon, type IconName } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
-import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../../../constants';
@@ -36,6 +36,7 @@ const REASONS: { value: DeliveryFailureReason; icon: IconName }[] = [
 
 export default function CantDeliverScreen() {
   const colors = useColors();
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { t } = useTranslation();
   const { showToast } = useToast();
   const requireOnline = useOnlineGuard();
@@ -68,13 +69,10 @@ export default function CantDeliverScreen() {
     <KeyboardAvoidingView
       style={[styles.screen, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.header}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.text }]}>{t('cantDeliver.title')}</Text>
         <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
           {t('cantDeliver.subtitle')}
@@ -126,6 +124,7 @@ export default function CantDeliverScreen() {
             onChangeText={setNote}
             placeholder={t('cantDeliver.notePlaceholder')}
             placeholderTextColor={colors.textTertiary}
+            keyboardAppearance={scheme}
             multiline
             style={[
               styles.noteInput,
@@ -150,11 +149,6 @@ export default function CantDeliverScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: {
-    paddingTop: 58,
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
   content: {
     paddingHorizontal: Spacing.xxl,
     gap: Spacing.xxl,

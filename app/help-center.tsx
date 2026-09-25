@@ -1,11 +1,10 @@
-import { router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
-import { GlassIconButton } from '../components/GlassIconButton';
 import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
 
 interface Faq {
@@ -22,15 +21,11 @@ export default function HelpCenterScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.header}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>{t('helpCenter.headerTitle')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <Stack.Screen options={{ title: t('helpCenter.headerTitle') }} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.content}>
         <AnimatedPressable
           scaleTo={0.98}
           onPress={() => Linking.openURL('mailto:support@jibex.app')}
@@ -85,15 +80,6 @@ export default function HelpCenterScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 58,
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
-  headerSpacer: { width: 44 },
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,

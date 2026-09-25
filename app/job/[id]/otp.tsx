@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, {
@@ -14,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
-import { GlassIconButton } from '../../../components/GlassIconButton';
 import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import {
@@ -167,14 +166,17 @@ export default function OtpScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.header}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-        {job && <TrackingId value={job.id} size="inline" />}
-      </View>
+      {/* The parcel's tracking number sits in Apple's bar, where the title goes. */}
+      <Stack.Screen
+        options={{
+          headerTitle: () => (job ? <TrackingId value={job.id} size="inline" /> : null),
+        }}
+      />
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.text }]}>{t('otp.title')}</Text>
         <Text style={[Typography.callout, styles.subtitle, { color: colors.textSecondary }]}>
           {t('otp.subtitle', { name: firstName })}
@@ -272,14 +274,6 @@ export default function OtpScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 58,
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingBottom: Spacing.xl,

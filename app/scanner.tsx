@@ -225,6 +225,7 @@ export default function ScannerScreen() {
               onChangeText={setManualCode}
               placeholder={t('scanner.manualPlaceholder')}
               placeholderTextColor="rgba(255,255,255,0.4)"
+              keyboardAppearance="dark"
               autoCapitalize="characters"
               autoFocus
               style={styles.manualInput}

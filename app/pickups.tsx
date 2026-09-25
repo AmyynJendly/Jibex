@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -14,7 +14,6 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
 import { LoadError } from '../components/LoadError';
-import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
@@ -301,37 +300,36 @@ export default function PickupsScreen() {
 
   const totalPackages = displayed.reduce((sum, p) => sum + p.packageCount, 0);
 
+  // Sits at the top of whichever list is showing, under Apple's large title.
+  const summary = (
+    <View style={styles.header}>
+      <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
+        {t('pickups.eyebrow')}
+      </Text>
+      <View style={styles.headerCount}>
+        <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{totalPackages}</Text>
+        <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
+          {t('pickups.parcelCountLabel')}
+        </Text>
+      </View>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.backRow}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-      </View>
-      <View style={styles.header}>
-        <View>
-          <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-            {t('pickups.eyebrow')}
-          </Text>
-          <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
-            {t('pickups.headerTitle')}
-          </Text>
-        </View>
-        <View style={styles.headerCount}>
-          <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{totalPackages}</Text>
-          <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
-            {t('pickups.parcelCountLabel')}
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView
+      edges={['bottom', 'left', 'right']}
+      style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <Stack.Screen options={{ title: t('pickups.headerTitle') }} />
 
       {segment === 'COMPLETED' ? (
         <FlashList
           data={displayed}
           keyExtractor={(pickup) => pickup.id}
+          contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}
           ListHeaderComponent={
             <View style={styles.headerBlock}>
+              {summary}
               <SegmentedControl
                 segments={[
                   { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
@@ -371,8 +369,12 @@ export default function PickupsScreen() {
           )}
         />
       ) : (
-        <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          scrollEnabled={!dragging}
+          contentContainerStyle={styles.content}>
           <View style={styles.headerBlock}>
+            {summary}
             <SegmentedControl
               segments={[
                 { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
@@ -460,19 +462,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  backRow: {
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.sm,
-  },
-  headerTitle: {
-    fontSize: 28,
   },
   headerCount: {
     alignItems: 'flex-end',
@@ -487,6 +480,7 @@ const styles = StyleSheet.create({
     gap: Spacing.mlg,
   },
   headerBlock: {
+    gap: Spacing.md,
     paddingBottom: Spacing.mlg,
   },
   row: {

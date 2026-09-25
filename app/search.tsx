@@ -1,18 +1,24 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Icon } from '../components/Icon';
 import { EmptyState } from '../components/EmptyState';
 import { FormField } from '../components/FormField';
-import { GlassIconButton } from '../components/GlassIconButton';
 import { Spacing, Typography, useColors } from '../constants';
 import { getJobDetail } from '../services/mock-api';
 
 /** "TRK-" + 8 hex chars — only worth hitting the mock API once the query could plausibly be a complete id. */
 const TRACKING_ID_LENGTH = 12;
+
+/**
+ * iOS gets Apple's own search bar, built into the navigation bar: it
+ * focuses once the screen has finished sliding in (so the keyboard and the
+ * push no longer fight), its keyboard always matches light/dark mode, and
+ * Cancel works the way it does everywhere else on the phone. Android and
+ * web keep the in-page field.
+ */
+const useNativeSearchBar = Platform.OS === 'ios';
 
 type SearchStatus = 'idle' | 'searching' | 'not-found';
 
@@ -57,74 +63,66 @@ export default function SearchScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.header}>
-          <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-            <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-          </GlassIconButton>
-          <Text style={[Typography.headline, { color: colors.text }]}>{t('search.headerTitle')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.content}>
+      <Stack.Screen options={{ title: t('search.headerTitle') }} />
 
-        <View style={styles.content}>
-          <FormField
-            label={t('search.label')}
-            placeholder={t('search.placeholder')}
-            value={query}
-            onChangeText={handleChangeText}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            autoFocus
-            returnKeyType="search"
-            onSubmitEditing={handleSubmit}
-          />
+      {useNativeSearchBar ? (
+        <Stack.SearchBar
+          placeholder={t('search.placeholder')}
+          autoCapitalize="characters"
+          autoFocus
+          hideWhenScrolling={false}
+          obscureBackground={false}
+          tintColor={colors.accent}
+          textColor={colors.text}
+          onChangeText={(event) => handleChangeText(event.nativeEvent.text)}
+          onSearchButtonPress={handleSubmit}
+        />
+      ) : (
+        <FormField
+          label={t('search.label')}
+          placeholder={t('search.placeholder')}
+          value={query}
+          onChangeText={handleChangeText}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          autoFocus
+          returnKeyType="search"
+          onSubmitEditing={handleSubmit}
+        />
+      )}
 
-          {status === 'searching' && (
-            <Text style={[Typography.footnote, styles.statusText, { color: colors.textSecondary }]}>
-              {t('search.searching')}
-            </Text>
-          )}
+      {status === 'searching' && (
+        <Text style={[Typography.footnote, styles.statusText, { color: colors.textSecondary }]}>
+          {t('search.searching')}
+        </Text>
+      )}
 
-          {status === 'not-found' && (
-            <EmptyState
-              icon="alert-circle-outline"
-              title={t('search.notFoundTitle')}
-              subtitle={t('search.notFoundSubtitle', { code: query.trim().toUpperCase() })}
-            />
-          )}
+      {status === 'not-found' && (
+        <EmptyState
+          icon="alert-circle-outline"
+          title={t('search.notFoundTitle')}
+          subtitle={t('search.notFoundSubtitle', { code: query.trim().toUpperCase() })}
+        />
+      )}
 
-          {status === 'idle' && query.trim().length === 0 && (
-            <EmptyState icon="search-outline" title={t('search.instructions')} />
-          )}
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      {status === 'idle' && query.trim().length === 0 && (
+        <EmptyState icon="search-outline" title={t('search.instructions')} />
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  flex: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
-  headerSpacer: {
-    width: 44,
-  },
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
+    paddingBottom: 40,
     gap: Spacing.md,
   },
   statusText: {

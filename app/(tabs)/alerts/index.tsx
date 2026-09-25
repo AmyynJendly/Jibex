@@ -1,8 +1,15 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  SlideOutLeft,
+  useReducedMotion,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -14,6 +21,8 @@ import { EmptyState } from '../../../components/EmptyState';
 import { invalidateNotifications, useNotifications, useScreenState } from '../../../lib/query';
 import { LoadError } from '../../../components/LoadError';
 import { SkeletonRow } from '../../../components/Skeleton';
+import { SwipeDeleteAction } from '../../../components/SwipeDeleteAction';
+import { ACTION_DISPLAY_MS, useToast } from '../../../components/Toast';
 import {
   Fonts,
   Radii,
@@ -104,6 +113,12 @@ function isYesterday(iso: string) {
   return new Date(iso).toDateString() === yesterday.toDateString();
 }
 
+/** The remaining rows closing the gap — the same curve as an on-screen move. */
+const CLOSE_GAP = LinearTransition.duration(280).easing(Easing.bezier(0.77, 0, 0.175, 1));
+/** Delay between rows when "Clear all" sweeps the list, top to bottom. */
+const CASCADE_STEP_MS = 45;
+const SLIDE_OUT_MS = 260;
+
 /** "Mark all read" is small text in a corner — give it a real target. */
 const MARK_ALL_HIT_SLOP = { top: 12, bottom: 12, left: 16, right: 16 };
 
@@ -112,6 +127,8 @@ export default function AlertsScreen() {
   const { t, i18n } = useTranslation();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { confirm } = useConfirm();
+  const { showToast } = useToast();
+  const reduceMotion = useReducedMotion();
   const notificationsQuery = useNotifications();
   const screen = useScreenState([notificationsQuery]);
   const notifications = notificationsQuery.data ?? null;
@@ -126,6 +143,30 @@ export default function AlertsScreen() {
    * finger jitter would trigger), consumed once by the next `handlePress`.
    */
   const swipeGuard = useRef<string | null>(null);
+
+  /**
+   * Alerts deleted on this screen but not yet on the server. The row leaves
+   * straight away and the real delete waits out the Undo toast, so Undo is
+   * just "show it again" rather than a re-create.
+   */
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(() => new Set());
+  const pendingDeletes = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  /** Set one render before "Clear all" removes the rows, so each leaves with its own delay. */
+  const [clearingAll, setClearingAll] = useState(false);
+  /** Which row's swipe has gone far enough to delete on release. */
+  const fullSwipeArmed = useRef<string | null>(null);
+
+  // Leaving the screen mid-Undo still deletes what the driver deleted.
+  useEffect(() => {
+    const pending = pendingDeletes.current;
+    return () => {
+      if (pending.size === 0) return;
+      const ids = [...pending.keys()];
+      pending.forEach(clearTimeout);
+      pending.clear();
+      Promise.all(ids.map(deleteNotification)).then(invalidateNotifications);
+    };
+  }, []);
 
   function formatTime(iso: string) {
     const date = new Date(iso);
@@ -159,9 +200,35 @@ export default function AlertsScreen() {
     await invalidateNotifications();
   }
 
-  async function handleDelete(id: string) {
-    await deleteNotification(id);
-    await invalidateNotifications();
+  function setHidden(id: string, hidden: boolean) {
+    setHiddenIds((current) => {
+      const next = new Set(current);
+      if (hidden) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function handleDelete(id: string) {
+    setHidden(id, true);
+    const timer = setTimeout(async () => {
+      pendingDeletes.current.delete(id);
+      await deleteNotification(id);
+      await invalidateNotifications();
+      setHidden(id, false);
+    }, ACTION_DISPLAY_MS);
+    pendingDeletes.current.set(id, timer);
+
+    showToast(t('alerts.deletedToast'), {
+      label: t('common.undo'),
+      onPress: () => {
+        const pending = pendingDeletes.current.get(id);
+        if (!pending) return;
+        clearTimeout(pending);
+        pendingDeletes.current.delete(id);
+        setHidden(id, false);
+      },
+    });
   }
 
   async function handleDeleteAll() {
@@ -174,14 +241,40 @@ export default function AlertsScreen() {
       cancelLabel: t('common.cancel'),
       destructive: true,
     });
-    if (!confirmed) return;
-    await deleteAllNotifications();
-    await invalidateNotifications();
+    if (!confirmed || !notifications) return;
+
+    // Two steps: first every row learns its place in the sweep, then they
+    // all go. Removing them in the same render would skip the delays.
+    const ids = notifications.map((n) => n.id);
+    setClearingAll(true);
+    requestAnimationFrame(() => setHiddenIds(new Set(ids)));
+
+    const sweepMs = reduceMotion ? 200 : ids.length * CASCADE_STEP_MS + SLIDE_OUT_MS;
+    setTimeout(async () => {
+      pendingDeletes.current.forEach(clearTimeout);
+      pendingDeletes.current.clear();
+      await deleteAllNotifications();
+      await invalidateNotifications();
+      setHiddenIds(new Set());
+      setClearingAll(false);
+    }, sweepMs);
   }
 
-  const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
-  const today = notifications?.filter((n) => isToday(n.timestamp)) ?? [];
-  const earlier = notifications?.filter((n) => !isToday(n.timestamp)) ?? [];
+  const visible = notifications?.filter((n) => !hiddenIds.has(n.id)) ?? null;
+  const unreadCount = visible?.filter((n) => !n.read).length ?? 0;
+  const today = visible?.filter((n) => isToday(n.timestamp)) ?? [];
+  const earlier = visible?.filter((n) => !isToday(n.timestamp)) ?? [];
+
+  /**
+   * How a row leaves: sliding off to the left, the way the swipe that
+   * deleted it was heading. "Clear all" staggers the rows top to bottom.
+   * Reduce Motion fades instead.
+   */
+  function exitFor(order: number) {
+    if (reduceMotion) return FadeOut.duration(180);
+    const slide = SlideOutLeft.duration(SLIDE_OUT_MS).easing(Easing.bezier(0.23, 1, 0.32, 1));
+    return clearingAll ? slide.delay(order * CASCADE_STEP_MS) : slide;
+  }
 
   /**
    * Wraps a row so it can be swiped left onto a delete action.
@@ -189,9 +282,10 @@ export default function AlertsScreen() {
    * `ReanimatedSwipeable` runs the drag on the UI thread, so the row tracks
    * the finger even while the list is re-rendering behind it. The action is
    * only revealed on the right, matching the platform convention for a
-   * destructive swipe, and the row is only removed once the driver actually
-   * taps it — a swipe alone never deletes, since it is far too easy to do by
-   * accident while scrolling.
+   * destructive swipe. A short swipe leaves Delete open to tap; a long one
+   * (past half the screen) deletes on release — see `SwipeDeleteAction`. A
+   * deleted row slides off to the left, the rows below close the gap, and
+   * the Undo toast brings it back.
    *
    * The card's shadow lives on this outer `View`, not on the card itself.
    * The library's own container (the thing that actually clips the row so
@@ -204,31 +298,42 @@ export default function AlertsScreen() {
    * library never touches, keeps it soft and unclipped like every other
    * card in the app.
    */
-  function renderSwipeable(notification: Notification, children: ReactNode) {
+  function renderSwipeable(notification: Notification, order: number, children: ReactNode) {
     return (
-      <View key={notification.id} style={[styles.shadowWrap, getCardShadow(scheme)]}>
+      <Animated.View
+        key={notification.id}
+        layout={reduceMotion ? undefined : CLOSE_GAP}
+        exiting={exitFor(order)}
+        style={[styles.shadowWrap, getCardShadow(scheme)]}>
         <ReanimatedSwipeable
           friction={2}
           rightThreshold={40}
-          overshootRight={false}
           containerStyle={styles.swipeContainer}
           onSwipeableOpenStartDrag={() => {
             swipeGuard.current = notification.id;
           }}
-          renderRightActions={() => (
-            <AnimatedPressable
-              haptic="medium"
-              scaleTo={0.94}
-              accessibilityRole="button"
+          onSwipeableWillOpen={() => {
+            // A long swipe deletes on release, like Mail — no second tap.
+            if (fullSwipeArmed.current === notification.id) {
+              fullSwipeArmed.current = null;
+              handleDelete(notification.id);
+            }
+          }}
+          renderRightActions={(_progress, translation) => (
+            <SwipeDeleteAction
+              translation={translation}
+              color={colors.danger}
+              radius={Radii.xxl}
               accessibilityLabel={t('alerts.deleteOne')}
-              style={[styles.deleteAction, { backgroundColor: colors.danger }]}
-              onPress={() => handleDelete(notification.id)}>
-              <Icon name="trash-outline" size={20} color="#fff" />
-            </AnimatedPressable>
+              onDelete={() => handleDelete(notification.id)}
+              onArmedChange={(armed) => {
+                fullSwipeArmed.current = armed ? notification.id : null;
+              }}
+            />
           )}>
           {children}
         </ReanimatedSwipeable>
-      </View>
+      </Animated.View>
     );
   }
 
@@ -241,11 +346,12 @@ export default function AlertsScreen() {
    * a property of the card now, not a place it lives: it stays in Today or
    * Earlier exactly where it was, and only its color changes when it's read.
    */
-  function renderCard(notification: Notification, dimmed: boolean) {
+  function renderCard(notification: Notification, order: number, dimmed: boolean) {
     const style = typeStyle(notification.type, colors);
     const unread = !notification.read;
     return renderSwipeable(
       notification,
+      order,
       <Animated.View entering={morphIn(0, 8)}>
         <AnimatedPressable
           onPress={() => handlePress(notification)}
@@ -312,7 +418,7 @@ export default function AlertsScreen() {
               </Text>
             </AnimatedPressable>
           )}
-          {(notifications?.length ?? 0) > 0 && (
+          {(visible?.length ?? 0) > 0 && (
             <AnimatedPressable
               scaleTo={0.94}
               hitSlop={MARK_ALL_HIT_SLOP}
@@ -327,9 +433,9 @@ export default function AlertsScreen() {
         </View>
       </View>
 
-      {screen.isError && !notifications ? (
+      {screen.isError && !visible ? (
         <LoadError onRetry={screen.retry} retrying={screen.retrying} />
-      ) : !notifications ? (
+      ) : !visible ? (
         <View style={styles.list}>
           <SkeletonRow />
           <SkeletonRow />
@@ -338,25 +444,35 @@ export default function AlertsScreen() {
       ) : (
         <>
           {today.length > 0 && (
-            <View style={styles.section}>
+            <Animated.View
+              layout={reduceMotion ? undefined : CLOSE_GAP}
+              exiting={FadeOut.duration(160)}
+              style={styles.section}>
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
                 {t('alerts.today')}
               </Text>
-              <View style={styles.list}>{today.map((n) => renderCard(n, false))}</View>
-            </View>
+              <View style={styles.list}>{today.map((n, i) => renderCard(n, i, false))}</View>
+            </Animated.View>
           )}
 
           {earlier.length > 0 && (
-            <View style={styles.section}>
+            <Animated.View
+              layout={reduceMotion ? undefined : CLOSE_GAP}
+              exiting={FadeOut.duration(160)}
+              style={styles.section}>
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
                 {t('alerts.earlier')}
               </Text>
-              <View style={styles.list}>{earlier.map((n) => renderCard(n, true))}</View>
-            </View>
+              <View style={styles.list}>
+                {earlier.map((n, i) => renderCard(n, today.length + i, true))}
+              </View>
+            </Animated.View>
           )}
 
-          {notifications.length === 0 && (
-            <EmptyState icon="checkmark-circle-outline" title={t('alerts.empty')} />
+          {visible.length === 0 && (
+            <Animated.View entering={FadeIn.duration(220).delay(clearingAll ? 0 : 120)}>
+              <EmptyState icon="checkmark-circle-outline" title={t('alerts.empty')} />
+            </Animated.View>
           )}
         </>
       )}
@@ -406,12 +522,6 @@ const styles = StyleSheet.create({
   markAllRead: {
     fontFamily: Fonts.archivoSemiBold,
     fontSize: 13,
-  },
-  deleteAction: {
-    width: 68,
-    borderRadius: Radii.xxl,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   section: {
     gap: Spacing.sm,

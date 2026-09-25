@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +14,6 @@ import { DragHandle, DraggableList, type DragBinding } from '../components/Dragg
 import { EmptyState } from '../components/EmptyState';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
-import { GlassIconButton } from '../components/GlassIconButton';
 import { MetaChip } from '../components/MetaChip';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -157,30 +156,29 @@ export default function TransfersScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.backRow}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-      </View>
-      <View style={styles.header}>
-        <View>
-          <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-            {t('transfers.eyebrow')}
-          </Text>
-          <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
-            {t('transfers.headerTitle')}
-          </Text>
-        </View>
-        <View style={styles.headerCount}>
-          <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{parcelsMoving}</Text>
-          <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
-            {t('transfers.movingLabel')}
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView
+      edges={['bottom', 'left', 'right']}
+      style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <Stack.Screen options={{ title: t('transfers.headerTitle') }} />
 
-      <ScrollView scrollEnabled={!dragging} contentContainerStyle={styles.content}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        scrollEnabled={!dragging}
+        contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <View>
+            <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
+              {t('transfers.eyebrow')}
+            </Text>
+          </View>
+          <View style={styles.headerCount}>
+            <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{parcelsMoving}</Text>
+            <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
+              {t('transfers.movingLabel')}
+            </Text>
+          </View>
+        </View>
+
         <SegmentedControl
           segments={[
             { value: 'current', label: t('transfers.toggleCurrent') },
@@ -223,19 +221,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  backRow: {
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.sm,
-  },
-  headerTitle: {
-    fontSize: 28,
   },
   headerCount: {
     alignItems: 'flex-end',

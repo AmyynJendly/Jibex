@@ -24,6 +24,7 @@ const en = {
       retry: 'Try Again',
     },
     cancel: 'Cancel',
+    undo: 'Undo',
     save: 'Save',
     back: 'Back',
     loading: 'Loading…',
@@ -344,6 +345,7 @@ const en = {
   alerts: {
     deleteAll: 'Clear all',
     deleteOne: 'Delete notification',
+    deletedToast: 'Notification deleted',
     deleteAllTitle: 'Clear all notifications?',
     deleteAllMessage: "They can't be brought back.",
     deleteAllConfirm: 'Clear all',

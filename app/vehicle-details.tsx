@@ -1,13 +1,12 @@
-import { router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../components/Icon';
-import { GlassIconButton } from '../components/GlassIconButton';
 import { ReadOnlyField } from '../components/ReadOnlyField';
 import { SkeletonRow } from '../components/Skeleton';
-import { Fonts, Spacing, Typography, useColors } from '../constants';
+import { Fonts, Spacing, useColors } from '../constants';
 import { getUser, getVehicle } from '../services/mock-api';
 import type { User, Vehicle } from '../types';
 
@@ -28,17 +27,11 @@ export default function VehicleDetailsScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.header}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-        <Text style={[Typography.headline, { color: colors.text }]}>
-          {t('vehicleDetails.headerTitle')}
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <Stack.Screen options={{ title: t('vehicleDetails.headerTitle') }} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.content}>
         {!vehicle || !user ? (
           <View style={styles.skeletonGroup}>
             <SkeletonRow />
@@ -71,15 +64,6 @@ export default function VehicleDetailsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 58,
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
-  headerSpacer: { width: 44 },
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,

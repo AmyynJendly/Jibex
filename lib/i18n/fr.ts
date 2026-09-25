@@ -27,6 +27,7 @@ const fr: TranslationResource = {
       retry: 'Réessayer',
     },
     cancel: 'Annuler',
+    undo: 'Rétablir',
     save: 'Enregistrer',
     back: 'Retour',
     loading: 'Chargement…',
@@ -343,6 +344,7 @@ const fr: TranslationResource = {
   alerts: {
     deleteAll: 'Tout effacer',
     deleteOne: 'Supprimer la notification',
+    deletedToast: 'Notification supprimée',
     deleteAllTitle: 'Effacer toutes les notifications ?',
     deleteAllMessage: 'Elles ne pourront pas être récupérées.',
     deleteAllConfirm: 'Tout effacer',
