@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -14,7 +15,9 @@ import { useTranslation } from 'react-i18next';
 
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
-import { Icon } from '../../../components/Icon';
+import { Icon, sfSymbolFor } from '../../../components/Icon';
+import { NativeAlertsList } from '../../../components/NativeAlertsList';
+import type { NativeAlertRow } from '../../../components/NativeAlertsList.types';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useConfirm } from '../../../components/ConfirmDialog';
 import { EmptyState } from '../../../components/EmptyState';
@@ -41,7 +44,9 @@ import {
   deleteNotification,
   markAllNotificationsRead,
   markNotificationRead,
+  markNotificationUnread,
 } from '../../../services/mock-api';
+import { useHapticsEnabled } from '../../../lib/haptics';
 import type { Notification, NotificationTarget, NotificationType } from '../../../types';
 
 /** Corner radius shared by the card, its shadow wrapper, and the swipeable's own clip mask — see `renderSwipeable`. */
@@ -124,6 +129,12 @@ const SLIDE_OUT_MS = 260;
  */
 const actionsInBar = Platform.OS !== 'web';
 
+/** iOS draws the list natively, Mail-style (`NativeAlertsList`). */
+const nativeList = Platform.OS === 'ios';
+
+/** Gap between rows as "Read all" sweeps down the list. */
+const READ_WAVE_STEP_MS = 55;
+
 /** "Mark all read" is small text in a corner — give it a real target. */
 const MARK_ALL_HIT_SLOP = { top: 12, bottom: 12, left: 16, right: 16 };
 
@@ -138,6 +149,25 @@ export default function AlertsScreen() {
   const screen = useScreenState([notificationsQuery]);
   const notifications = notificationsQuery.data ?? null;
   const now = useNow();
+  const { enabled: hapticsEnabled } = useHapticsEnabled();
+
+  /**
+   * Read state as the screen shows it right now, ahead of the server: set
+   * the moment a row is swiped read / unread, or as the "Read all" wave
+   * reaches it, and dropped once the refetch agrees.
+   */
+  const [readOverrides, setReadOverrides] = useState<ReadonlyMap<string, boolean>>(
+    () => new Map()
+  );
+  const isRead = (n: Notification) => readOverrides.get(n.id) ?? n.read;
+  function setReadOverride(id: string, read: boolean | null) {
+    setReadOverrides((current) => {
+      const next = new Map(current);
+      if (read === null) next.delete(id);
+      else next.set(id, read);
+      return next;
+    });
+  }
 
   /**
    * A horizontal swipe never leaves the row's own bounds, so it never trips
@@ -200,9 +230,33 @@ export default function AlertsScreen() {
     markNotificationRead(notification.id).then(invalidateNotifications);
   }
 
+  /**
+   * "Read all" as a wave: one light tick, then each unread row turns read in
+   * turn from the top down — its dot shrinking away — rather than every row
+   * changing at once. The server write happens once the wave has passed.
+   */
   async function handleMarkAllRead() {
+    const unreadIds = (visible ?? []).filter((n) => !isRead(n)).map((n) => n.id);
+    if (unreadIds.length === 0) return;
+    if (hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    const step = reduceMotion ? 0 : READ_WAVE_STEP_MS;
+    unreadIds.forEach((id, i) => {
+      if (step === 0) setReadOverride(id, true);
+      else setTimeout(() => setReadOverride(id, true), i * step);
+    });
+    await new Promise((resolve) => setTimeout(resolve, unreadIds.length * step + 250));
     await markAllNotificationsRead();
     await invalidateNotifications();
+    setReadOverrides(new Map());
+  }
+
+  /** The Mail-style leading swipe: flips one alert between read and unread. */
+  async function handleToggleRead(id: string, currentlyUnread: boolean) {
+    setReadOverride(id, currentlyUnread);
+    await (currentlyUnread ? markNotificationRead(id) : markNotificationUnread(id));
+    await invalidateNotifications();
+    setReadOverride(id, null);
   }
 
   function setHidden(id: string, hidden: boolean) {
@@ -248,6 +302,22 @@ export default function AlertsScreen() {
     });
     if (!confirmed || !notifications) return;
 
+    // iOS: rows leave one after another from the top, and the native list
+    // animates each one closing up.
+    if (nativeList) {
+      const ids = notifications.map((n) => n.id);
+      const step = reduceMotion ? 0 : CASCADE_STEP_MS;
+      ids.forEach((id, i) => setTimeout(() => setHidden(id, true), i * step));
+      setTimeout(async () => {
+        pendingDeletes.current.forEach(clearTimeout);
+        pendingDeletes.current.clear();
+        await deleteAllNotifications();
+        await invalidateNotifications();
+        setHiddenIds(new Set());
+      }, ids.length * step + 400);
+      return;
+    }
+
     // Two steps: first every row learns its place in the sweep, then they
     // all go. Removing them in the same render would skip the delays.
     const ids = notifications.map((n) => n.id);
@@ -267,7 +337,7 @@ export default function AlertsScreen() {
 
   const visible = notifications?.filter((n) => !hiddenIds.has(n.id)) ?? null;
   const hasAlerts = (visible?.length ?? 0) > 0;
-  const unreadCount = visible?.filter((n) => !n.read).length ?? 0;
+  const unreadCount = visible?.filter((n) => !isRead(n)).length ?? 0;
   const today = visible?.filter((n) => isToday(n.timestamp)) ?? [];
   const earlier = visible?.filter((n) => !isToday(n.timestamp)) ?? [];
 
@@ -354,7 +424,7 @@ export default function AlertsScreen() {
    */
   function renderCard(notification: Notification, order: number, dimmed: boolean) {
     const style = typeStyle(notification.type, colors);
-    const unread = !notification.read;
+    const unread = !isRead(notification);
     return renderSwipeable(
       notification,
       order,
@@ -393,28 +463,81 @@ export default function AlertsScreen() {
     );
   }
 
+  // Two plain, labelled buttons rather than a ⋯ menu: drivers should see
+  // both actions without having to go looking for them.
+  const barActions = actionsInBar && (unreadCount > 0 || hasAlerts) && (
+    <Stack.Toolbar placement="right">
+      {unreadCount > 0 && (
+        <Stack.Toolbar.Button tintColor={colors.accent} onPress={handleMarkAllRead}>
+          {t('alerts.markAllRead')}
+        </Stack.Toolbar.Button>
+      )}
+      {hasAlerts && (
+        <Stack.Toolbar.Button tintColor={colors.danger} onPress={handleDeleteAll}>
+          {t('alerts.deleteAll')}
+        </Stack.Toolbar.Button>
+      )}
+    </Stack.Toolbar>
+  );
+
+  const toNativeRow = (n: Notification, dimmed: boolean): NativeAlertRow => {
+    const style = typeStyle(n.type, colors);
+    return {
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      time: formatTime(n.timestamp),
+      unread: !isRead(n),
+      dimmed,
+      symbol: sfSymbolFor(style.icon) ?? 'bell',
+      color: style.color,
+      soft: String(style.soft),
+      opens: !!n.target,
+    };
+  };
+
+  // iOS: Mail's list. It scrolls itself, so the bar keeps a regular title.
+  // Loading, errors and an empty inbox fall through to the screen below.
+  if (nativeList && visible && visible.length > 0) {
+    return (
+      <View style={[styles.fill, { backgroundColor: colors.bg }]}>
+        <Stack.Screen
+          options={{ title: t('alerts.headerTitle'), headerLargeTitleEnabled: false }}
+        />
+        {barActions}
+        <NativeAlertsList
+          sections={[
+            { key: 'today', title: t('alerts.today'), rows: today.map((n) => toNativeRow(n, false)) },
+            {
+              key: 'earlier',
+              title: t('alerts.earlier'),
+              rows: earlier.map((n) => toNativeRow(n, true)),
+            },
+          ]}
+          labels={{
+            delete: t('alerts.swipeDelete'),
+            read: t('alerts.swipeRead'),
+            unread: t('alerts.swipeUnread'),
+          }}
+          onOpen={(id) => {
+            const n = visible.find((item) => item.id === id);
+            if (n) handlePress(n);
+          }}
+          onDelete={handleDelete}
+          onToggleRead={handleToggleRead}
+          onRefresh={invalidateNotifications}
+        />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: t('alerts.headerTitle') }} />
-      {actionsInBar && (unreadCount > 0 || hasAlerts) && (
-        // Two plain, labelled buttons rather than a ⋯ menu: drivers should
-        // see both actions without having to go looking for them.
-        <Stack.Toolbar placement="right">
-          {unreadCount > 0 && (
-            <Stack.Toolbar.Button tintColor={colors.accent} onPress={handleMarkAllRead}>
-              {t('alerts.markAllRead')}
-            </Stack.Toolbar.Button>
-          )}
-          {hasAlerts && (
-            <Stack.Toolbar.Button tintColor={colors.danger} onPress={handleDeleteAll}>
-              {t('alerts.deleteAll')}
-            </Stack.Toolbar.Button>
-          )}
-        </Stack.Toolbar>
-      )}
+      {barActions}
 
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -504,6 +627,9 @@ export default function AlertsScreen() {
 }
 
 const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: Spacing.xxl,
     // `contentInsetAdjustmentBehavior="automatic"` already accounts for the

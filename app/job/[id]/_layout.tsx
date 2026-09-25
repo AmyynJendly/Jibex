@@ -15,7 +15,6 @@ export default function JobStackLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="index" options={Platform.OS === 'web' ? undefined : header} />
-      <Stack.Screen name="otp" options={header} />
       <Stack.Screen name="cant-deliver" options={header} />
       <Stack.Screen name="photo-proof" options={header} />
       <Stack.Screen name="cash-collected" />

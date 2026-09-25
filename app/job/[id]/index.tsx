@@ -138,7 +138,7 @@ export default function JobDetailScreen() {
    *
    * This replaces a button that only opened the scanner flow, so the driver
    * had to go two screens deep to record the ordinary outcome. The gates the
-   * OTP and photo routes enforce still apply — the run has to be signed for,
+   * other delivery routes enforce still apply — the run has to be signed for,
    * and the customer has to have been called — and the reason surfaces as a
    * toast rather than the press silently doing nothing.
    *

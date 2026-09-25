@@ -1015,6 +1015,13 @@ export async function markNotificationRead(id: string): Promise<void> {
   await delay(undefined);
 }
 
+/** Puts an alert back to unread — the Mail-style swipe offers both ways. */
+export async function markNotificationUnread(id: string): Promise<void> {
+  const notification = mockNotifications.find((n) => n.id === id);
+  if (notification) notification.read = false;
+  await delay(undefined);
+}
+
 export async function deleteNotification(id: string): Promise<void> {
   const index = mockNotifications.findIndex((n) => n.id === id);
   if (index >= 0) mockNotifications.splice(index, 1);

@@ -12,7 +12,12 @@ import { useToast } from './Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
-import { markDeliveryFailed, reopenParcel } from '../services/mock-api';
+import {
+  confirmDelivery,
+  getDriverStats,
+  markDeliveryFailed,
+  reopenParcel,
+} from '../services/mock-api';
 import type { DeliveryFailureReason, Job } from '../types';
 
 /** The real 7 failure reasons — same list as the full-screen Can't Deliver flow. */
@@ -35,10 +40,9 @@ interface StatusUpdateSheetProps {
 }
 
 /**
- * Bottom sheet for updating a parcel's status. "Delivered" routes into the
- * existing OTP → Cash Collected flow rather than marking delivered itself —
- * OTP verification stays the one way a delivery gets confirmed — and is
- * gated on the driver having called the customer at least once.
+ * Bottom sheet for updating a parcel's status. "Delivered" records the
+ * delivery on the spot and shows the cash receipt; like everywhere else it
+ * is gated on the driver having called the customer at least once.
  *
  * For a parcel that's already resolved, the sheet turns into a correction
  * tool instead, so a wrongly-marked package can always be put back.
@@ -90,15 +94,31 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
     onClose();
   }
 
-  function handleDelivered() {
-    if (!job) return;
+  /**
+   * Records the delivery straight away — no code to type — and lands on the
+   * same cash receipt the stop screen's Delivered button ends on.
+   */
+  async function handleDelivered() {
+    if (!job || submitting) return;
     if (!canDeliver) {
       showToast(t('statusUpdate.callRequired'));
       return;
     }
-    const id = job.id;
+    setSubmitting(true);
+    const previousTotal = (await getDriverStats()).cashCollectedTotal;
+    const result = await confirmDelivery(job.id, job.cashToCollect);
+    setSubmitting(false);
+    if (!result.success) {
+      showToast(t(result.error ?? 'common.genericError'));
+      return;
+    }
+    const { id, cashToCollect } = job;
     handleClose();
-    router.push({ pathname: '/job/[id]/otp', params: { id } });
+    onDone();
+    router.push({
+      pathname: '/job/[id]/cash-collected',
+      params: { id, cashAmount: String(cashToCollect), previousTotal: String(previousTotal) },
+    });
   }
 
   async function handleConfirmFailed() {
