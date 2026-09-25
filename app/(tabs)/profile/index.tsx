@@ -110,14 +110,14 @@ export default function ProfileScreen() {
             {/* Fixed warm gradient, not theme-adaptive — same treatment as the
                 design's driver card, which never switches to a neutral surface. */}
             <LinearGradient
-              colors={['#EAB464', '#C99A6D', colors.accent]}
+              colors={['#F2A516', '#D99A45', colors.accent]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.profileCardTopRow}>
               <View style={styles.avatar}>
-                <Icon name="person-outline" size={30} color="#7E5731" />
+                <Icon name="person-outline" size={30} color="#8C5A2B" />
               </View>
               <View style={styles.nameBlock}>
                 <Text style={styles.name}>{user.name}</Text>
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
               <View style={styles.plateRow}>
                 <Barcode
                   seed={user.id + vehicle.plate}
-                  color="rgba(46,52,57,0.55)"
+                  color="rgba(30,34,38,0.55)"
                   width={150}
                   height={20}
                 />
@@ -418,15 +418,15 @@ const styles = StyleSheet.create({
   },
   plateText: {
     ...monoStyle(12, 'medium'),
-    color: 'rgba(46,52,57,0.6)',
+    color: 'rgba(30,34,38,0.6)',
   },
   avatar: {
     width: 60,
     height: 60,
     borderRadius: Radii.xl,
-    backgroundColor: 'rgba(255,252,248,0.55)',
+    backgroundColor: 'rgba(255,253,248,0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(255,252,248,0.7)',
+    borderColor: 'rgba(255,253,248,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -437,11 +437,11 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: Fonts.archivoExtraBold,
     fontSize: 19,
-    color: '#2E3439',
+    color: '#1E2226',
   },
   handle: {
     ...monoStyle(12),
-    color: 'rgba(46,52,57,0.7)',
+    color: 'rgba(30,34,38,0.7)',
   },
   statsCard: {
     flexDirection: 'row',

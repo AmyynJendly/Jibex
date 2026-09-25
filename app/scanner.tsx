@@ -181,7 +181,7 @@ export default function ScannerScreen() {
       {batchComplete ? (
         <View style={styles.batchCompleteBlock}>
           <View style={styles.batchCompleteIcon}>
-            <Icon name="checkmark" size={32} color="#2E3439" effect="bounce" />
+            <Icon name="checkmark" size={32} color="#1B1917" effect="bounce" />
           </View>
           <Text style={styles.permissionTitle}>{t('scanner.batchCompleteTitle')}</Text>
           <Text style={styles.permissionBody}>{t('scanner.batchCompleteBody')}</Text>
@@ -282,12 +282,12 @@ export default function ScannerScreen() {
   );
 }
 
-const ACCENT = '#EAB464';
+const ACCENT = '#FFB627';
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#2E3439',
+    backgroundColor: '#1B1917',
   },
   header: {
     flexDirection: 'row',
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   actionButtonTextDark: {
     fontFamily: Fonts.archivoBold,
     fontSize: 14,
-    color: '#2E3439',
+    color: '#1B1917',
   },
   scannedCount: {
     fontFamily: Fonts.archivoSemiBold,

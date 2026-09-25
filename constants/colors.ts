@@ -23,112 +23,90 @@ export interface ColorPalette {
   /** Stop-number badges, secondary status chips ("Paid", "Closed", timestamp pills). */
   neutral: string;
   neutralSoft: string;
-  /** "In Transit" filled-chip color — the design's darker clay tone, distinct from `accent` and `warning`. */
+  /** "In Transit" filled-chip color — deep kraft, distinct from `accent` and `warning`. */
   info: string;
   infoSoft: string;
   /** Ink for text and icons sitting on an accent/filled surface. */
   onAccent: string;
   /** Ink readable on `warning` — the amber fills are too light for white. */
   onWarning: string;
-  /** The one deliberately dark surface in a warm-cream app: the cash strip. */
+  /** The wallet chip: dark on kraft paper, light in the dark warehouse. */
   inverseSurface: string;
   inverseText: string;
   inverseTextMuted: string;
 }
 
 /**
- * "Sunlit" theme — clay-and-sand surfaces, warm cream backgrounds, ink-stamp
- * accents (Claude Design project 6f820bf5-c67c-4e8a-8512-4f2c82bf319d,
- * "Jibex Box theme.dc.html"). Values below are lifted directly from that
- * source's light palette.
+ * "Kraft & Tape" — the parcel depot, brighter. Cardboard kraft leads, packing
+ * tape amber marks what needs attention, and delivered / failed read as
+ * green and red ink stamps instead of two shades of gray. Cards are
+ * shipping-label white on kraft paper; dark mode is a warehouse at night,
+ * with dark-cardboard cards and the same tape and stamp colors, lifted so
+ * they hold their contrast.
  *
- * The source design only defines ONE palette (its `renderVals()` hardcodes
- * `light: false`, i.e. an always-warm-cream UI — the only true dark surface
- * shown anywhere is the Scanner screen, which every screen in the app has
- * always rendered forced-dark regardless of system theme). Since this app
- * still needs to support `useColorScheme()`-driven dark mode, the `dark`
- * palette below is derived (not lifted) — anchored to the Scanner screen's
- * real colors (`#2E3439` bg, `rgba(245,238,230,*)` text/borders, `#EAB464`
- * accent) and extended using the same light/dark relationship the previous
- * palette had, rather than inventing new hues.
+ * Token names are unchanged from the earlier palette so every screen picks
+ * the new colors up without edits; `purple` (Pickups) is now manifest blue.
  */
 export const palette: { light: ColorPalette; dark: ColorPalette } = {
   light: {
-    bg: '#F5EEE6',
-    bgElevated: '#FFFCF8',
-    text: '#2E3439',
-    textSecondary: '#646E78',
-    textTertiary: '#8D98A7',
-    separator: '#E9DDCE',
-    // The design has no backdrop-blur glass anywhere — chrome (icon buttons,
-    // tab bar) is opaque clay-white cards. `glassTint` stays a real (if
-    // near-opaque) alpha rather than a flat color so `GlassSurface` still
-    // renders through native `GlassView`/`BlurView`, just tinted to read as
-    // solid, matching the design without restructuring every call site.
-    glassTint: 'rgba(255,252,248,0.92)',
-    glassTintStrong: 'rgba(255,252,248,0.97)',
-    glassBorder: 'rgba(228,214,198,0.9)',
-    accent: '#A7754D',
-    accentSoft: '#F7E7D2',
-    // The design renders "delivered/done" states in neutral ink-gray, not
-    // green — there is no green anywhere in this palette.
-    success: '#646E78',
-    successSoft: '#EDEAE4',
-    // The design's only red-family swatch, used for "Se déconnecter" — the
-    // one negative/destructive accent in an otherwise all-warm-neutral
-    // palette. Reused here for error text/failed badges/end-shift, which
-    // need a distinct "problem" color the source doesn't otherwise supply.
-    danger: '#B4564E',
-    dangerSoft: 'rgba(180,86,78,0.12)',
-    // No purple/lavender exists in this palette — aliased to accent, same
-    // as how the design itself colors the Pickups quick-action count badge.
-    purple: '#A7754D',
-    purpleSoft: '#F7E7D2',
-    // Gold — the design's "urgent / live / needs attention" highlight
-    // (pulsing dots, priority alerts, next-stop borders).
-    warning: '#EAB464',
-    warningSoft: 'rgba(234,180,100,0.18)',
-    neutral: '#8D98A7',
-    neutralSoft: '#E6E7E4',
-    // Darker clay — the design's "in transit / active" filled-chip color,
-    // kept distinct from `warning` gold and `accent` clay-brown.
-    info: '#96683F',
-    infoSoft: 'rgba(150,104,63,0.14)',
+    bg: '#F3E9DA',
+    bgElevated: '#FFFDF8',
+    text: '#1E2226',
+    textSecondary: '#5F5850',
+    textTertiary: '#8E8478',
+    separator: '#E6D6BE',
+    glassTint: 'rgba(255,253,248,0.92)',
+    glassTintStrong: 'rgba(255,253,248,0.97)',
+    glassBorder: 'rgba(230,214,190,0.9)',
+    accent: '#B5793F',
+    accentSoft: '#F6E4CC',
+    success: '#2E8B57',
+    successSoft: 'rgba(46,139,87,0.13)',
+    danger: '#D6402C',
+    dangerSoft: 'rgba(214,64,44,0.12)',
+    purple: '#2F5DA8',
+    purpleSoft: 'rgba(47,93,168,0.12)',
+    warning: '#F2A516',
+    warningSoft: 'rgba(242,165,22,0.18)',
+    neutral: '#8E8478',
+    neutralSoft: '#EDE4D6',
+    info: '#8C5A2B',
+    infoSoft: 'rgba(140,90,43,0.14)',
     onAccent: '#FFFFFF',
-    onWarning: '#2E3439',
-    inverseSurface: '#4E565F',
-    inverseText: '#F5EEE6',
-    inverseTextMuted: 'rgba(245,238,230,0.7)',
+    onWarning: '#1E2226',
+    inverseSurface: '#2B2621',
+    inverseText: '#F6EEE2',
+    inverseTextMuted: 'rgba(246,238,226,0.65)',
   },
   dark: {
-    bg: '#2E3439',
-    bgElevated: '#3E464C',
-    text: '#F5EEE6',
-    textSecondary: 'rgba(245,238,230,0.6)',
-    textTertiary: 'rgba(245,238,230,0.3)',
-    separator: 'rgba(245,238,230,0.16)',
-    glassTint: 'rgba(245,238,230,0.12)',
-    glassTintStrong: 'rgba(245,238,230,0.18)',
-    glassBorder: 'rgba(245,238,230,0.2)',
-    accent: '#EAB464',
-    accentSoft: 'rgba(234,180,100,0.2)',
-    success: '#8D98A7',
-    successSoft: 'rgba(141,152,167,0.16)',
-    danger: '#D97B72',
-    dangerSoft: 'rgba(217,123,114,0.18)',
-    purple: '#EAB464',
-    purpleSoft: 'rgba(234,180,100,0.2)',
-    warning: '#EAB464',
-    warningSoft: 'rgba(234,180,100,0.2)',
-    neutral: '#8D98A7',
-    neutralSoft: 'rgba(141,152,167,0.18)',
-    info: '#C99A6D',
-    infoSoft: 'rgba(201,154,109,0.18)',
-    onAccent: '#2E2A26',
-    onWarning: '#2E3439',
-    inverseSurface: '#3A4149',
-    inverseText: '#F5EEE6',
-    inverseTextMuted: 'rgba(245,238,230,0.7)',
+    bg: '#1B1917',
+    bgElevated: '#2A2622',
+    text: '#F6EEE2',
+    textSecondary: 'rgba(246,238,226,0.66)',
+    textTertiary: 'rgba(246,238,226,0.38)',
+    separator: 'rgba(246,238,226,0.13)',
+    glassTint: 'rgba(246,238,226,0.1)',
+    glassTintStrong: 'rgba(246,238,226,0.16)',
+    glassBorder: 'rgba(246,238,226,0.18)',
+    accent: '#D49A5E',
+    accentSoft: 'rgba(212,154,94,0.2)',
+    success: '#4CC38A',
+    successSoft: 'rgba(76,195,138,0.16)',
+    danger: '#FF6B55',
+    dangerSoft: 'rgba(255,107,85,0.16)',
+    purple: '#6E9BEA',
+    purpleSoft: 'rgba(110,155,234,0.16)',
+    warning: '#FFB627',
+    warningSoft: 'rgba(255,182,39,0.16)',
+    neutral: '#A89E91',
+    neutralSoft: 'rgba(168,158,145,0.16)',
+    info: '#D9A56E',
+    infoSoft: 'rgba(217,165,110,0.16)',
+    onAccent: '#1B1917',
+    onWarning: '#1B1917',
+    inverseSurface: '#F6EEE2',
+    inverseText: '#1B1917',
+    inverseTextMuted: 'rgba(27,25,23,0.6)',
   },
 };
 

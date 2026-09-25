@@ -13,7 +13,7 @@ const CARD_SHADOWS: Record<'light' | 'dark', ViewStyle> =
     ? { light: { elevation: 2 }, dark: { elevation: 4 } }
     : {
         light: {
-          shadowColor: '#646E78',
+          shadowColor: '#6B4A2B',
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.1,
           shadowRadius: 16,
@@ -47,7 +47,7 @@ export function getAccentGlow(opacity = 0.3, radius = 24): ViewStyle {
     return { elevation: 6 };
   }
   return {
-    shadowColor: '#96683F',
+    shadowColor: '#8C5A2B',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: opacity,
     shadowRadius: radius,

@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -20,6 +19,7 @@ import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PackageCube } from '../../../components/PackageCube';
 import { StopLink } from '../../../components/StopLink';
 import { LoadError } from '../../../components/LoadError';
+import { Barcode } from '../../../components/Barcode';
 import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
 import { useConfirm } from '../../../components/ConfirmDialog';
@@ -35,6 +35,7 @@ import {
   useColors,
 } from '../../../constants';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
+import { localeTag } from '../../../lib/date';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { useNextStop } from '../../../lib/useNextStop';
@@ -78,7 +79,7 @@ const integerFormatter = (n: number) => String(Math.round(n));
 
 export default function HomeScreen() {
   const colors = useColors();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
@@ -220,10 +221,7 @@ export default function HomeScreen() {
               <SkeletonBlock width={40} height={40} radius={20} />
             </View>
           </View>
-          <View style={styles.skeletonGreeting}>
-            <SkeletonBlock width={160} height={30} radius={6} />
-            <SkeletonBlock width={120} height={14} radius={4} />
-          </View>
+          <SkeletonBlock height={150} radius={Radii.card} />
           <SkeletonBlock height={190} radius={Radii.card} />
           <SkeletonBlock height={120} radius={Radii.card} />
           <View style={styles.compactRow}>
@@ -245,6 +243,9 @@ export default function HomeScreen() {
   const nextStopDistanceKm = nextStop
     ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, nextStop.location)
     : 0;
+  const todayLabel = new Date()
+    .toLocaleDateString(localeTag(i18n.language), { weekday: 'short', day: 'numeric', month: 'short' })
+    .replace(/\./g, '');
   const cashLabel = `${t('home.cashCollected')} · ${formatCurrency(stats.cashCollectedTotal)}`;
   const nextStopEtaMinutes = nextStop ? Math.max(1, Math.round((nextStopDistanceKm / 35) * 60)) : 0;
 
@@ -299,11 +300,6 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <LinearGradient
-        colors={[colors.warning, `${colors.warning}00`]}
-        style={styles.heroGradient}
-        pointerEvents="none"
-      />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
@@ -334,7 +330,21 @@ export default function HomeScreen() {
           </View>
         </View>
 
-      <View style={styles.greeting}>
+      {/* The greeting, dressed as a shipping label: a strip of tape holding
+          it down, a barcode, and a perforated stub with the driver's code. */}
+      <View
+        style={[
+          styles.greeting,
+          { backgroundColor: colors.bgElevated, borderColor: colors.separator },
+          getCardShadow(scheme),
+        ]}>
+        <View style={[styles.labelTape, { backgroundColor: colors.warning }]} />
+        <View style={styles.labelTopRow}>
+          <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>
+            {todayLabel}
+          </Text>
+          <Barcode seed={user.id + user.driverCode} color={colors.text} width={58} height={20} />
+        </View>
         <Text style={[Typography.largeTitle, styles.name, { color: colors.text }]}>
           {t(getGreetingKey())}, {firstName}
         </Text>
@@ -346,6 +356,14 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
+        <View style={[styles.labelStub, { borderTopColor: colors.separator }]}>
+          <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>
+            JIBEX
+          </Text>
+          <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>
+            {user.driverCode}
+          </Text>
+        </View>
       </View>
 
       {unconfirmedRunsheets.length > 0 && (
@@ -376,7 +394,7 @@ export default function HomeScreen() {
                 scaleTo={0.95}
                 style={[styles.toConfirmButton, { backgroundColor: colors.warning }]}
                 onPress={() => handleConfirmReceipt(runsheet)}>
-                <Text style={styles.toConfirmButtonText}>
+                <Text style={[styles.toConfirmButtonText, { color: colors.onWarning }]}>
                   {runsheet.status === 'A_CONFIRMER'
                     ? t('runsheets.confirm.action')
                     : t('runsheets.confirm.recountAction')}
@@ -434,17 +452,15 @@ export default function HomeScreen() {
         <StopLink
           job={nextStop}
           scaleTo={0.98}
-          style={[
-            styles.nextStopCard,
-            { backgroundColor: colors.bgElevated, borderColor: colors.accent },
-            getCardShadow(scheme),
-          ]}>
+          style={[styles.nextStopCard, { backgroundColor: colors.accent }, getCardShadow(scheme)]}>
+          {/* The tag's punched hole, showing the page through it. */}
+          <View style={[styles.tagHole, { backgroundColor: colors.bg }]} />
           <View style={styles.nextStopTopRow}>
-            <Text style={[monoStyle(11), styles.nextStopLabel, { color: colors.accent }]}>
+            <Text style={[monoStyle(11), styles.nextStopLabel, styles.tagMuted, { color: colors.onAccent }]}>
               {t('home.nextStop.label')}
               {nextStopIndex ? ` · ${nextStopIndex}` : ''}
             </Text>
-            <Text style={[monoStyle(11), { color: colors.textSecondary }]}>
+            <Text style={[monoStyle(11), styles.tagMuted, { color: colors.onAccent }]}>
               {t('home.nextStop.distanceEta', {
                 distance: formatDecimal(nextStopDistanceKm),
                 minutes: nextStopEtaMinutes,
@@ -453,33 +469,38 @@ export default function HomeScreen() {
           </View>
           <View style={styles.nextStopBody}>
             <View style={styles.nextStopText}>
-              <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
+              <Text style={[Typography.title3, { color: colors.onAccent }]} numberOfLines={1}>
                 {nextStop.customerName}
               </Text>
-              <Text style={[Typography.subhead, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text
+                style={[Typography.subhead, styles.tagMuted, { color: colors.onAccent }]}
+                numberOfLines={1}>
                 {nextStop.address}
               </Text>
             </View>
-            <View style={[styles.nextStopIcon, { backgroundColor: colors.accentSoft }]}>
+            <View style={styles.nextStopIcon}>
               <PackageCube size={24} />
             </View>
           </View>
           <View style={styles.nextStopBottomRow}>
             <View style={styles.nextStopCod}>
-              <Text style={[monoStyle(9), styles.nextStopCodLabel, { color: colors.textTertiary }]}>
+              <Text
+                style={[monoStyle(9), styles.nextStopCodLabel, styles.tagMuted, { color: colors.onAccent }]}>
                 {t('home.nextStop.codLabel')}
               </Text>
               <Text
-                style={[monoStyle(19, 'medium'), { color: colors.text }]}
+                style={[monoStyle(19, 'medium'), { color: colors.onAccent }]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.7}>
                 {formatCurrency(nextStop.cashToCollect)}
               </Text>
             </View>
-            <View style={[styles.goPill, { backgroundColor: colors.accent }]}>
-              <Icon name="navigate" size={12} color="#fff" />
-              <Text style={styles.goPillText}>{t('home.nextStop.go')}</Text>
+            <View style={[styles.goPill, { backgroundColor: colors.warning }]}>
+              <Icon name="navigate" size={12} color={colors.onWarning} />
+              <Text style={[styles.goPillText, { color: colors.onWarning }]}>
+                {t('home.nextStop.go')}
+              </Text>
             </View>
           </View>
         </StopLink>
@@ -520,13 +541,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  heroGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 230,
-  },
   content: {
     paddingHorizontal: Spacing.xxl,
     // `contentInsetAdjustmentBehavior="automatic"` below already pushes content
@@ -546,12 +560,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
   },
-  skeletonGreeting: {
-    gap: Spacing.sm,
-    marginTop: -6,
-  },
   greeting: {
-    marginTop: -8,
+    borderRadius: Radii.card,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.smd,
+    marginTop: Spacing.xs,
+  },
+  // A strip of packing tape across the label's top edge, a little askew.
+  labelTape: {
+    position: 'absolute',
+    top: -7,
+    alignSelf: 'center',
+    width: 84,
+    height: 18,
+    borderRadius: 2,
+    opacity: 0.85,
+    transform: [{ rotate: '-2deg' }],
+  },
+  labelTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  labelEyebrow: {
+    letterSpacing: 0.1 * 10,
+    textTransform: 'uppercase',
+  },
+  // The tear-off stub: a perforated line, then the sender and the driver code.
+  labelStub: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1.5,
+    borderStyle: 'dashed',
   },
   name: {
     letterSpacing: -0.03 * 34,
@@ -598,7 +642,6 @@ const styles = StyleSheet.create({
   toConfirmButtonText: {
     fontFamily: Fonts.archivoBold,
     fontSize: 12,
-    color: '#2E3439',
   },
   card: {
     paddingTop: Spacing.lg,
@@ -642,11 +685,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
+  // A parcel tag: kraft card, a punched hole on the leading edge.
   nextStopCard: {
     borderRadius: Radii.card,
-    borderWidth: 1.5,
     padding: Spacing.md,
+    paddingLeft: Spacing.md + 18,
     gap: Spacing.xs,
+  },
+  tagHole: {
+    position: 'absolute',
+    left: 11,
+    top: '50%',
+    width: 11,
+    height: 11,
+    marginTop: -5.5,
+    borderRadius: 5.5,
+  },
+  tagMuted: {
+    opacity: 0.78,
   },
   nextStopTopRow: {
     flexDirection: 'row',
@@ -669,6 +725,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: Radii.md,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -702,7 +759,6 @@ const styles = StyleSheet.create({
   goPillText: {
     fontFamily: Fonts.archivoBold,
     fontSize: 12,
-    color: '#fff',
   },
   compactRow: {
     flexDirection: 'row',
