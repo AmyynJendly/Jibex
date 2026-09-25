@@ -1,12 +1,11 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Icon } from '../components/Icon';
-import { ReadOnlyField } from '../components/ReadOnlyField';
+import { InfoList } from '../components/InfoList';
 import { SkeletonRow } from '../components/Skeleton';
-import { Fonts, Spacing, useColors } from '../constants';
+import { Spacing, useColors } from '../constants';
 import { getUser } from '../services/mock-api';
 import type { User } from '../types';
 
@@ -27,30 +26,23 @@ export default function PersonalInfoScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('personalInfo.headerTitle') }} />
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}>
-        {!user ? (
-          <View style={styles.skeletonGroup}>
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
-          </View>
-        ) : (
-          <>
-            <View style={[styles.notice, { backgroundColor: colors.bgElevated }]}>
-              <Icon name="lock-closed-outline" size={15} color={colors.textSecondary} />
-              <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
-                {t('personalInfo.readOnlyNotice')}
-              </Text>
-            </View>
-            <ReadOnlyField label={t('personalInfo.fullNameLabel')} value={user.name} />
-            <ReadOnlyField label={t('personalInfo.usernameLabel')} value={user.username} />
-            <ReadOnlyField label={t('personalInfo.emailLabel')} value={user.email} />
-            <ReadOnlyField label={t('personalInfo.driverCodeLabel')} value={user.driverCode} />
-          </>
-        )}
-      </ScrollView>
+      {!user ? (
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </ScrollView>
+      ) : (
+        <InfoList
+          notice={t('personalInfo.readOnlyNotice')}
+          rows={[
+            { label: t('personalInfo.fullNameLabel'), value: user.name },
+            { label: t('personalInfo.usernameLabel'), value: user.username },
+            { label: t('personalInfo.emailLabel'), value: user.email },
+            { label: t('personalInfo.driverCodeLabel'), value: user.driverCode },
+          ]}
+        />
+      )}
     </View>
   );
 }
@@ -60,24 +52,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
-    paddingBottom: 40,
     gap: Spacing.md,
-  },
-  skeletonGroup: {
-    gap: Spacing.md,
-  },
-  notice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    borderRadius: 14,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xs,
-  },
-  noticeText: {
-    flex: 1,
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 13,
   },
 });

@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -33,33 +33,9 @@ import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
+import { openDirections } from '../lib/stopActions';
 import { completePickups, setPickupOrder } from '../services/mock-api';
 import type { Pickup, PickupStatus } from '../types';
-
-/**
- * Pickup addresses only have text, not coordinates, so this navigates by
- * address query rather than lat/lng (same Google Maps app/web fallback
- * pattern as the job-detail screen's `openInMaps`).
- */
-async function openInMaps(address: string) {
-  const query = encodeURIComponent(address);
-  const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${query}&travelmode=driving`;
-
-  const appUrl = Platform.select({
-    ios: `comgooglemaps://?daddr=${query}&directionsmode=driving`,
-    android: `google.navigation:q=${query}`,
-  });
-
-  if (appUrl) {
-    const canOpen = await Linking.canOpenURL(appUrl).catch(() => false);
-    if (canOpen) {
-      Linking.openURL(appUrl).catch(() => Linking.openURL(webUrl));
-      return;
-    }
-  }
-
-  Linking.openURL(webUrl);
-}
 
 interface PickupCardProps {
   pickup: Pickup;
@@ -192,7 +168,7 @@ function PickupCard({
               accessibilityRole="button"
               accessibilityLabel={`${t('pickups.navigate')} ${pickup.address}`}
               style={[styles.actionButton, styles.actionButtonWide, { backgroundColor: colors.accent }]}
-              onPress={() => openInMaps(pickup.address)}>
+              onPress={() => openDirections({ address: pickup.address })}>
               <Icon name="navigate" size={16} color="#fff" />
               <Text style={[styles.actionButtonText, styles.actionButtonTextOn]}>
                 {t('pickups.navigate')}

@@ -1,7 +1,6 @@
-import { MenuView, type MenuAction } from '@expo/ui/community/menu';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useIsPreview, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useIsPreview, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, {
@@ -15,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
-import { GlassIcon, GlassIconButton } from '../../../components/GlassIconButton';
+import { GlassIconButton } from '../../../components/GlassIconButton';
 import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
@@ -56,6 +55,9 @@ import type { Job } from '../../../types';
 function staticMapUrl({ lat, lng }: { lat: number; lng: number }) {
   return `https://static-maps.yandex.ru/1.x/?ll=${lng},${lat}&z=15&l=map&size=640,300&pt=${lng},${lat},pm2rdl`;
 }
+
+/** Phones get Apple's navigation bar; the web keeps the drawn header. */
+const nativeBar = Platform.OS !== 'web';
 
 export default function JobDetailScreen() {
   const colors = useColors();
@@ -125,11 +127,11 @@ export default function JobDetailScreen() {
     else if (action === 'cantDeliver') router.push({ pathname: '/job/[id]/cant-deliver', params: { id } });
   }
 
-  const menuActions: MenuAction[] = [
-    { id: 'call', title: t('runsheets.call'), image: 'phone' },
-    { id: 'navigate', title: t('jobDetail.navigate'), image: 'arrow.triangle.turn.up.right.diamond' },
-    { id: 'cantDeliver', title: t('jobDetail.cantDeliver'), image: 'xmark.circle' },
-  ];
+  const menuActions = [
+    { id: 'call', title: t('runsheets.call'), icon: 'phone' },
+    { id: 'navigate', title: t('jobDetail.navigate'), icon: 'arrow.triangle.turn.up.right.diamond' },
+    { id: 'cantDeliver', title: t('jobDetail.cantDeliver'), icon: 'xmark.circle' },
+  ] as const;
 
   /**
    * Marks the parcel delivered from the doorstep.
@@ -170,37 +172,59 @@ export default function JobDetailScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <View style={styles.header}>
-        <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
-          <Icon name="chevron-back" size={20} color={colors.textSecondary} />
-        </GlassIconButton>
-        {position && (
-          <View style={[styles.stopChip, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
-            <Text style={[monoLabelStyle(12, 0.04), { color: colors.text }]}>
-              {t('jobDetail.stopChip', { index: position.index, total: position.total })}
-            </Text>
-          </View>
-        )}
-        {/* The system menu on iOS and Android. The web drop-in can't open
-            menus, so there the button keeps its old placeholder. */}
-        {Platform.OS === 'web' ? (
+      {nativeBar ? (
+        <>
+          {/* Apple's bar: the stop number as the title, a system back button
+              (this is the first screen of the stop's own stack, so iOS adds
+              none by itself) and the system ⋯ menu. */}
+          <Stack.Screen
+            options={{
+              title: position
+                ? t('jobDetail.stopChip', { index: position.index, total: position.total })
+                : '',
+            }}
+          />
+          <Stack.Toolbar placement="left">
+            <Stack.Toolbar.Button
+              icon="chevron.left"
+              accessibilityLabel={t('common.back')}
+              onPress={() => router.back()}
+            />
+          </Stack.Toolbar>
+          <Stack.Toolbar placement="right">
+            <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel={t('jobDetail.a11yMore')}>
+              {menuActions.map((action) => (
+                <Stack.Toolbar.MenuAction
+                  key={action.id}
+                  icon={action.icon}
+                  onPress={() => handleMenuAction(action.id)}>
+                  {action.title}
+                </Stack.Toolbar.MenuAction>
+              ))}
+            </Stack.Toolbar.Menu>
+          </Stack.Toolbar>
+        </>
+      ) : (
+        <View style={styles.header}>
+          <GlassIconButton accessibilityLabel={t('common.back')} onPress={() => router.back()}>
+            <Icon name="chevron-back" size={20} color={colors.textSecondary} />
+          </GlassIconButton>
+          {position && (
+            <View style={[styles.stopChip, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+              <Text style={[monoLabelStyle(12, 0.04), { color: colors.text }]}>
+                {t('jobDetail.stopChip', { index: position.index, total: position.total })}
+              </Text>
+            </View>
+          )}
           <GlassIconButton
             accessibilityLabel={t('jobDetail.a11yMore')}
             onPress={() => showToast(t('jobDetail.moreOptionsToast'))}>
             <Icon name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
           </GlassIconButton>
-        ) : (
-          <MenuView
-            actions={menuActions}
-            onPressAction={({ nativeEvent }) => handleMenuAction(nativeEvent.event)}>
-            <GlassIcon>
-              <Icon name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
-            </GlassIcon>
-          </MenuView>
-        )}
-      </View>
+        </View>
+      )}
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <AnimatedPressable
           scaleTo={0.98}
           style={[styles.mapCard, getCardShadow(scheme)]}

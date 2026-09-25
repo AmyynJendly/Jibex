@@ -1,10 +1,11 @@
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FaqList } from '../components/FaqList';
 import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
 
 interface Faq {
@@ -19,6 +20,36 @@ export default function HelpCenterScreen() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const faqs = t('helpCenter.faqs', { returnObjects: true }) as Faq[];
 
+  const contactCard = (
+    <AnimatedPressable
+      scaleTo={0.98}
+      onPress={() => Linking.openURL('mailto:support@jibex.app')}
+      style={[styles.contactRow, { backgroundColor: colors.accent }]}>
+      <View style={styles.contactIcon}>
+        <Icon name="chatbubbles-outline" size={20} color="#fff" />
+      </View>
+      <View style={styles.contactText}>
+        <Text style={styles.contactTitle}>{t('helpCenter.contactSupport')}</Text>
+        <Text style={styles.contactSubtitle}>support@jibex.app</Text>
+      </View>
+      <Icon name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
+    </AnimatedPressable>
+  );
+
+  // iOS: Apple's grouped list with native fold-out questions.
+  if (Platform.OS === 'ios') {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+        <Stack.Screen options={{ title: t('helpCenter.headerTitle') }} />
+        <FaqList
+          header={contactCard}
+          sectionTitle={t('helpCenter.faqSectionLabel')}
+          faqs={faqs}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('helpCenter.headerTitle') }} />
@@ -26,19 +57,7 @@ export default function HelpCenterScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}>
-        <AnimatedPressable
-          scaleTo={0.98}
-          onPress={() => Linking.openURL('mailto:support@jibex.app')}
-          style={[styles.contactRow, { backgroundColor: colors.accent }]}>
-          <View style={styles.contactIcon}>
-            <Icon name="chatbubbles-outline" size={20} color="#fff" />
-          </View>
-          <View style={styles.contactText}>
-            <Text style={styles.contactTitle}>{t('helpCenter.contactSupport')}</Text>
-            <Text style={styles.contactSubtitle}>support@jibex.app</Text>
-          </View>
-          <Icon name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
-        </AnimatedPressable>
+        {contactCard}
 
         <Text style={[Typography.footnote, styles.sectionLabel, { color: colors.textTertiary }]}>
           {t('helpCenter.faqSectionLabel').toUpperCase()}

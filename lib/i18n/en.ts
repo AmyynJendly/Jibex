@@ -15,6 +15,9 @@ const en = {
     message: "You're offline — changes will sync when reconnected",
   },
 
+  maps: {
+    chooseTitle: 'Open directions in',
+  },
   common: {
     close: 'Close',
     offlineAction: "You're offline — reconnect before recording this.",
@@ -223,6 +226,7 @@ const en = {
     hintCapture: 'Take a clear photo of the package at the delivery location.',
     hintConfirm: 'Package left at the door? Confirm to complete this delivery.',
     confirmDelivery: 'Confirm Delivery',
+    openCamera: 'Open camera',
     retake: 'Retake Photo',
   },
 
@@ -346,6 +350,7 @@ const en = {
     deleteAll: 'Clear all',
     deleteOne: 'Delete notification',
     deletedToast: 'Notification deleted',
+    a11yActions: 'Notification actions',
     deleteAllTitle: 'Clear all notifications?',
     deleteAllMessage: "They can't be brought back.",
     deleteAllConfirm: 'Clear all',

@@ -1,3 +1,4 @@
+import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
@@ -340,9 +341,7 @@ export default function RunsheetsScreen() {
 
   const titleAndToggle = (
     <>
-      <Text style={[Typography.pageTitle, styles.headerTitle, { color: colors.text }]}>
-        {t('runsheets.headerTitle')}
-      </Text>
+      <Stack.Screen options={{ title: t('runsheets.headerTitle') }} />
       <SegmentedControl
         segments={[
           { value: 'current', label: t('runsheets.toggleCurrent') },
@@ -378,38 +377,16 @@ export default function RunsheetsScreen() {
           ListHeaderComponent={
             <View style={styles.headerBlock}>
               {titleAndToggle}
-              <View style={styles.filterRow}>
-                {(['all', 'DELIVERED', 'FAILED'] as HistoryFilter[]).map((value) => {
-                  const selected = filter === value;
-                  const label =
-                    value === 'all'
-                      ? t('runsheets.filters.all')
-                      : value === 'DELIVERED'
-                        ? t('runsheets.filters.delivered')
-                        : t('runsheets.filters.failed');
-                  return (
-                    <AnimatedPressable
-                      key={value}
-                      scaleTo={0.95}
-                      onPress={() => setFilter(value)}
-                      style={[
-                        styles.filterChip,
-                        {
-                          backgroundColor: selected ? colors.accent : colors.bgElevated,
-                          borderColor: selected ? colors.accent : colors.separator,
-                        },
-                      ]}>
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          { color: selected ? '#fff' : colors.textSecondary },
-                        ]}>
-                        {label}
-                      </Text>
-                    </AnimatedPressable>
-                  );
-                })}
-              </View>
+              {/* Same Apple switcher as Current / History. */}
+              <SegmentedControl
+                segments={[
+                  { value: 'all', label: t('runsheets.filters.all') },
+                  { value: 'DELIVERED', label: t('runsheets.filters.delivered') },
+                  { value: 'FAILED', label: t('runsheets.filters.failed') },
+                ]}
+                value={filter}
+                onChange={setFilter}
+              />
             </View>
           }
           ListEmptyComponent={empty}
@@ -612,7 +589,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: Spacing.mlg,
   },
-  headerTitle: { fontSize: 26 },
   skeletonGroup: { gap: Spacing.md },
   confirmCard: {
     borderRadius: Radii.card,
@@ -773,19 +749,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.archivoBold,
     fontSize: 14,
     color: '#fff',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radii.full,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    fontFamily: Fonts.archivoSemiBold,
-    fontSize: 13,
   },
 });

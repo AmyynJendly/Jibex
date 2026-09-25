@@ -12,6 +12,8 @@ export const iosMajorVersion =
 export const supports = {
   /** Long-press preview + menu on a link (iOS 13+, so every supported iPhone). */
   linkPreview: iosMajorVersion >= 13,
+  /** Apple's native empty-state view (ContentUnavailableView). */
+  contentUnavailableView: iosMajorVersion >= 17,
   /** Animated SF Symbols (bounce, pulse). */
   symbolEffects: iosMajorVersion >= 17,
   /** Apple's zoom transition into a pushed screen. */

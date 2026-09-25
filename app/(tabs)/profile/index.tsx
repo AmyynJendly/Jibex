@@ -1,14 +1,15 @@
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Icon, type IconName } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Barcode } from '../../../components/Barcode';
 import { NativeSwitch } from '../../../components/NativeSwitch';
+import { ProfileSettingsList } from '../../../components/ProfileSettingsList';
 import { SkeletonBlock, SkeletonRow } from '../../../components/Skeleton';
 import {
   Fonts,
@@ -29,7 +30,6 @@ import { useHapticsEnabled } from '../../../lib/haptics';
 import { useNextStopBarEnabled } from '../../../lib/nextStopBar';
 import { supports } from '../../../lib/platformSupport';
 import { useDriverStats, useRunsheets, useUser, useVehicle } from '../../../lib/query';
-import type { DriverStats, User, Vehicle } from '../../../types';
 
 interface AccountRow {
   key: string;
@@ -86,16 +86,136 @@ export default function ProfileScreen() {
     },
   ];
 
+  const driverSummary =
+    user && stats ? (
+      <View style={styles.summary}>
+      <View style={[styles.profileCard, getCardShadow(scheme)]}>
+        {/* Fixed warm gradient, not theme-adaptive — same treatment as the
+            design's driver card, which never switches to a neutral surface. */}
+        <LinearGradient
+          colors={['#F2A516', '#D99A45', colors.accent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.profileCardTopRow}>
+          <View style={styles.avatar}>
+            <Icon name="person-outline" size={30} color="#8C5A2B" />
+          </View>
+          <View style={styles.nameBlock}>
+            <Text style={styles.name}>{user.name}</Text>
+            <Text style={styles.handle}>
+              {user.driverCode} · {hub ?? t('profile.hub')}
+            </Text>
+          </View>
+        </View>
+
+        {vehicle && (
+          <View style={styles.plateRow}>
+            <Barcode
+              seed={user.id + vehicle.plate}
+              color="rgba(30,34,38,0.55)"
+              width={150}
+              height={20}
+            />
+            <Text style={styles.plateText}>{vehicle.plate}</Text>
+          </View>
+        )}
+      </View>
+
+      <View
+        style={[
+          styles.statsCard,
+          { backgroundColor: colors.bgElevated },
+          getCardShadow(scheme),
+        ]}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {stats.lifetimeDeliveries}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            {t('profile.stats.lifetimeDeliveries')}
+          </Text>
+        </View>
+        <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.success }]}>
+            {formatDecimal(stats.deliveryRate)}%
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            {t('profile.stats.deliveryRate')}
+          </Text>
+        </View>
+        <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
+        <View style={styles.statItem}>
+          {/* The number alone — the label right below it already says
+              "DT / Week", so `formatCurrency`'s own "TND" suffix would
+              name the same currency twice, in two different
+              abbreviations, on one stat. */}
+          <Text style={[styles.statValueSmall, { color: colors.accent }]}>
+            {formatDecimal(stats.weeklyCashCollected, CURRENCY_DECIMALS)}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            {t('profile.stats.weeklyCash')}
+          </Text>
+        </View>
+      </View>
+      </View>
+    ) : null;
+
+  // iOS: Apple's grouped settings list. It scrolls itself, so the bar keeps
+  // a regular title rather than a large one that would never shrink.
+  if (Platform.OS === 'ios' && user && stats) {
+    return (
+      <>
+        <Stack.Screen options={{ title: t('profile.headerTitle'), headerLargeTitleEnabled: false }} />
+        <ProfileSettingsList
+          header={driverSummary}
+          labels={{
+            account: t('profile.sectionAccount'),
+            personalInfo: t('profile.rows.personalInfo'),
+            vehicle: t('profile.rows.vehicleDetails'),
+            language: t('settings.sectionLanguage'),
+            security: t('settings.sectionSecurity'),
+            biometric: t('settings.biometricLogin'),
+            haptics: t('settings.hapticFeedback'),
+            nextStopBar: t('settings.nextStopBar'),
+            newJobAlerts: t('settings.newJobAlerts'),
+            support: t('profile.sectionSupport'),
+            helpCenter: t('profile.rows.helpCenter'),
+            appVersion: t('settings.appVersion'),
+            logOut: t('profile.rows.logOut'),
+          }}
+          languages={SUPPORTED_LANGUAGES.map((code) => ({
+            value: code,
+            label: t(`settings.languages.${code}`),
+          }))}
+          language={language}
+          onLanguageChange={(code) => setLanguage(code as SupportedLanguage)}
+          biometric={biometricLogin}
+          onBiometricChange={setBiometricLogin}
+          haptics={hapticsEnabled}
+          onHapticsChange={setHapticsEnabled}
+          nextStopBar={supports.tabBarAccessory ? nextStopBarEnabled : null}
+          onNextStopBarChange={setNextStopBarEnabled}
+          newJobAlerts={newJobAlerts}
+          onNewJobAlertsChange={setNewJobAlerts}
+          appVersion={Constants.expoConfig?.version ?? '1.0.0'}
+          onOpenPersonalInfo={() => router.push('/personal-info')}
+          onOpenVehicle={() => router.push('/vehicle-details')}
+          onOpenHelpCenter={() => router.push('/help-center')}
+          onLogOut={handleLogOut}
+        />
+      </>
+    );
+  }
+
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={[Typography.pageTitle, { color: colors.text }]}>
-          {t('profile.headerTitle')}
-        </Text>
-      </View>
+      <Stack.Screen options={{ title: t('profile.headerTitle') }} />
 
       {!user || !stats ? (
         <View style={styles.skeletonGroup}>
@@ -106,77 +226,7 @@ export default function ProfileScreen() {
         </View>
       ) : (
         <>
-          <View style={[styles.profileCard, getCardShadow(scheme)]}>
-            {/* Fixed warm gradient, not theme-adaptive — same treatment as the
-                design's driver card, which never switches to a neutral surface. */}
-            <LinearGradient
-              colors={['#F2A516', '#D99A45', colors.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.profileCardTopRow}>
-              <View style={styles.avatar}>
-                <Icon name="person-outline" size={30} color="#8C5A2B" />
-              </View>
-              <View style={styles.nameBlock}>
-                <Text style={styles.name}>{user.name}</Text>
-                <Text style={styles.handle}>
-                  {user.driverCode} · {hub ?? t('profile.hub')}
-                </Text>
-              </View>
-            </View>
-
-            {vehicle && (
-              <View style={styles.plateRow}>
-                <Barcode
-                  seed={user.id + vehicle.plate}
-                  color="rgba(30,34,38,0.55)"
-                  width={150}
-                  height={20}
-                />
-                <Text style={styles.plateText}>{vehicle.plate}</Text>
-              </View>
-            )}
-          </View>
-
-          <View
-            style={[
-              styles.statsCard,
-              { backgroundColor: colors.bgElevated },
-              getCardShadow(scheme),
-            ]}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.text }]}>
-                {stats.lifetimeDeliveries}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.lifetimeDeliveries')}
-              </Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.success }]}>
-                {formatDecimal(stats.deliveryRate)}%
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.deliveryRate')}
-              </Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
-            <View style={styles.statItem}>
-              {/* The number alone — the label right below it already says
-                  "DT / Week", so `formatCurrency`'s own "TND" suffix would
-                  name the same currency twice, in two different
-                  abbreviations, on one stat. */}
-              <Text style={[styles.statValueSmall, { color: colors.accent }]}>
-                {formatDecimal(stats.weeklyCashCollected, CURRENCY_DECIMALS)}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.weeklyCash')}
-              </Text>
-            </View>
-          </View>
+          {driverSummary}
 
           <View>
             <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
@@ -391,10 +441,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: Spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  summary: {
+    gap: Spacing.xl,
   },
   skeletonGroup: {
     gap: Spacing.xl,

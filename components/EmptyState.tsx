@@ -2,8 +2,10 @@ import { type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { Icon, type IconName } from './Icon';
+import { Icon, sfSymbolFor, type IconName } from './Icon';
+import { NativeEmptyState } from './NativeEmptyState';
 import { Fonts, Radii, Spacing, Typography, morphIn, useColors } from '../constants';
+import { supports } from '../lib/platformSupport';
 
 interface EmptyStateProps {
   icon?: IconName;
@@ -29,6 +31,17 @@ interface EmptyStateProps {
  */
 export function EmptyState({ icon, illustration, title, subtitle }: EmptyStateProps) {
   const colors = useColors();
+
+  // iOS 17+: Apple's own empty-state view, when the icon has a system
+  // symbol. The kraft box illustration and older iPhones keep the tile below.
+  const symbol = icon ? sfSymbolFor(icon) : undefined;
+  if (supports.contentUnavailableView && symbol && !illustration) {
+    return (
+      <Animated.View entering={morphIn()} style={styles.nativeContainer}>
+        <NativeEmptyState systemImage={symbol} title={title} description={subtitle} />
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View entering={morphIn()} style={styles.container}>
@@ -59,6 +72,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.huge,
     paddingBottom: Spacing.huge,
     gap: Spacing.lg,
+  },
+  nativeContainer: {
+    paddingVertical: Spacing.xl,
   },
   iconTile: {
     width: 64,

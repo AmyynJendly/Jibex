@@ -2,8 +2,6 @@ import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../components/Icon';
@@ -11,6 +9,7 @@ import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
+import { HandoffQrSheet } from '../components/HandoffQrSheet';
 import { EmptyState } from '../components/EmptyState';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
@@ -27,7 +26,6 @@ import {
   monoLabelStyle,
   monoStyle,
   useColors,
-  morphIn,
 } from '../constants';
 import { localeTag } from '../lib/date';
 import { useScreenState, useTransfers } from '../lib/query';
@@ -72,7 +70,6 @@ export default function TransfersScreen() {
   function renderCard(transfer: Transfer, drag?: DragBinding) {
     const completed = transfer.status === 'COMPLETED';
     const accent = completed ? colors.success : colors.accent;
-    const showingQr = qrTransferId === transfer.id;
 
     return (
       <Card
@@ -117,38 +114,20 @@ export default function TransfersScreen() {
 
         {!isHistory && (
           <View style={[styles.actions, { borderTopColor: colors.separator }]}>
-            {showingQr ? (
-              <Animated.View entering={morphIn(0, 8)} style={styles.qrBlock}>
-                <View style={styles.qrCard}>
-                  <QRCode value={`JIBEX-TRANSFER:${transfer.id}`} size={150} />
-                </View>
-                <Text style={[Typography.caption2, styles.qrHint, { color: colors.textSecondary }]}>
-                  {t('transfers.qrInfoNote')}
-                </Text>
-                <AnimatedPressable scaleTo={0.95} onPress={() => setQrTransferId(null)}>
-                  <Text style={[Typography.footnote, { color: colors.accent }]}>
-                    {t('transfers.hideQr')}
-                  </Text>
-                </AnimatedPressable>
-              </Animated.View>
-            ) : (
-              <>
-                <PrimaryButton
-                  label={t('transfers.showQr')}
-                  height={46}
-                  onPress={() => setQrTransferId(transfer.id)}
-                />
-                <AnimatedPressable
-                  scaleTo={0.97}
-                  style={[styles.scanButton, { borderColor: colors.separator }]}
-                  onPress={() => router.push('/scanner')}>
-                  <Icon name="scan-outline" size={16} color={colors.textSecondary} />
-                  <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
-                    {t('transfers.scanToConfirm')}
-                  </Text>
-                </AnimatedPressable>
-              </>
-            )}
+            <PrimaryButton
+              label={t('transfers.showQr')}
+              height={46}
+              onPress={() => setQrTransferId(transfer.id)}
+            />
+            <AnimatedPressable
+              scaleTo={0.97}
+              style={[styles.scanButton, { borderColor: colors.separator }]}
+              onPress={() => router.push('/scanner')}>
+              <Icon name="scan-outline" size={16} color={colors.textSecondary} />
+              <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
+                {t('transfers.scanToConfirm')}
+              </Text>
+            </AnimatedPressable>
           </View>
         )}
       </Card>
@@ -213,6 +192,11 @@ export default function TransfersScreen() {
           />
         )}
       </ScrollView>
+
+      <HandoffQrSheet
+        transfer={current.find((tr) => tr.id === qrTransferId) ?? null}
+        onClose={() => setQrTransferId(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -271,19 +255,5 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: Radii.full,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  qrBlock: {
-    alignItems: 'center',
-    gap: Spacing.smd,
-    paddingVertical: Spacing.xs,
-  },
-  qrCard: {
-    backgroundColor: '#fff',
-    padding: Spacing.md,
-    borderRadius: Radii.md,
-  },
-  qrHint: {
-    textAlign: 'center',
-    paddingHorizontal: Spacing.md,
   },
 });

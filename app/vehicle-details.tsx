@@ -1,12 +1,11 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Icon } from '../components/Icon';
-import { ReadOnlyField } from '../components/ReadOnlyField';
+import { InfoList } from '../components/InfoList';
 import { SkeletonRow } from '../components/Skeleton';
-import { Fonts, Spacing, useColors } from '../constants';
+import { Spacing, useColors } from '../constants';
 import { getUser, getVehicle } from '../services/mock-api';
 import type { User, Vehicle } from '../types';
 
@@ -29,35 +28,28 @@ export default function VehicleDetailsScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('vehicleDetails.headerTitle') }} />
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}>
-        {!vehicle || !user ? (
-          <View style={styles.skeletonGroup}>
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
-          </View>
-        ) : (
-          <>
-            <View style={[styles.notice, { backgroundColor: colors.bgElevated }]}>
-              <Icon name="lock-closed-outline" size={15} color={colors.textSecondary} />
-              <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
-                {t('vehicleDetails.readOnlyNotice')}
-              </Text>
-            </View>
-            <ReadOnlyField label={t('vehicleDetails.driverLabel')} value={user.name} />
-            <ReadOnlyField label={t('vehicleDetails.driverCodeLabel')} value={user.driverCode} />
-            <ReadOnlyField
-              label={t('vehicleDetails.typeLabel')}
-              value={t(`vehicleDetails.types.${vehicle.type}`)}
-            />
-            <ReadOnlyField label={t('vehicleDetails.plateLabel')} value={vehicle.plate} />
-            <ReadOnlyField label={t('vehicleDetails.modelLabel')} value={vehicle.model} />
-            <ReadOnlyField label={t('vehicleDetails.colorLabel')} value={vehicle.color} />
-          </>
-        )}
-      </ScrollView>
+      {!vehicle || !user ? (
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </ScrollView>
+      ) : (
+        <InfoList
+          notice={t('vehicleDetails.readOnlyNotice')}
+          rows={[
+            { label: t('vehicleDetails.driverLabel'), value: user.name },
+            { label: t('vehicleDetails.driverCodeLabel'), value: user.driverCode },
+            {
+              label: t('vehicleDetails.typeLabel'),
+              value: t(`vehicleDetails.types.${vehicle.type}`),
+            },
+            { label: t('vehicleDetails.plateLabel'), value: vehicle.plate },
+            { label: t('vehicleDetails.modelLabel'), value: vehicle.model },
+            { label: t('vehicleDetails.colorLabel'), value: vehicle.color },
+          ]}
+        />
+      )}
     </View>
   );
 }
@@ -67,24 +59,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
-    paddingBottom: 40,
     gap: Spacing.md,
-  },
-  skeletonGroup: {
-    gap: Spacing.md,
-  },
-  notice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    borderRadius: 14,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xs,
-  },
-  noticeText: {
-    flex: 1,
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 13,
   },
 });

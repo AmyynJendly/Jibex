@@ -18,6 +18,9 @@ const fr: TranslationResource = {
     message: 'Vous êtes hors ligne — les modifications seront synchronisées une fois reconnecté',
   },
 
+  maps: {
+    chooseTitle: 'Ouvrir l’itinéraire avec',
+  },
   common: {
     close: 'Fermer',
     offlineAction: "Vous êtes hors ligne — reconnectez-vous avant d'enregistrer.",
@@ -222,6 +225,7 @@ const fr: TranslationResource = {
     hintCapture: 'Prenez une photo nette du colis à l\'adresse de livraison.',
     hintConfirm: 'Colis laissé à la porte ? Confirmez pour terminer cette livraison.',
     confirmDelivery: 'Confirmer la réception',
+    openCamera: 'Ouvrir l’appareil photo',
     retake: 'Reprendre la photo',
   },
 
@@ -345,6 +349,7 @@ const fr: TranslationResource = {
     deleteAll: 'Tout effacer',
     deleteOne: 'Supprimer la notification',
     deletedToast: 'Notification supprimée',
+    a11yActions: 'Actions sur les notifications',
     deleteAllTitle: 'Effacer toutes les notifications ?',
     deleteAllMessage: 'Elles ne pourront pas être récupérées.',
     deleteAllConfirm: 'Tout effacer',

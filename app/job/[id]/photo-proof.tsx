@@ -1,17 +1,18 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { router, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { useToast } from '../../../components/Toast';
-import { GlassIconButton } from '../../../components/GlassIconButton';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import { Fonts, Radii, Spacing, Typography, morphIn } from '../../../constants';
+import { Fonts, Radii, Spacing, morphIn, useColors } from '../../../constants';
+import { useHapticsEnabled } from '../../../lib/haptics';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/mock-api';
@@ -20,49 +21,76 @@ import type { Job } from '../../../types';
 /** 44pt minimum target for the small text actions on this screen. */
 const HIT_SLOP = { top: 12, bottom: 12, left: 16, right: 16 };
 
+/**
+ * Proof-of-delivery photo, taken with the phone's own camera.
+ *
+ * The system camera opens straight away — the same one the driver uses every
+ * day, with its own shutter, flash, zoom and Retake / Use Photo step. This
+ * screen then shows the shot with Confirm, and Retake opens the camera again.
+ * Cancelling the camera before any photo exists goes back to the stop.
+ *
+ * The web can't open a camera without a tap, so there the screen waits for
+ * the button instead of opening it on arrival.
+ */
 export default function PhotoProofScreen() {
+  const colors = useColors();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [permission, requestPermission] = useCameraPermissions();
   const [job, setJob] = useState<Job | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [cameraBlocked, setCameraBlocked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const cameraRef = useRef<CameraView>(null);
-  /** A capture already in flight — a second shutter tap would race it. */
-  const capturingRef = useRef(false);
-  const mountedRef = useRef(true);
+  const opened = useRef(false);
   const { showToast } = useToast();
+  const { enabled: hapticsEnabled } = useHapticsEnabled();
   const requireOnline = useOnlineGuard();
+
+  async function takePhoto() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setCameraBlocked(true);
+      return;
+    }
+    setCameraBlocked(false);
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.5,
+        cameraType: ImagePicker.CameraType.back,
+      });
+      if (result.canceled) {
+        // Backed out of the camera with nothing taken: nothing to confirm.
+        if (!photoUri) router.back();
+        return;
+      }
+      if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setPhotoUri(result.assets[0].uri);
+    } catch {
+      showToast(t('photoProof.captureFailed'));
+    }
+  }
 
   useEffect(() => {
     getJobDetail(id).then(setJob);
-    requestPermission();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
+  useEffect(() => {
+    if (opened.current || Platform.OS === 'web') return;
+    opened.current = true;
+    takePhoto();
+    // Opens once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCapture() {
-    // Showing the photo swaps CameraView out for the preview, so the camera
-    // unmounts the moment a capture lands. A second tap — or backing out
-    // mid-capture — leaves takePictureAsync rejecting with "Camera unmounted
-    // during taking photo process", which used to surface as an uncaught
-    // rejection. Guard the second tap, and treat the rest as a failed shot.
-    if (capturingRef.current || photoUri) return;
-    capturingRef.current = true;
-
-    try {
-      const photo = await cameraRef.current?.takePictureAsync({ quality: 0.5 });
-      if (!photo || !mountedRef.current) return;
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setPhotoUri(photo.uri);
-    } catch {
-      if (mountedRef.current) showToast(t('photoProof.captureFailed'));
-    } finally {
-      capturingRef.current = false;
+  async function handleEnableCamera() {
+    const permission = await ImagePicker.getCameraPermissionsAsync();
+    // Once refused for good, only Settings can turn it back on.
+    if (!permission.canAskAgain) {
+      Linking.openSettings();
+      return;
     }
+    takePhoto();
   }
 
   async function handleConfirm() {
@@ -97,139 +125,103 @@ export default function PhotoProofScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <GlassIconButton
-          forceDark
-          accessibilityLabel={t('common.close')}
-          onPress={() => router.back()}>
-          <Icon name="close" size={20} color="#fff" />
-        </GlassIconButton>
-        <Text style={[Typography.headline, styles.title]}>{t('photoProof.title')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: colors.bg }]}>
+      {/* A solid bar here: the photo sits below it instead of scrolling under it. */}
+      <Stack.Screen
+        options={{
+          title: t('photoProof.title'),
+          headerTransparent: false,
+          headerStyle: { backgroundColor: colors.bg },
+        }}
+      />
 
       {photoUri ? (
-        <Animated.View entering={morphIn()} style={styles.preview}>
+        <Animated.View
+          entering={morphIn()}
+          style={[styles.preview, { backgroundColor: colors.bgElevated }]}>
           <Animated.Image source={{ uri: photoUri }} style={StyleSheet.absoluteFill} />
         </Animated.View>
-      ) : permission?.granted ? (
-        <CameraView ref={cameraRef} style={styles.preview} facing="back" />
       ) : (
-        <View style={styles.permissionBlock}>
-          <Icon name="camera-outline" size={28} color="#fff" />
-          <Text style={styles.permissionBody}>{t('photoProof.permissionBody')}</Text>
-          <PrimaryButton
-            label={t('photoProof.enableCamera')}
-            onPress={requestPermission}
-            style={styles.permissionButton}
-          />
+        <View style={styles.waiting}>
+          <View style={[styles.cameraTile, { backgroundColor: colors.accentSoft }]}>
+            <Icon name="camera-outline" size={28} color={colors.accent} />
+          </View>
+          <Text style={[styles.body, { color: colors.textSecondary }]}>
+            {cameraBlocked ? t('photoProof.permissionBody') : t('photoProof.hintCapture')}
+          </Text>
         </View>
       )}
 
       <View style={styles.footer}>
-        <Text style={styles.hint}>
-          {photoUri ? t('photoProof.hintConfirm') : t('photoProof.hintCapture')}
-        </Text>
         {photoUri ? (
           <>
+            <Text style={[styles.body, { color: colors.textSecondary }]}>
+              {t('photoProof.hintConfirm')}
+            </Text>
             <PrimaryButton
               label={t('photoProof.confirmDelivery')}
               height={56}
               loading={submitting}
               onPress={handleConfirm}
+              style={styles.fullWidth}
             />
-            <AnimatedPressable
-              scaleTo={0.94}
-              hitSlop={HIT_SLOP}
-              onPress={() => setPhotoUri(null)}>
-              <Text style={styles.retake}>{t('photoProof.retake')}</Text>
+            <AnimatedPressable scaleTo={0.94} hitSlop={HIT_SLOP} onPress={takePhoto}>
+              <Text style={[styles.retake, { color: colors.accent }]}>{t('photoProof.retake')}</Text>
             </AnimatedPressable>
           </>
         ) : (
-          permission?.granted && (
-            <AnimatedPressable
-              // The capture handler fires its own Medium impact on success.
-              haptic={false}
-              scaleTo={0.9}
-              style={styles.shutterOuter}
-              onPress={handleCapture}>
-              <View style={styles.shutterInner} />
-            </AnimatedPressable>
-          )
+          <PrimaryButton
+            label={cameraBlocked ? t('photoProof.enableCamera') : t('photoProof.openCamera')}
+            height={56}
+            onPress={cameraBlocked ? handleEnableCamera : takePhoto}
+            style={styles.fullWidth}
+          />
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0a0a0c' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 58,
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom: Spacing.xxs,
-  },
-  title: { color: '#fff' },
-  headerSpacer: { width: 44 },
+  screen: { flex: 1 },
   preview: {
     flex: 1,
+    marginTop: Spacing.md,
     marginHorizontal: Spacing.xxl,
     borderRadius: Radii.card,
     overflow: 'hidden',
-    backgroundColor: '#1a1a1c',
   },
-  permissionBlock: {
+  waiting: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xxxl,
     gap: Spacing.md,
   },
-  permissionBody: {
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
+  cameraTile: {
+    width: 64,
+    height: 64,
+    borderRadius: Radii.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  permissionButton: {
-    marginTop: Spacing.md,
-    alignSelf: 'stretch',
+  body: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 14,
+    textAlign: 'center',
   },
   footer: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: Spacing.lg,
     alignItems: 'center',
     gap: Spacing.lg,
   },
-  hint: {
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
+  fullWidth: {
+    alignSelf: 'stretch',
   },
   retake: {
     fontFamily: Fonts.archivoSemiBold,
     fontSize: 15,
-    color: '#fff',
-  },
-  shutterOuter: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    borderWidth: 3,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shutterInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#fff',
   },
 });

@@ -12,7 +12,9 @@
       "infoPlist": {
         "UIDesignRequiresCompatibility": false,
         "LSApplicationQueriesSchemes": [
-          "comgooglemaps"
+          "comgooglemaps",
+          "waze",
+          "maps"
         ],
         "CADisableMinimumFrameDurationOnPhone": true,
         "NSFaceIDUsageDescription": "Jibex uses Face ID to unlock your driver session, which holds your route and cash totals."
@@ -52,6 +54,14 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Jibex uses Face ID to unlock your driver session, which holds your route and cash totals."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Jibex uses your camera to scan package barcodes and capture delivery photos.",
+          "microphonePermission": false,
+          "photosPermission": false
         }
       ],
       "expo-image",

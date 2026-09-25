@@ -1,7 +1,7 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -27,7 +27,6 @@ import {
   Fonts,
   Radii,
   Spacing,
-  Typography,
   getCardShadow,
   monoStyle,
   sectionLabelStyle,
@@ -118,6 +117,12 @@ const CLOSE_GAP = LinearTransition.duration(280).easing(Easing.bezier(0.77, 0, 0
 /** Delay between rows when "Clear all" sweeps the list, top to bottom. */
 const CASCADE_STEP_MS = 45;
 const SLIDE_OUT_MS = 260;
+
+/**
+ * Phones get "Mark all read" and "Clear all" from a native ⋯ menu in the
+ * navigation bar; the web has no such bar item, so it keeps them on the page.
+ */
+const actionsInBar = Platform.OS !== 'web';
 
 /** "Mark all read" is small text in a corner — give it a real target. */
 const MARK_ALL_HIT_SLOP = { top: 12, bottom: 12, left: 16, right: 16 };
@@ -261,6 +266,7 @@ export default function AlertsScreen() {
   }
 
   const visible = notifications?.filter((n) => !hiddenIds.has(n.id)) ?? null;
+  const hasAlerts = (visible?.length ?? 0) > 0;
   const unreadCount = visible?.filter((n) => !n.read).length ?? 0;
   const today = visible?.filter((n) => isToday(n.timestamp)) ?? [];
   const earlier = visible?.filter((n) => !isToday(n.timestamp)) ?? [];
@@ -392,45 +398,62 @@ export default function AlertsScreen() {
       contentInsetAdjustmentBehavior="automatic"
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.content}>
+      <Stack.Screen options={{ title: t('alerts.headerTitle') }} />
+      {actionsInBar && (unreadCount > 0 || hasAlerts) && (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Menu icon="ellipsis.circle" accessibilityLabel={t('alerts.a11yActions')}>
+            {unreadCount > 0 && (
+              <Stack.Toolbar.MenuAction icon="checkmark.circle" onPress={handleMarkAllRead}>
+                {t('alerts.markAllRead')}
+              </Stack.Toolbar.MenuAction>
+            )}
+            {hasAlerts && (
+              <Stack.Toolbar.MenuAction icon="trash" destructive onPress={handleDeleteAll}>
+                {t('alerts.deleteAll')}
+              </Stack.Toolbar.MenuAction>
+            )}
+          </Stack.Toolbar.Menu>
+        </Stack.Toolbar>
+      )}
+
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={[sectionLabelStyle, styles.eyebrow, { color: colors.textTertiary }]}>
             {t('alerts.eyebrow')}
           </Text>
-          <View style={styles.headerLeft}>
-            <Text style={[Typography.pageTitle, { color: colors.text }]}>{t('alerts.headerTitle')}</Text>
+          {unreadCount > 0 && (
+            <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+              <Text style={[styles.badgeText, { color: colors.onAccent }]}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
+        {!actionsInBar && (
+          <View style={styles.headerActions}>
             {unreadCount > 0 && (
-              <View style={[styles.badge, { backgroundColor: colors.accent }]}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
+              <AnimatedPressable
+                scaleTo={0.94}
+                hitSlop={MARK_ALL_HIT_SLOP}
+                accessibilityRole="button"
+                onPress={handleMarkAllRead}>
+                <Text style={[styles.markAllRead, { color: colors.accent }]}>
+                  {t('alerts.markAllRead')}
+                </Text>
+              </AnimatedPressable>
+            )}
+            {hasAlerts && (
+              <AnimatedPressable
+                scaleTo={0.94}
+                hitSlop={MARK_ALL_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel={t('alerts.deleteAll')}
+                onPress={handleDeleteAll}>
+                <Text style={[styles.markAllRead, { color: colors.danger }]}>
+                  {t('alerts.deleteAll')}
+                </Text>
+              </AnimatedPressable>
             )}
           </View>
-        </View>
-        <View style={styles.headerActions}>
-          {unreadCount > 0 && (
-            <AnimatedPressable
-              scaleTo={0.94}
-              hitSlop={MARK_ALL_HIT_SLOP}
-              accessibilityRole="button"
-              onPress={handleMarkAllRead}>
-              <Text style={[styles.markAllRead, { color: colors.accent }]}>
-                {t('alerts.markAllRead')}
-              </Text>
-            </AnimatedPressable>
-          )}
-          {(visible?.length ?? 0) > 0 && (
-            <AnimatedPressable
-              scaleTo={0.94}
-              hitSlop={MARK_ALL_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel={t('alerts.deleteAll')}
-              onPress={handleDeleteAll}>
-              <Text style={[styles.markAllRead, { color: colors.danger }]}>
-                {t('alerts.deleteAll')}
-              </Text>
-            </AnimatedPressable>
-          )}
-        </View>
+        )}
       </View>
 
       {screen.isError && !visible ? (
@@ -491,12 +514,12 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 24,
   },
   eyebrow: {
     paddingLeft: 2,
-    marginBottom: 2,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -504,15 +527,15 @@ const styles = StyleSheet.create({
     gap: Spacing.smd,
   },
   badge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: {
-    ...monoStyle(13, 'medium'),
-    color: '#fff',
+    ...monoStyle(12, 'medium'),
   },
   headerActions: {
     flexDirection: 'row',

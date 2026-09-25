@@ -89,6 +89,7 @@ const SF_SYMBOLS: Partial<Record<IconName, AvailableSymbol>> = {
   flashlight: 'flashlight.on.fill',
   'flashlight-outline': 'flashlight.off.fill',
   'git-branch-outline': 'arrow.triangle.branch',
+  'globe-outline': 'globe',
   'help-circle-outline': 'questionmark.circle',
   home: 'house.fill',
   'home-outline': 'house',
@@ -117,6 +118,11 @@ const SF_SYMBOLS: Partial<Record<IconName, AvailableSymbol>> = {
   'volume-mute-outline': 'speaker.slash',
   warning: 'exclamationmark.triangle.fill',
 };
+
+/** The SF Symbol an icon draws as on iOS, for native views that take a symbol name. */
+export function sfSymbolFor(name: IconName): AvailableSymbol | undefined {
+  return SF_SYMBOLS[name];
+}
 
 interface IconProps {
   name: IconName;
