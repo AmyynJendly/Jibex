@@ -6,6 +6,7 @@ import { NextStopAccessory } from '../../components/NextStopAccessory';
 import { useColors } from '../../constants';
 import { useNextStopBarEnabled } from '../../lib/nextStopBar';
 import { supports } from '../../lib/platformSupport';
+import { useNotifications } from '../../lib/query';
 import { useNextStop } from '../../lib/useNextStop';
 
 /**
@@ -21,6 +22,9 @@ export default function TabsLayout() {
   const { nextStop, index } = useNextStop();
   const { enabled: barEnabled } = useNextStopBarEnabled();
   const pathname = usePathname();
+  // Unread count on the Alerts tab, like Mail — tab badges exist on every
+  // iOS version, so nothing to gate.
+  const unread = (useNotifications().data ?? []).filter((n) => !n.read).length;
 
   // The next-stop bar lives on the Alerts tab only, on iPhones whose tab bar
   // has the accessory slot (iOS 26+), and only while the driver has it on in
@@ -58,6 +62,9 @@ export default function TabsLayout() {
           sf={{ default: 'bell', selected: 'bell.fill' }}
           drawable="ic_alerts"
         />
+        <NativeTabs.Trigger.Badge hidden={unread === 0}>
+          {unread > 99 ? '99+' : String(unread)}
+        </NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">
