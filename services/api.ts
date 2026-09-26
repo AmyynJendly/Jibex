@@ -80,6 +80,8 @@ export const confirmScan = useReal ? real.confirmScan : mock.confirmScan;
 
 // ── Writes ────────────────────────────────────────────────────────────────
 export const confirmRunsheetReceipt = useReal ? real.confirmRunsheetReceipt : mock.confirmRunsheetReceipt;
+export const rejectRunsheet = useReal ? real.rejectRunsheet : mock.rejectRunsheet;
+export const rejectNewParcels = useReal ? real.rejectNewParcels : mock.rejectNewParcels;
 export const confirmDelivery = useReal ? real.confirmDelivery : mock.confirmDelivery;
 export const confirmDeliveryWithPhoto = useReal ? real.confirmDeliveryWithPhoto : mock.confirmDeliveryWithPhoto;
 export const confirmDeliveryWithOTP = useReal ? real.confirmDeliveryWithOTP : mock.confirmDeliveryWithOTP;
@@ -87,6 +89,7 @@ export const markDeliveryFailed = useReal ? real.markDeliveryFailed : mock.markD
 export const reopenParcel = useReal ? real.reopenParcel : mock.reopenParcel;
 export const completePickups = useReal ? real.completePickups : mock.completePickups;
 export const confirmReturns = useReal ? real.confirmReturns : mock.confirmReturns;
+export const confirmTransferPickup = useReal ? real.confirmTransferPickup : mock.confirmTransferPickup;
 export const markNotificationRead = useReal ? real.markNotificationRead : mock.markNotificationRead;
 export const markAllNotificationsRead = useReal ? real.markAllNotificationsRead : mock.markAllNotificationsRead;
 

@@ -22,7 +22,6 @@ import { LoadError } from '../../../components/LoadError';
 import { Barcode } from '../../../components/Barcode';
 import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
-import { useConfirm } from '../../../components/ConfirmDialog';
 import { useToast } from '../../../components/Toast';
 import { WalletChip } from '../../../components/WalletChip';
 import {
@@ -48,8 +47,7 @@ import {
   useScreenState,
   useUser,
 } from '../../../lib/query';
-import { safely, writeErrorText } from '../../../lib/writeResult';
-import { confirmRunsheetReceipt } from '../../../services/api';
+import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
 import type { DriverStats, Runsheet, User } from '../../../types';
 
 interface HomeData {
@@ -84,7 +82,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
+  const runsheetConfirm = useRunsheetConfirm();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 
   const [refreshing, setRefreshing] = useState(false);
@@ -184,31 +182,6 @@ export default function HomeScreen() {
     await invalidateDeliveryData();
     setRefreshing(false);
   }, []);
-
-  async function handleConfirmReceipt(runsheet: Runsheet) {
-    const isRecount = runsheet.status !== 'A_CONFIRMER';
-    const confirmed = await confirm({
-      title: isRecount
-        ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
-        : t('runsheets.confirm.title', { count: runsheet.stopCount }),
-      message: t('runsheets.confirm.dialogMessage', { count: runsheet.stopCount }),
-      confirmLabel: isRecount
-        ? t('runsheets.confirm.recountAction')
-        : t('runsheets.confirm.action'),
-      cancelLabel: t('common.cancel'),
-    });
-    if (!confirmed) return;
-
-    // Never crashes on a server or network error: the failure is shown and
-    // the card stays exactly as it was.
-    const result = await safely(() => confirmRunsheetReceipt(runsheet.id));
-    if (!result.success) {
-      showToast(writeErrorText(t, result));
-      return;
-    }
-    await invalidateDeliveryData();
-    showToast(t('runsheets.confirm.toast'));
-  }
 
   // A failure with nothing cached is the only case where the driver gets a
   // wall instead of the screen; otherwise the last good data stays up.
@@ -410,11 +383,9 @@ export default function HomeScreen() {
               <AnimatedPressable
                 scaleTo={0.95}
                 style={[styles.toConfirmButton, { backgroundColor: colors.warning }]}
-                onPress={() => handleConfirmReceipt(runsheet)}>
+                onPress={() => runsheetConfirm.confirmReceipt(runsheet)}>
                 <Text style={[styles.toConfirmButtonText, { color: colors.onWarning }]}>
-                  {runsheet.status === 'A_CONFIRMER'
-                    ? t('runsheets.confirm.action')
-                    : t('runsheets.confirm.recountAction')}
+                  {runsheetConfirm.actionLabel(runsheet)}
                 </Text>
               </AnimatedPressable>
             </View>

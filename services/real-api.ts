@@ -15,10 +15,21 @@
  *   - GET /api/transfers/{id}                      → one transfer
  *   - GET /api/return-management/driver/{driverId}/assigned → returns
  *   - GET /api/notifications/user/{userId}         → notifications (USER id)
- * Every action that would write to the server is refused on the phone for
- * now ("Not connected to the server yet") — nothing is sent. Deleting an
- * alert and marking one unread have no server endpoint at all; those stay on
- * the phone (lib/deviceStore).
+ *
+ * Writes — built, and switched OFF unless `EXPO_PUBLIC_API_WRITES=on`. While
+ * off, each answers "Not connected to the server yet" without a request:
+ *   - PUT  /api/runsheets/{id}/driver-confirm, /start, /confirm-new-parcels
+ *   - PUT  /api/runsheets/{id}/driver-reject, /reject-new-parcels  {reason}
+ *   - PUT  /api/runsheets/items/{itemId}/status  {status, failureReason?, notes?}
+ *   - PUT  /api/pickup-requests/{id}/start, /complete
+ *   - POST /api/transfers/{id}/confirm-pickup?driverId=
+ *   - POST /api/return-management/driver/{driverId}/confirm-loaded
+ *   - POST /api/return-management/{parcelId}/confirm-delivered?driverId=
+ *   - PUT  /api/notifications/{id}/read, /api/notifications/user/{userId}/read-all
+ * Every write updates the screen only after the server says yes. Deleting
+ * an alert and marking one unread have no server endpoint at all; those
+ * stay on the phone (lib/deviceStore), as does the GPS fix taken on a
+ * failed delivery.
  *
  * Three small layers, top to bottom:
  *   1. HTTP client  — base URL, the Bearer token, errors, and 401 → sign out
@@ -26,7 +37,8 @@
  *   3. Enum mapper  — the server's status / reason values onto ours, both ways
  */
 
-import { API_BASE_URL, API_TIMEOUT_MS } from '../constants/backend';
+import { API_BASE_URL, API_TIMEOUT_MS, API_WRITES } from '../constants/backend';
+import { reasonNeedsNote } from '../lib/failureReasons';
 import * as device from '../lib/deviceStore';
 import { localeTag } from '../lib/date';
 import { FALLBACK_ORIGIN } from '../lib/geo';
@@ -344,7 +356,9 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
     cashCollected: status === 'DELIVERED' ? amountToCollect : undefined,
     location: point(parcel.recipientLat, parcel.recipientLng),
     failureReason: status === 'FAILED' ? failureReason : undefined,
-    failureNote: text(parcel.failureNotes),
+    failureNote: text(item?.notes) ?? text(parcel.failureNotes),
+    // Kept on the phone when the failure was recorded here; the server has no field for it.
+    failureLocation: status === 'FAILED' ? device.failureLocationFor(id) : undefined,
     proofPhotoUri: text(parcel.deliveryPhotoUrl),
     callAttempts: calls.length,
     lastCallAt: calls.at(-1),
@@ -434,7 +448,10 @@ export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
   const jobs = runsheetJobs(runsheet);
   const items = runsheet.items ?? [];
   const delivered = jobs.filter((job) => job.status === 'DELIVERED').length;
-  const newParcelsToConfirm = items.some((item) => item.status === 'PENDING_DRIVER_CONFIRMATION');
+  const newParcels = items.filter((item) => item.status === 'PENDING_DRIVER_CONFIRMATION').length;
+  // Confirmed but not started: parcels can't be updated yet (the server only
+  // takes updates on an IN_PROGRESS run), so it stays on the to-do cards.
+  const needsStart = raw === 'DRIVER_CONFIRMED';
 
   return {
     id: idString(runsheet.id) ?? '',
@@ -444,10 +461,13 @@ export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
     status,
     stopCount: jobs.length || (num(runsheet.totalParcels) ?? 0),
     deliveredCount: delivered,
-    needsConfirmation: status === 'A_CONFIRMER' || newParcelsToConfirm,
+    needsConfirmation: status === 'A_CONFIRMER' || needsStart || newParcels > 0,
     completionPercent: jobs.length ? Math.round((delivered / jobs.length) * 100) : 0,
     stopIds: jobs.map((job) => job.id),
     vehiclePlate: text(runsheet.vehiclePlate),
+    needsStart,
+    newParcelsCount: newParcels,
+    serverStatus: raw,
   };
 }
 
@@ -581,6 +601,7 @@ export function toTransfer(apiTransfer: ApiTransfer): Transfer | null {
     id: text(apiTransfer.transferNumber) ?? `TRF-${idString(apiTransfer.id) ?? '?'}`,
     // A status we don't know shows in history — read-only, no actions.
     status: toTransferStatus(raw) ?? 'COMPLETED',
+    awaitingPickupConfirmation: raw === 'READY_FOR_PICKUP',
     originAgency: text(from?.name) ?? '—',
     destinationAgency: text(apiTransfer.toAgency?.name) ?? '—',
     parcelCount: parcels.length,
@@ -629,6 +650,7 @@ export function toReturn(parcel: ApiParcel & { senderAddress?: string | null; up
   return {
     id: tracking,
     status: toReturnStatus(raw),
+    stage: raw === 'RETOUR_A_CHARGER' ? 'TO_LOAD' : raw === 'EN_TRANSIT_RETOUR' ? 'TO_HAND_BACK' : undefined,
     fromAgency: text(parcel.senderAgencyName) ?? text(parcel.agencyName) ?? '—',
     toAgency: text(parcel.senderName) ?? '—',
     parcelCount: 1,
@@ -1417,9 +1439,13 @@ export async function deleteAllNotifications(): Promise<WriteResult> {
 // ═══════════════════════════════════════════════════════════════════════════
 // Writes
 // ═══════════════════════════════════════════════════════════════════════════
-// Nothing that changes server data is sent yet: each of these answers "Not
-// connected to the server yet" without a request, and the screens leave
-// everything as it was.
+// Every write below:
+//   - sends nothing while `EXPO_PUBLIC_API_WRITES` is off, answering
+//     "Not connected to the server yet";
+//   - never throws — a failure comes back as a result with a message;
+//   - reports success only once the server has said yes, so a screen changes
+//     only then. The cached driver data is dropped after any change, so the
+//     next read shows the server's own state.
 
 const WRITES_OFF: WriteResult = { success: false, error: 'common.writesOff' };
 
@@ -1438,12 +1464,175 @@ export function writeFailure(error: unknown, { notAvailableOn404 = false } = {})
   return { success: false, error: 'common.genericError' };
 }
 
-export async function confirmRunsheetReceipt(_id: string): Promise<RunsheetWriteResult> {
-  return WRITES_OFF;
+const path = (template: TemplateStringsArray, ...ids: (string | number)[]) =>
+  template.reduce((out, part, i) => out + part + (i < ids.length ? encodeURIComponent(String(ids[i])) : ''), '');
+
+// ── Runsheet flow ─────────────────────────────────────────────────────────
+
+/**
+ * "Confirm receipt" — one tap for the driver, whatever step the run is at.
+ * The server wants these in order:
+ *   PENDING / VALIDATED → PUT driver-confirm, then PUT start
+ *   DRIVER_CONFIRMED    → PUT start (the retry, when starting failed before)
+ *   IN_PROGRESS with parcels added since → PUT confirm-new-parcels
+ * The run's status is read fresh first, so a stale screen can't send the
+ * wrong step. If confirming works but starting doesn't, the result says so
+ * (`confirmedOnly`) and the run shows up as DRIVER_CONFIRMED, with a
+ * "Start run" button.
+ */
+export async function confirmRunsheetReceipt(id: string): Promise<RunsheetWriteResult> {
+  if (!API_WRITES) return WRITES_OFF;
+  let raw: string | undefined;
+  let hasNewParcels = false;
+  try {
+    const fresh = await request<ApiRunsheet>(path`api/runsheets/${id}`);
+    raw = text(fresh?.status);
+    hasNewParcels = (fresh?.items ?? []).some((item) => item.status === 'PENDING_DRIVER_CONFIRMATION');
+  } catch (error) {
+    return writeFailure(error);
+  }
+
+  try {
+    if (raw === 'PENDING' || raw === 'VALIDATED') {
+      await request(path`api/runsheets/${id}/driver-confirm`, { method: 'PUT' });
+      forgetDriverData();
+      try {
+        await request(path`api/runsheets/${id}/start`, { method: 'PUT' });
+      } catch (error) {
+        const why = writeFailure(error);
+        return { success: false, error: 'runsheets.confirm.startFailed', errorParams: why.errorParams, confirmedOnly: true };
+      }
+    } else if (raw === 'DRIVER_CONFIRMED') {
+      await request(path`api/runsheets/${id}/start`, { method: 'PUT' });
+    } else if (raw === 'IN_PROGRESS' && hasNewParcels) {
+      await request(path`api/runsheets/${id}/confirm-new-parcels`, { method: 'PUT' });
+    } else {
+      return { success: false, error: 'runsheets.confirm.nothingToConfirm' };
+    }
+  } catch (error) {
+    return writeFailure(error);
+  } finally {
+    forgetDriverData();
+  }
+  return { success: true };
 }
 
-export async function confirmDelivery(_id: string, _cashAmount: number): Promise<ConfirmDeliveryResult> {
-  return WRITES_OFF;
+/**
+ * Refusing a run (driver-reject), or only the parcels dispatch added to it
+ * later (reject-new-parcels). A reason is required. These two endpoints may
+ * not exist on the live server yet: a 404 reads as "Not available yet".
+ */
+export async function rejectRunsheet(id: string, reason: string): Promise<WriteResult> {
+  return reject(path`api/runsheets/${id}/driver-reject`, reason);
+}
+
+export async function rejectNewParcels(id: string, reason: string): Promise<WriteResult> {
+  return reject(path`api/runsheets/${id}/reject-new-parcels`, reason);
+}
+
+async function reject(url: string, reason: string): Promise<WriteResult> {
+  const why = reason.trim();
+  if (!why) return { success: false, error: 'runsheets.refuse.reasonRequired' };
+  if (!API_WRITES) return WRITES_OFF;
+  try {
+    await request(url, { method: 'PUT', body: { reason: why } });
+  } catch (error) {
+    return writeFailure(error, { notAvailableOn404: true });
+  } finally {
+    forgetDriverData();
+  }
+  return { success: true };
+}
+
+// ── Delivered / failed / correction ───────────────────────────────────────
+
+/** One of the driver's parcels, by tracking number, as the server last described it. */
+async function ownParcel(id: string): Promise<Job | undefined> {
+  const { runsheets, jobs } = await loadDriverData();
+  const wanted = id.trim().toUpperCase();
+  const matches = (job: Job) => job.id.toUpperCase() === wanted;
+  // Open runs first; then runs the agency closed, so a correction there is
+  // refused as "closed" rather than "not found".
+  return jobs.find(matches) ?? (await pastRunsheetJobs(new Set(runsheets.map((r) => r.id)))).find(matches);
+}
+
+/**
+ * `PUT /api/runsheets/items/{itemId}/status`. CAREFUL: the RUNSHEET ITEM id
+ * (the parcel's line on this run), never the parcel's own id. The server
+ * takes it only while the run is IN_PROGRESS, so that's checked first.
+ */
+async function updateItemStatus(
+  id: string,
+  body: { status: 'DELIVERED' | 'FAILED' | 'PENDING'; failureReason?: string; notes?: string },
+  whenNotOpen: string
+): Promise<{ result: WriteResult; job?: Job }> {
+  let job: Job | undefined;
+  try {
+    job = await ownParcel(id);
+  } catch (error) {
+    return { result: writeFailure(error) };
+  }
+  const itemId = job?.server?.itemId;
+  if (!job || !itemId) return { result: { success: false, error: 'common.genericError' } };
+  if (job.server?.runsheetStatus !== 'IN_PROGRESS') return { result: { success: false, error: whenNotOpen } };
+
+  try {
+    await request(path`api/runsheets/items/${itemId}/status`, { method: 'PUT', body });
+  } catch (error) {
+    return { result: writeFailure(error) };
+  } finally {
+    forgetDriverData();
+  }
+  return { result: { success: true }, job };
+}
+
+export async function confirmDelivery(id: string, cashAmount: number): Promise<ConfirmDeliveryResult> {
+  if (!API_WRITES) return WRITES_OFF;
+  await device.hydrateDeviceStore();
+  // Same gate as everywhere: the customer has to have been called first.
+  if (!device.hasCalled(id)) return { success: false, error: 'statusUpdate.callRequired' };
+
+  const { result, job } = await updateItemStatus(id, { status: 'DELIVERED' }, 'statusUpdate.runNotStarted');
+  if (!result.success || !job) return result;
+  return { success: true, job: { ...copy(job), status: 'DELIVERED', cashCollected: cashAmount } };
+}
+
+/**
+ * Failed delivery, with the backend's exact reason name. The GPS fix has no
+ * server field: it's saved on the phone only, once the server has taken
+ * the failure.
+ */
+export async function markDeliveryFailed(
+  id: string,
+  reason: DeliveryFailureReason,
+  note?: string,
+  location?: GeoPoint
+): Promise<FailDeliveryResult> {
+  if (reasonNeedsNote(reason) && !note?.trim()) return { success: false, error: 'cantDeliver.noteRequired' };
+  if (!API_WRITES) return WRITES_OFF;
+
+  const { result, job } = await updateItemStatus(
+    id,
+    { status: 'FAILED', failureReason: fromFailureReason(reason), notes: note?.trim() || undefined },
+    'statusUpdate.runNotStarted'
+  );
+  if (!result.success || !job) return result;
+  if (location) await device.saveFailureLocation(job.id, location);
+  return {
+    success: true,
+    job: { ...copy(job), status: 'FAILED', failureReason: reason, failureNote: note, failureLocation: location },
+  };
+}
+
+/** A correction: back to PENDING. Only while the agency hasn't closed the run. */
+export async function reopenParcel(id: string): Promise<ConfirmDeliveryResult> {
+  if (!API_WRITES) return WRITES_OFF;
+  const { result, job } = await updateItemStatus(id, { status: 'PENDING' }, 'statusUpdate.runClosed');
+  if (!result.success || !job) return result;
+  return {
+    success: true,
+    job: { ...copy(job), status: 'PENDING', cashCollected: undefined, failureReason: undefined, failureNote: undefined },
+  };
 }
 
 /** The photo route has no server field to send a photo to; it stays refused. */
@@ -1464,31 +1653,133 @@ export async function confirmDeliveryWithOTP(
   return WRITES_OFF;
 }
 
-export async function markDeliveryFailed(
-  _id: string,
-  _reason: DeliveryFailureReason,
-  _note?: string,
-  _location?: GeoPoint
-): Promise<FailDeliveryResult> {
-  return WRITES_OFF;
-}
-
-export async function reopenParcel(_id: string): Promise<ConfirmDeliveryResult> {
-  return WRITES_OFF;
-}
-
-export async function completePickups(ids: string[]): Promise<BatchWriteResult> {
-  return { ...WRITES_OFF, succeeded: [], failed: [...ids] };
-}
-
-export async function confirmReturns(ids: string[]): Promise<BatchWriteResult> {
-  return { ...WRITES_OFF, succeeded: [], failed: [...ids] };
-}
+// ── Pickups ───────────────────────────────────────────────────────────────
 
 /**
- * Marking read. An alert the driver only marked unread on this phone is
- * still read on the server, so marking it read again just drops the local
- * mark — no request needed.
+ * Marks pickups collected: `PUT /api/pickup-requests/{id}/start` when one
+ * hasn't been started yet, then `/complete`. One at a time; each succeeds
+ * or fails on its own, so "Done all" can report "3 of 4". A pickup whose
+ * start went through but whose complete didn't is left IN_PROGRESS and
+ * counts as failed — trying again completes it.
+ */
+export async function completePickups(ids: string[]): Promise<BatchWriteResult> {
+  if (!API_WRITES) return { ...WRITES_OFF, succeeded: [], failed: [...ids] };
+  const succeeded: string[] = [];
+  const failed: string[] = [];
+  let lastFailure: WriteResult | undefined;
+
+  let statusOf: Map<string, string | undefined>;
+  try {
+    const { driverId } = await requireSession();
+    const list = (await request<ApiPickup[] | null>(path`api/pickup-requests/driver/${driverId}`)) ?? [];
+    statusOf = new Map(list.map((pickup) => [idString(pickup.id) ?? '', text(pickup.status)]));
+  } catch (error) {
+    return { ...writeFailure(error), succeeded, failed: [...ids] };
+  }
+
+  for (const id of ids) {
+    const status = statusOf.get(id);
+    if (status === 'COMPLETED') {
+      succeeded.push(id);
+      continue;
+    }
+    try {
+      if (status !== 'IN_PROGRESS') await request(path`api/pickup-requests/${id}/start`, { method: 'PUT' });
+      await request(path`api/pickup-requests/${id}/complete`, { method: 'PUT' });
+      succeeded.push(id);
+    } catch (error) {
+      failed.push(id);
+      lastFailure = writeFailure(error);
+    }
+  }
+  return { success: failed.length === 0, error: lastFailure?.error, errorParams: lastFailure?.errorParams, succeeded, failed };
+}
+
+// ── Transfers ─────────────────────────────────────────────────────────────
+
+/**
+ * The driver confirms they've loaded a transfer:
+ * `POST /api/transfers/{id}/confirm-pickup?driverId=` (READY_FOR_PICKUP →
+ * IN_TRANSIT), by the server's numeric id.
+ */
+export async function confirmTransferPickup(transfer: Transfer): Promise<WriteResult> {
+  if (!API_WRITES) return WRITES_OFF;
+  const transferId = transfer.server?.transferId;
+  if (!transferId) return { success: false, error: 'common.genericError' };
+  try {
+    const { driverId } = await requireSession();
+    await request(path`api/transfers/${transferId}/confirm-pickup?driverId=${driverId}`, { method: 'POST' });
+  } catch (error) {
+    return writeFailure(error);
+  }
+  return { success: true };
+}
+
+// ── Returns ───────────────────────────────────────────────────────────────
+
+/**
+ * Returns, in their two steps:
+ *   TO_LOAD      → `POST /api/return-management/driver/{driverId}/confirm-loaded`
+ *                  (one call loads every return waiting at the agency)
+ *   TO_HAND_BACK → `POST /api/return-management/{parcelId}/confirm-delivered?driverId=`
+ *                  (one per parcel, handed to its sender)
+ * Stages are read fresh from the server first.
+ */
+export async function confirmReturns(ids: string[]): Promise<BatchWriteResult> {
+  if (!API_WRITES) return { ...WRITES_OFF, succeeded: [], failed: [...ids] };
+  const succeeded: string[] = [];
+  const failed: string[] = [];
+  let lastFailure: WriteResult | undefined;
+
+  let driverId: string;
+  let byId: Map<string, Return>;
+  try {
+    driverId = (await requireSession()).driverId;
+    const list = (await request<ApiParcel[] | null>(path`api/return-management/driver/${driverId}/assigned`)) ?? [];
+    byId = new Map(list.map((parcel) => toReturn(parcel)).map((item) => [item.id, item]));
+  } catch (error) {
+    return { ...writeFailure(error), succeeded, failed: [...ids] };
+  }
+
+  const toLoad = ids.filter((id) => byId.get(id)?.stage === 'TO_LOAD');
+  const toHandBack = ids.filter((id) => byId.get(id)?.stage === 'TO_HAND_BACK');
+  failed.push(...ids.filter((id) => !toLoad.includes(id) && !toHandBack.includes(id)));
+
+  if (toLoad.length > 0) {
+    try {
+      const loaded = await request<ApiParcel[] | null>(path`api/return-management/driver/${driverId}/confirm-loaded`, {
+        method: 'POST',
+      });
+      // The server answers with the parcels it loaded; without a list, the call itself is the answer.
+      const loadedIds = Array.isArray(loaded) ? new Set(loaded.map((parcel) => toReturn(parcel).id)) : null;
+      for (const id of toLoad) (loadedIds === null || loadedIds.has(id) ? succeeded : failed).push(id);
+    } catch (error) {
+      failed.push(...toLoad);
+      lastFailure = writeFailure(error);
+    }
+  }
+
+  for (const id of toHandBack) {
+    const parcelId = byId.get(id)?.server?.parcelId;
+    try {
+      if (!parcelId) throw new ApiError(0, 'no parcel id');
+      await request(path`api/return-management/${parcelId}/confirm-delivered?driverId=${driverId}`, { method: 'POST' });
+      succeeded.push(id);
+    } catch (error) {
+      failed.push(id);
+      lastFailure = writeFailure(error);
+    }
+  }
+  return { success: failed.length === 0, error: lastFailure?.error, errorParams: lastFailure?.errorParams, succeeded, failed };
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────
+
+/**
+ * `PUT /api/notifications/{id}/read`. An alert the driver only marked
+ * unread on this phone is still read on the server, so marking it read
+ * again just drops the local mark — no request, and it works with writes
+ * off too.
  */
 export async function markNotificationRead(id: string): Promise<WriteResult> {
   await device.hydrateDeviceStore();
@@ -1501,11 +1792,28 @@ export async function markNotificationRead(id: string): Promise<WriteResult> {
       return { success: true };
     }
   }
-  return WRITES_OFF;
+  if (!API_WRITES) return WRITES_OFF;
+  try {
+    await request(path`api/notifications/${id}/read`, { method: 'PUT' });
+  } catch (error) {
+    return writeFailure(error);
+  }
+  await device.setMarkedUnread(id, false);
+  return { success: true };
 }
 
+/** `PUT /api/notifications/user/{userId}/read-all` — the USER ACCOUNT id, like the list. */
 export async function markAllNotificationsRead(): Promise<WriteResult> {
-  return WRITES_OFF;
+  if (!API_WRITES) return WRITES_OFF;
+  try {
+    const { userId } = await requireSession();
+    await request(path`api/notifications/user/${userId}/read-all`, { method: 'PUT' });
+  } catch (error) {
+    return writeFailure(error);
+  }
+  await device.hydrateDeviceStore();
+  await device.clearMarkedUnread();
+  return { success: true };
 }
 
 /**

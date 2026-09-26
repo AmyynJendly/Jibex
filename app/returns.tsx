@@ -68,6 +68,40 @@ export default function ReturnsScreen() {
   const pendingParcelTotal = displayed.reduce((sum, r) => sum + r.parcelCount, 0);
 
   /**
+   * Real server: returns come back in two steps (see `Return.stage`).
+   * Loading is confirmed for every waiting return at once; handing back,
+   * one parcel at a time. Mock data has a single Confirm step.
+   */
+  const staged = pending.some((r) => r.stage);
+  const toLoad = pending.filter((r) => r.stage === 'TO_LOAD');
+
+  function dialogFor(batches: Return[]) {
+    const parcels = batches.reduce((sum, r) => sum + r.parcelCount, 0);
+    if (batches.every((r) => r.stage === 'TO_LOAD')) {
+      return {
+        title: t('returns.loadedTitle'),
+        message: t('returns.loadedMessage', { count: batches.length }),
+        confirmLabel: t('returns.confirmAction'),
+        toast: (count: number) => t('returns.loadedToast', { count }),
+      };
+    }
+    if (batches.length === 1 && batches[0].stage === 'TO_HAND_BACK') {
+      return {
+        title: t('returns.handedBackTitle'),
+        message: t('returns.handedBackMessage', { id: batches[0].id, sender: batches[0].toAgency }),
+        confirmLabel: t('returns.handedBack'),
+        toast: () => t('returns.handedBackToast'),
+      };
+    }
+    return {
+      title: t('returns.confirmTitle'),
+      message: t('returns.confirmMessage', { count: batches.length, parcels }),
+      confirmLabel: t('returns.confirmAction'),
+      toast: (count: number) => t('returns.confirmToast', { count }),
+    };
+  }
+
+  /**
    * Signs for return batches without scanning. The depot counts a hand-back
    * against the manifest at the counter; scanning each batch is the fallback
    * for when the paperwork and the pallet disagree, not the normal path.
@@ -75,12 +109,12 @@ export default function ReturnsScreen() {
   async function handleConfirm(batches: Return[]) {
     if (batches.length === 0 || confirming) return;
     if (!requireOnline()) return;
-    const parcels = batches.reduce((sum, r) => sum + r.parcelCount, 0);
+    const dialog = dialogFor(batches);
 
     const accepted = await confirm({
-      title: t('returns.confirmTitle'),
-      message: t('returns.confirmMessage', { count: batches.length, parcels }),
-      confirmLabel: t('returns.confirmAction'),
+      title: dialog.title,
+      message: dialog.message,
+      confirmLabel: dialog.confirmLabel,
       cancelLabel: t('common.cancel'),
     });
     if (!accepted) return;
@@ -96,7 +130,7 @@ export default function ReturnsScreen() {
     await invalidateReturns();
     showToast(
       succeeded.length === batches.length
-        ? t('returns.confirmToast', { count: succeeded.length })
+        ? dialog.toast(succeeded.length)
         : t('returns.confirmPartialToast', { done: succeeded.length, total: batches.length })
     );
   }
@@ -128,7 +162,11 @@ export default function ReturnsScreen() {
               },
             ]}
             numberOfLines={1}>
-            {enumLabel(t, 'returnStatus', item.status)}
+            {item.stage === 'TO_LOAD'
+              ? t('returns.stage.toLoad')
+              : item.stage === 'TO_HAND_BACK'
+                ? t('returns.stage.toHandBack')
+                : enumLabel(t, 'returnStatus', item.status)}
           </Text>
         </View>
 
@@ -161,13 +199,23 @@ export default function ReturnsScreen() {
         {/* History is read-only — no actions there. */}
         {!isHistory && (
           <View style={[styles.actions, { borderTopColor: colors.separator }]}>
-            <AnimatedPressable
-              scaleTo={0.96}
-              style={[styles.confirmButton, { backgroundColor: colors.success }]}
-              onPress={() => handleConfirm([item])}>
-              <Icon name="checkmark-circle-outline" size={17} color="#fff" />
-              <Text style={styles.confirmButtonText}>{t('returns.confirmOne')}</Text>
-            </AnimatedPressable>
+            {/* Loading is confirmed for all of them at once, below — the
+                server has no per-parcel loading step. */}
+            {item.stage === 'TO_LOAD' ? (
+              <Text style={[styles.loadHint, { color: colors.textSecondary }]}>
+                {t('returns.loadHint')}
+              </Text>
+            ) : (
+              <AnimatedPressable
+                scaleTo={0.96}
+                style={[styles.confirmButton, { backgroundColor: colors.success }]}
+                onPress={() => handleConfirm([item])}>
+                <Icon name="checkmark-circle-outline" size={17} color="#fff" />
+                <Text style={styles.confirmButtonText}>
+                  {item.stage === 'TO_HAND_BACK' ? t('returns.handedBack') : t('returns.confirmOne')}
+                </Text>
+              </AnimatedPressable>
+            )}
             <AnimatedPressable
               scaleTo={0.94}
               accessibilityRole="button"
@@ -256,7 +304,7 @@ export default function ReturnsScreen() {
         )}
       </ScrollView>
 
-      {!isHistory && pending.length > 0 && (
+      {!isHistory && pending.length > 0 && (!staged || toLoad.length > 0) && (
         <View
           style={[
             styles.footer,
@@ -271,10 +319,12 @@ export default function ReturnsScreen() {
               styles.confirmAllButton,
               { backgroundColor: colors.success, opacity: confirming ? 0.5 : 1 },
             ]}
-            onPress={() => handleConfirm(pending)}>
+            onPress={() => handleConfirm(staged ? toLoad : pending)}>
             <Icon name="checkmark-done" size={18} color="#fff" />
             <Text style={styles.confirmAllButtonText}>
-              {t('returns.confirmAllWithCount', { count: pending.length })}
+              {staged
+                ? t('returns.confirmLoadedWithCount', { count: toLoad.length })
+                : t('returns.confirmAllWithCount', { count: pending.length })}
             </Text>
           </AnimatedPressable>
           <AnimatedPressable
@@ -371,6 +421,12 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     height: 44,
     borderRadius: Radii.full,
+  },
+  loadHint: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    lineHeight: 17,
   },
   confirmButtonText: {
     fontFamily: Fonts.archivoBold,

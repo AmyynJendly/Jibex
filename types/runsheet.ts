@@ -36,4 +36,14 @@ export interface Runsheet {
   stopIds: string[];
   /** The vehicle dispatch put on this run, when they filled it in. Absent on mock data. */
   vehiclePlate?: string;
+  /**
+   * Real server: the driver confirmed receipt, but the run hasn't started
+   * (DRIVER_CONFIRMED) — usually because starting failed right after the
+   * confirmation. Its parcels stay locked; the card offers "Start run".
+   */
+  needsStart?: boolean;
+  /** Real server: how many parcels dispatch added since the driver signed, waiting for their OK. */
+  newParcelsCount?: number;
+  /** The server's raw status. Absent on mock data. */
+  serverStatus?: string;
 }

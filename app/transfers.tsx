@@ -8,6 +8,7 @@ import { Icon } from '../components/Icon';
 import { AgencyFlow } from '../components/AgencyFlow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
+import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { HandoffQrSheet } from '../components/HandoffQrSheet';
 import { EmptyState } from '../components/EmptyState';
@@ -29,9 +30,10 @@ import {
 } from '../constants';
 import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
-import { useScreenState, useTransfers } from '../lib/query';
+import { invalidateTransfers, useScreenState, useTransfers } from '../lib/query';
+import { safely, writeErrorText } from '../lib/writeResult';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
-import { setTransferOrder } from '../services/api';
+import { confirmTransferPickup, setTransferOrder } from '../services/api';
 import type { Transfer } from '../types';
 
 type Toggle = 'current' | 'history';
@@ -40,6 +42,7 @@ export default function TransfersScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
   const transfers = transfersQuery.data ?? null;
@@ -59,6 +62,28 @@ export default function TransfersScreen() {
   async function handleReorder(orderedIds: string[]) {
     await setTransferOrder(orderedIds);
     showToast(t('transfers.reorderedToast'));
+  }
+
+  /** The driver has loaded the batch: it leaves "ready" and goes in transit — once the server agrees. */
+  async function handleConfirmPickup(transfer: Transfer) {
+    const accepted = await confirm({
+      title: t('transfers.confirmPickupTitle'),
+      message: t('transfers.confirmPickupMessage', {
+        count: transfer.parcelCount,
+        from: transfer.originAgency,
+        to: transfer.destinationAgency,
+      }),
+      confirmLabel: t('transfers.confirmPickup'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!accepted) return;
+    const result = await safely(() => confirmTransferPickup(transfer));
+    if (!result.success) {
+      showToast(writeErrorText(t, result));
+      return;
+    }
+    await invalidateTransfers();
+    showToast(t('transfers.confirmPickupToast'));
   }
 
   const current = transfers?.filter((tr) => tr.status === 'IN_PROGRESS') ?? [];
@@ -101,7 +126,11 @@ export default function TransfersScreen() {
               },
             ]}
             numberOfLines={1}>
-            {completed ? t('transfers.status.completed') : t('transfers.status.awaitingHandoff')}
+            {completed
+              ? t('transfers.status.completed')
+              : transfer.awaitingPickupConfirmation
+                ? t('transfers.status.readyForPickup')
+                : t('transfers.status.awaitingHandoff')}
           </Text>
         </View>
 
@@ -129,15 +158,30 @@ export default function TransfersScreen() {
               height={46}
               onPress={() => setQrTransferId(transfer.id)}
             />
-            <AnimatedPressable
-              scaleTo={0.97}
-              style={[styles.scanButton, { borderColor: colors.separator }]}
-              onPress={() => router.push('/scanner')}>
-              <Icon name="scan-outline" size={16} color={colors.textSecondary} />
-              <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
-                {t('transfers.scanToConfirm')}
-              </Text>
-            </AnimatedPressable>
+            {/* Waiting on this driver (real server): confirm the pickup.
+                Otherwise the scan, same place, same look. */}
+            {transfer.awaitingPickupConfirmation ? (
+              <AnimatedPressable
+                scaleTo={0.97}
+                accessibilityRole="button"
+                style={[styles.scanButton, { borderColor: colors.separator }]}
+                onPress={() => handleConfirmPickup(transfer)}>
+                <Icon name="checkmark-circle-outline" size={16} color={colors.textSecondary} />
+                <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
+                  {t('transfers.confirmPickup')}
+                </Text>
+              </AnimatedPressable>
+            ) : (
+              <AnimatedPressable
+                scaleTo={0.97}
+                style={[styles.scanButton, { borderColor: colors.separator }]}
+                onPress={() => router.push('/scanner')}>
+                <Icon name="scan-outline" size={16} color={colors.textSecondary} />
+                <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
+                  {t('transfers.scanToConfirm')}
+                </Text>
+              </AnimatedPressable>
+            )}
           </View>
         )}
       </Card>

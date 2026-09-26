@@ -18,6 +18,11 @@ export interface Transfer {
   /** Depot/hub where the handover happens. */
   location: string;
   scheduledAt: string;
+  /**
+   * Real server: the batch is ready and waiting for this driver to confirm
+   * they've loaded it (READY_FOR_PICKUP). Shows "Confirm pickup".
+   */
+  awaitingPickupConfirmation?: boolean;
   /** What the real server says beyond the fields above. Absent on mock data. */
   server?: TransferServerInfo;
 }

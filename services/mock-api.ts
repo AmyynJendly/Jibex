@@ -778,6 +778,37 @@ export async function getRunsheetJobs(id: string): Promise<Job[]> {
  */
 export interface RunsheetWriteResult extends WriteResult {
   runsheet?: Runsheet;
+  /**
+   * The receipt was confirmed but the run couldn't be started — the data
+   * did change, so the screen refreshes to show "Start run".
+   */
+  confirmedOnly?: boolean;
+}
+
+/**
+ * The driver refuses a run they were given — it goes back to dispatch and
+ * off the driver's lists. A reason is required.
+ */
+export async function rejectRunsheet(id: string, reason: string): Promise<WriteResult> {
+  await delay(undefined);
+  if (!reason.trim()) return { success: false, error: 'runsheets.refuse.reasonRequired' };
+  const index = mockRunsheets.findIndex((r) => r.id === id);
+  if (index < 0) return { success: false, error: 'common.genericError' };
+  mockRunsheets.splice(index, 1);
+  return { success: true };
+}
+
+/**
+ * The driver refuses only the parcels dispatch added after they signed —
+ * those go back to dispatch; the rest of the run carries on.
+ */
+export async function rejectNewParcels(id: string, reason: string): Promise<WriteResult> {
+  await delay(undefined);
+  if (!reason.trim()) return { success: false, error: 'runsheets.refuse.reasonRequired' };
+  const seed = mockRunsheets.find((r) => r.id === id);
+  if (!seed || seed.confirmedStopCount === null) return { success: false, error: 'common.genericError' };
+  seed.stopIds = seed.stopIds.slice(0, seed.confirmedStopCount);
+  return { success: true };
 }
 
 export async function confirmRunsheetReceipt(id: string): Promise<RunsheetWriteResult> {
@@ -946,6 +977,15 @@ export async function getTransfer(id: string): Promise<Transfer> {
   const transfer = mockTransfers.find((t) => t.id === id);
   if (!transfer) throw new Error(`Transfer ${id} not found`);
   return { ...transfer };
+}
+
+/** The driver confirms they've loaded a transfer. */
+export async function confirmTransferPickup(transfer: Transfer): Promise<WriteResult> {
+  await delay(undefined);
+  const found = mockTransfers.find((t) => t.id === transfer.id);
+  if (!found || found.status !== 'IN_PROGRESS') return { success: false, error: 'common.genericError' };
+  found.status = 'COMPLETED';
+  return { success: true };
 }
 
 export async function getTransfers(): Promise<Transfer[]> {

@@ -25,6 +25,7 @@ const KEYS = {
   callLog: 'jibex.device.callLog.v1',
   hiddenNotifications: 'jibex.device.hiddenNotifications.v1',
   unreadNotifications: 'jibex.device.unreadNotifications.v1',
+  failureLocations: 'jibex.device.failureLocations.v1',
 } as const;
 
 /** A call older than this is no longer evidence for any open parcel — dropped on load. */
@@ -54,7 +55,12 @@ const state = {
   hiddenNotifications: [] as string[],
   /** Alerts the driver marked unread again. The server has no "unread", so it's kept here. */
   unreadNotifications: [] as string[],
+  /** Where the driver stood when they recorded a failed delivery. The server has no field for it. */
+  failureLocations: {} as FailureLocations,
 };
+
+/** Per parcel: the GPS fix taken when its failure was recorded, and when. */
+type FailureLocations = Record<string, { lat: number; lng: number; at: string }>;
 
 let hydration: Promise<void> | null = null;
 
@@ -80,6 +86,12 @@ export function hydrateDeviceStore(): Promise<void> {
         state.listOrders = parse(values[KEYS.listOrders], {});
         state.hiddenNotifications = parse(values[KEYS.hiddenNotifications], []);
         state.unreadNotifications = parse(values[KEYS.unreadNotifications], []);
+        const failureCutoff = Date.now() - CALL_LOG_RETENTION_MS;
+        state.failureLocations = Object.fromEntries(
+          Object.entries(parse<FailureLocations>(values[KEYS.failureLocations], {})).filter(
+            ([, fix]) => Date.parse(fix.at) >= failureCutoff
+          )
+        );
 
         const cutoff = Date.now() - CALL_LOG_RETENTION_MS;
         const log = parse<CallLog>(values[KEYS.callLog], {});
@@ -232,4 +244,22 @@ export async function setMarkedUnread(id: string, unread: boolean): Promise<void
 export async function clearMarkedUnread(): Promise<void> {
   state.unreadNotifications = [];
   await persist('unreadNotifications', []);
+}
+
+// ── Where a failure was recorded ──────────────────────────────────────────
+// Proof the driver was at the address when they logged a failed delivery.
+// The server's status update has no place for it, so it stays on the phone
+// (kept 30 days, like the call log).
+
+export function failureLocationFor(parcelId: string): { lat: number; lng: number } | undefined {
+  const fix = state.failureLocations[parcelId];
+  return fix ? { lat: fix.lat, lng: fix.lng } : undefined;
+}
+
+export async function saveFailureLocation(parcelId: string, fix: { lat: number; lng: number }): Promise<void> {
+  state.failureLocations = {
+    ...state.failureLocations,
+    [parcelId]: { lat: fix.lat, lng: fix.lng, at: new Date().toISOString() },
+  };
+  await persist('failureLocations', state.failureLocations);
 }

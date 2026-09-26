@@ -23,6 +23,13 @@ export interface Return {
   /** Local device photo URIs documenting damage — populated via `attachReturnPhoto`. */
   photoUris?: string[];
   /**
+   * Real server: a return goes back in two steps. TO_LOAD — still at the
+   * agency; the driver confirms loading all of them at once. TO_HAND_BACK —
+   * in the van; the driver confirms handing each one to its sender.
+   * Absent on mock data, which has a single Confirm step.
+   */
+  stage?: 'TO_LOAD' | 'TO_HAND_BACK';
+  /**
    * What the real server says. It sends returns as single parcels, not
    * batches: each one becomes a return of one parcel. Absent on mock data.
    */

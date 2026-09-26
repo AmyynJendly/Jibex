@@ -8,7 +8,6 @@ import type { TFunction } from 'i18next';
 import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { Card } from '../../../components/Card';
-import { useConfirm } from '../../../components/ConfirmDialog';
 import { CornerRibbon } from '../../../components/CornerRibbon';
 import { DragHandle, DraggableList, type DragBinding } from '../../../components/DraggableList';
 import { EmptyState } from '../../../components/EmptyState';
@@ -36,7 +35,7 @@ import {
 import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { telUrl } from '../../../lib/phone';
-import { safely, writeErrorText } from '../../../lib/writeResult';
+import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
   invalidateDeliveryData,
@@ -46,8 +45,8 @@ import {
   useRunsheets,
   useScreenState,
 } from '../../../lib/query';
-import { confirmRunsheetReceipt, logCallAttempt, setNearestFirst, setStopOrder } from '../../../services/api';
-import type { Job, JobStatus, Runsheet } from '../../../types';
+import { logCallAttempt, setNearestFirst, setStopOrder } from '../../../services/api';
+import type { Job, JobStatus } from '../../../types';
 
 type Toggle = 'current' | 'history';
 type HistoryFilter = 'all' | 'DELIVERED' | 'FAILED';
@@ -250,8 +249,8 @@ export default function RunsheetsScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const runsheetConfirm = useRunsheetConfirm();
 
   const activeQuery = useActiveParcels();
   const historyQuery = useHistoryParcels();
@@ -293,31 +292,6 @@ export default function RunsheetsScreen() {
   async function handleToggleNearestFirst(next: boolean) {
     await setNearestFirst(next);
     await invalidateDeliveryData();
-  }
-
-  async function handleConfirmReceipt(runsheet: Runsheet) {
-    const isRecount = runsheet.status !== 'A_CONFIRMER';
-    const confirmed = await confirm({
-      title: isRecount
-        ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
-        : t('runsheets.confirm.title', { count: runsheet.stopCount }),
-      message: t('runsheets.confirm.dialogMessage', { count: runsheet.stopCount }),
-      confirmLabel: isRecount
-        ? t('runsheets.confirm.recountAction')
-        : t('runsheets.confirm.action'),
-      cancelLabel: t('common.cancel'),
-    });
-    if (!confirmed) return;
-
-    // Never crashes on a server or network error: the failure is shown and
-    // the card stays exactly as it was.
-    const result = await safely(() => confirmRunsheetReceipt(runsheet.id));
-    if (!result.success) {
-      showToast(writeErrorText(t, result));
-      return;
-    }
-    await invalidateDeliveryData();
-    showToast(t('runsheets.confirm.toast'));
   }
 
   async function handleCall(job: Job) {
@@ -470,7 +444,7 @@ export default function RunsheetsScreen() {
           {titleAndToggle}
 
           {unconfirmed.map((runsheet) => {
-            const isRecount = runsheet.status !== 'A_CONFIRMER';
+            const refuseLabel = runsheetConfirm.refuseLabel(runsheet);
             return (
               <View
                 key={runsheet.id}
@@ -485,9 +459,7 @@ export default function RunsheetsScreen() {
                   </View>
                   <View style={styles.confirmHeadText}>
                     <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
-                      {isRecount
-                        ? t('runsheets.confirm.recountTitle', { count: runsheet.stopCount })
-                        : t('runsheets.confirm.title', { count: runsheet.stopCount })}
+                      {runsheetConfirm.title(runsheet)}
                     </Text>
                     <Text
                       style={[Typography.caption2, { color: colors.textSecondary }]}
@@ -498,14 +470,21 @@ export default function RunsheetsScreen() {
                 </View>
 
                 <PrimaryButton
-                  label={
-                    isRecount
-                      ? t('runsheets.confirm.recountAction')
-                      : t('runsheets.confirm.action')
-                  }
+                  label={runsheetConfirm.actionLabel(runsheet)}
                   height={46}
-                  onPress={() => handleConfirmReceipt(runsheet)}
+                  onPress={() => runsheetConfirm.confirmReceipt(runsheet)}
                 />
+                {/* Refusing is the rare case, so it's a quiet text button
+                    under the main one, and it asks for a reason. */}
+                {refuseLabel && (
+                  <AnimatedPressable
+                    scaleTo={0.97}
+                    accessibilityRole="button"
+                    style={styles.refuseButton}
+                    onPress={() => runsheetConfirm.refuse(runsheet)}>
+                    <Text style={[styles.refuseText, { color: colors.danger }]}>{refuseLabel}</Text>
+                  </AnimatedPressable>
+                )}
               </View>
             );
           })}
@@ -679,6 +658,16 @@ const styles = StyleSheet.create({
   confirmHeadText: {
     flex: 1,
     gap: 1,
+  },
+  refuseButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    marginTop: -Spacing.xs,
+  },
+  refuseText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 14,
   },
   summaryRow: {
     flexDirection: 'row',
