@@ -107,7 +107,10 @@ export default function JobDetailScreen() {
     );
   }
 
-  const distanceKm = haversineKm(liveCoords ?? FALLBACK_ORIGIN, job.location);
+  // Without the parcel's coordinates there's no honest distance or map tile;
+  // the card then offers directions by address instead.
+  const location = job.location;
+  const distanceKm = location ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, location) : 0;
   const etaMinutes = Math.max(1, Math.round((distanceKm / 35) * 60));
   const etaTime = new Date(now + etaMinutes * 60_000).toLocaleTimeString(
     localeTag(i18n.language),
@@ -231,19 +234,25 @@ export default function JobDetailScreen() {
           onPress={() => openInMaps(job)}>
           {/* expo-image caches this between visits and fades it in, instead
               of refetching the same tile every time the screen opens. */}
-          <Image
-            source={{ uri: staticMapUrl(job.location) }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={180}
-            cachePolicy="memory-disk"
-          />
-          <LinearGradient
-            colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+          {location ? (
+            <>
+              <Image
+                source={{ uri: staticMapUrl(location) }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={180}
+                cachePolicy="memory-disk"
+              />
+              <LinearGradient
+                colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </>
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.accentSoft }]} />
+          )}
           <View style={styles.pinWrap}>
             <Animated.View
               style={[styles.pinRipple, { backgroundColor: colors.accent }, rippleStyle]}
@@ -252,13 +261,19 @@ export default function JobDetailScreen() {
               <Icon name="location" size={16} color="#fff" />
             </View>
           </View>
-          <Text style={styles.mapBadge}>
-            {t('jobDetail.mapBadge', {
-              distance: formatDecimal(distanceKm),
-              minutes: etaMinutes,
-            })}
-          </Text>
-          <Text style={styles.etaBadge}>{t('jobDetail.etaLabel', { time: etaTime })}</Text>
+          {location ? (
+            <>
+              <Text style={styles.mapBadge}>
+                {t('jobDetail.mapBadge', {
+                  distance: formatDecimal(distanceKm),
+                  minutes: etaMinutes,
+                })}
+              </Text>
+              <Text style={styles.etaBadge}>{t('jobDetail.etaLabel', { time: etaTime })}</Text>
+            </>
+          ) : (
+            <Text style={styles.mapBadge}>{t('jobDetail.byAddress')}</Text>
+          )}
         </AnimatedPressable>
 
         <View
@@ -336,7 +351,7 @@ export default function JobDetailScreen() {
               <Icon name="cube-outline" size={14} color={colors.textSecondary} />
               <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
                 {t('jobDetail.parcelCount', { count: job.packageInfo.count })} ·{' '}
-                {formatDecimal(job.packageInfo.weightLbs)} KG
+                {formatDecimal(job.packageInfo.weightKg)} KG
               </Text>
             </View>
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>

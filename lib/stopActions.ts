@@ -46,5 +46,6 @@ export async function openDirections(destination: Destination) {
 
 /** Driving directions to a stop. */
 export function openInMaps(job: Job) {
-  return openDirections(job.location);
+  // No coordinates on the parcel: navigate by its street address instead.
+  return openDirections(job.location ?? { address: job.address });
 }

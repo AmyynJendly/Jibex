@@ -1,6 +1,7 @@
 import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
+import { nearestNeighborOrder } from '../lib/route';
 import { reasonNeedsNote } from '../lib/failureReasons';
 import { clearSession, saveSession } from '../lib/session';
 import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids';
@@ -84,40 +85,6 @@ function minutesAgo(minutes: number): string {
 /** Driver's approximate start point — Sousse/Sahloul depot. */
 const DEPOT: GeoPoint = { lat: 35.848, lng: 10.5975 };
 
-function haversineMiles(a: GeoPoint, b: GeoPoint): number {
-  const R = 3958.8;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-/** Greedy nearest-neighbor — good enough for a same-day local route, not a true TSP solve. */
-function nearestNeighborOrder(jobs: Job[], start: GeoPoint): Job[] {
-  const remaining = [...jobs];
-  const ordered: Job[] = [];
-  let current = start;
-
-  while (remaining.length > 0) {
-    let nearestIndex = 0;
-    let nearestDist = Infinity;
-    remaining.forEach((job, i) => {
-      const d = haversineMiles(current, job.location);
-      if (d < nearestDist) {
-        nearestDist = d;
-        nearestIndex = i;
-      }
-    });
-    const [next] = remaining.splice(nearestIndex, 1);
-    ordered.push(next);
-    current = next.location;
-  }
-
-  return ordered;
-}
-
 // ---------------------------------------------------------------------------
 // Driver-owned order — stop sequence for Runsheets/Home, and one manual sort
 // per list for Pickups/Transfers/Returns. `nearestFirst` only applies to
@@ -194,7 +161,7 @@ const mockJobs: Job[] = [
     customerName: 'Amine Ben Salah',
     customerPhone: '+216 20 456 789',
     address: 'Rue de la Liberté, Sahloul, Sousse',
-    packageInfo: { count: 1, weightLbs: 2.4, fragile: true, note: 'Leave with concierge if not home' },
+    packageInfo: { count: 1, weightKg: 2.4, fragile: true, note: 'Leave with concierge if not home' },
     status: 'IN_TRANSIT',
     cashToCollect: 42.0,
     location: { lat: 35.8465, lng: 10.6015 },
@@ -206,7 +173,7 @@ const mockJobs: Job[] = [
     customerName: 'Karim Mejri',
     customerPhone: '+216 22 314 908',
     address: 'Avenue Farhat Hached, Sfax',
-    packageInfo: { count: 2, weightLbs: 5.1, fragile: false },
+    packageInfo: { count: 2, weightKg: 5.1, fragile: false },
     status: 'PENDING',
     cashToCollect: 28.5,
     location: { lat: 34.7398, lng: 10.76 },
@@ -217,7 +184,7 @@ const mockJobs: Job[] = [
     customerName: 'Sarra Gharbi',
     customerPhone: '+216 26 771 244',
     address: 'Rue Ibn Khaldoun, Monastir',
-    packageInfo: { count: 1, weightLbs: 1.2, fragile: false },
+    packageInfo: { count: 1, weightKg: 1.2, fragile: false },
     status: 'PENDING',
     cashToCollect: 65.0,
     location: { lat: 35.7643, lng: 10.8113 },
@@ -228,7 +195,7 @@ const mockJobs: Job[] = [
     customerName: 'Nizar Guesmi',
     customerPhone: '+216 24 590 118',
     address: 'Rue de Marseille, Sfax',
-    packageInfo: { count: 3, weightLbs: 8.0, fragile: false },
+    packageInfo: { count: 3, weightKg: 8.0, fragile: false },
     status: 'PENDING',
     cashToCollect: 15.0,
     location: { lat: 34.735, lng: 10.765 },
@@ -240,7 +207,7 @@ const mockJobs: Job[] = [
     customerName: 'Rania Cherif',
     customerPhone: '+216 27 683 052',
     address: 'Avenue de la République, Monastir',
-    packageInfo: { count: 1, weightLbs: 0.8, fragile: true, note: 'Ring twice' },
+    packageInfo: { count: 1, weightKg: 0.8, fragile: true, note: 'Ring twice' },
     status: 'PENDING',
     cashToCollect: 22.0,
     location: { lat: 35.77, lng: 10.82 },
@@ -251,7 +218,7 @@ const mockJobs: Job[] = [
     customerName: 'Walid Ammar',
     customerPhone: '+216 21 908 366',
     address: 'Zone Industrielle, Sfax',
-    packageInfo: { count: 4, weightLbs: 12.5, fragile: false },
+    packageInfo: { count: 4, weightKg: 12.5, fragile: false },
     status: 'FAILED',
     failureReason: 'WRONG_ADDRESS',
     cashToCollect: 0,
@@ -263,7 +230,7 @@ const mockJobs: Job[] = [
     customerName: 'Ines Trabelsi',
     customerPhone: '+216 25 447 610',
     address: 'Boulevard 14 Janvier, Sousse',
-    packageInfo: { count: 1, weightLbs: 3.0, fragile: false },
+    packageInfo: { count: 1, weightKg: 3.0, fragile: false },
     status: 'DELIVERED',
     cashToCollect: 55.0,
     cashCollected: 55.0,
@@ -275,7 +242,7 @@ const mockJobs: Job[] = [
     customerName: 'Yassine Trabelsi',
     customerPhone: '+216 29 152 837',
     address: 'Avenue Habib Bourguiba, Tunis',
-    packageInfo: { count: 1, weightLbs: 1.5, fragile: false },
+    packageInfo: { count: 1, weightKg: 1.5, fragile: false },
     status: 'DELIVERED',
     cashToCollect: 30.0,
     cashCollected: 30.0,
@@ -287,7 +254,7 @@ const mockJobs: Job[] = [
     customerName: 'Amel Trabelsi',
     customerPhone: '+216 23 604 771',
     address: 'Avenue de Gabès, Sfax',
-    packageInfo: { count: 1, weightLbs: 1.8, fragile: false },
+    packageInfo: { count: 1, weightKg: 1.8, fragile: false },
     status: 'PENDING',
     cashToCollect: 19.0,
     location: { lat: 34.728, lng: 10.702 },
@@ -299,7 +266,7 @@ const mockJobs: Job[] = [
     customerName: 'Sami Belhaj',
     customerPhone: '+216 28 340 662',
     address: 'Rue de la République, Sousse',
-    packageInfo: { count: 1, weightLbs: 2.0, fragile: false },
+    packageInfo: { count: 1, weightKg: 2.0, fragile: false },
     status: 'DELIVERED',
     cashToCollect: 35.0,
     cashCollected: 35.0,
@@ -311,7 +278,7 @@ const mockJobs: Job[] = [
     customerName: 'Nadia Ferjani',
     customerPhone: '+216 22 917 384',
     address: 'Avenue Léopold Senghor, Sousse',
-    packageInfo: { count: 2, weightLbs: 4.2, fragile: false },
+    packageInfo: { count: 2, weightKg: 4.2, fragile: false },
     status: 'DELIVERED',
     cashToCollect: 47.5,
     cashCollected: 47.5,
@@ -1121,7 +1088,7 @@ export async function getNextStopId(currentId: string): Promise<string | null> {
     .filter((j): j is Job => !!j && j.id !== currentId && j.status !== 'DELIVERED');
 
   if (remaining.length === 0) return null;
-  return nearestNeighborOrder(remaining, currentJob.location)[0].id;
+  return nearestNeighborOrder(remaining, currentJob.location ?? DEPOT)[0].id;
 }
 
 export async function confirmDeliveryWithOTP(

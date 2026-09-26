@@ -20,3 +20,19 @@ const useReal = API_MODE === 'real';
 export const login = useReal ? real.login : mock.login;
 export const getUser = useReal ? real.getUser : mock.getUser;
 export const logout = useReal ? real.logout : mock.logout;
+
+// Runsheets and parcels (read-only).
+export const getRunsheets = useReal ? real.getRunsheets : mock.getRunsheets;
+export const getRunsheet = useReal ? real.getRunsheet : mock.getRunsheet;
+export const getRunsheetJobs = useReal ? real.getRunsheetJobs : mock.getRunsheetJobs;
+export const getActiveParcels = useReal ? real.getActiveParcels : mock.getActiveParcels;
+export const getHistoryParcels = useReal ? real.getHistoryParcels : mock.getHistoryParcels;
+export const getJobsByIds = useReal ? real.getJobsByIds : mock.getJobsByIds;
+export const getJobDetail = useReal ? real.getJobDetail : mock.getJobDetail;
+export const optimizeRouteOrder = useReal ? real.optimizeRouteOrder : mock.optimizeRouteOrder;
+export const getNextStopId = useReal ? real.getNextStopId : mock.getNextStopId;
+
+// Phone-only state over real parcels (the call log and the driver's order
+// live on the phone; the mock versions only know mock parcels).
+export const logCallAttempt = useReal ? real.logCallAttempt : mock.logCallAttempt;
+export const setStopOrder = useReal ? real.setStopOrder : mock.setStopOrder;

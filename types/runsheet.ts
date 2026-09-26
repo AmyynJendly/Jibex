@@ -9,6 +9,8 @@ export type RunsheetStatus = 'EN_COURS' | 'VALIDE' | 'A_CONFIRMER';
 
 export interface Runsheet {
   id: string;
+  /** The server's printed reference, e.g. "RS-20260827-0002". Absent on mock data. */
+  code?: string;
   /**
    * Delivery area the parcels fall in. There is deliberately no "route"
    * label: the driver works one flat list of packages and orders it

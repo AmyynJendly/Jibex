@@ -3,7 +3,7 @@ export type JobStatus = 'PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED';
 
 export interface PackageInfo {
   count: number;
-  weightLbs: number;
+  weightKg: number;
   fragile: boolean;
   note?: string;
 }
@@ -53,8 +53,12 @@ export interface Job {
   cashToCollect: number;
   /** Set once the driver confirms delivery; may differ from cashToCollect. */
   cashCollected?: number;
-  /** Used for nearest-neighbor route ordering and "open in Maps" navigation. */
-  location: GeoPoint;
+  /**
+   * Where the customer is, for nearest-first ordering, distance and the map.
+   * Optional: the real server leaves a parcel's coordinates empty unless the
+   * agency set them, so every use has an address-only fallback.
+   */
+  location?: GeoPoint;
   /** ISO time the customer needs this by, if any — drives Home's time-sensitive callout. */
   deliverBy?: string;
   /** Set when a delivery attempt fails via the Can't Deliver flow. */
@@ -77,4 +81,57 @@ export interface Job {
   callAttempts: number;
   /** ISO timestamp of the most recent call attempt, if any. */
   lastCallAt?: string;
+  /** What the real server says about this parcel beyond the fields above. Absent on mock data. */
+  server?: ParcelServerInfo;
+}
+
+/**
+ * The real server's facts about a parcel, mapped but not (yet) all shown.
+ * Kept so later screens — and the write-back endpoints, which need the
+ * server's own ids — have them without another request.
+ */
+export interface ParcelServerInfo {
+  /** The parcel's own id on the server. */
+  parcelId: string;
+  /** The runsheet line this parcel sits on — what status updates will be sent against. */
+  itemId?: string;
+  runsheetId?: string;
+  /** Position dispatch gave the stop. The driver's own drag order sits on top of it. */
+  sequenceOrder?: number;
+  /** Raw statuses as the server sent them, including any we don't map yet. */
+  itemStatus?: string;
+  parcelStatus?: string;
+  /** The server's failure reason when it's one we don't know yet. */
+  unknownFailureReason?: string;
+  /**
+   * The two cash figures. `cashToCollect` is taken from `amountToCollect`;
+   * in the data seen so far `price` = `amountToCollect` + `deliveryFee`.
+   * Which one the customer pays at the door is waiting on the backend team.
+   */
+  price?: number;
+  amountToCollect?: number;
+  deliveryFee?: number;
+  isPaid?: boolean;
+  description?: string;
+  parcelType?: string;
+  senderName?: string;
+  senderPhone?: string;
+  senderAgencyName?: string;
+  agencyName?: string;
+  agencyCity?: string;
+  destinationAgencyName?: string;
+  destinationAgencyCity?: string;
+  companyName?: string;
+  driverName?: string;
+  lastScanLocation?: string;
+  lastScanTime?: string;
+  pickedUpAt?: string;
+  deliveredAt?: string;
+  createdAt?: string;
+  /** Where the delivery was recorded, when the server has it. */
+  deliveryLocation?: GeoPoint;
+  deliveryPhotoUrl?: string;
+  deliverySignatureUrl?: string;
+  deliveryAttempts?: number;
+  returnType?: string;
 }

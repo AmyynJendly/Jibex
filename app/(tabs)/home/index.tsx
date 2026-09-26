@@ -240,14 +240,17 @@ export default function HomeScreen() {
   const locationLabel = gpsLocation ?? zone;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];
-  const nextStopDistanceKm = nextStop
+  // Only a stop with coordinates has a distance; the others show no figure
+  // rather than a made-up one.
+  const nextStopDistanceKm = nextStop?.location
     ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, nextStop.location)
-    : 0;
+    : null;
   const todayLabel = new Date()
     .toLocaleDateString(localeTag(i18n.language), { weekday: 'short', day: 'numeric', month: 'short' })
     .replace(/\./g, '');
   const cashLabel = `${t('home.cashCollected')} · ${formatCurrency(stats.cashCollectedTotal)}`;
-  const nextStopEtaMinutes = nextStop ? Math.max(1, Math.round((nextStopDistanceKm / 35) * 60)) : 0;
+  const nextStopEtaMinutes =
+    nextStopDistanceKm === null ? null : Math.max(1, Math.round((nextStopDistanceKm / 35) * 60));
 
   const compactActions: {
     key: string;
@@ -460,12 +463,14 @@ export default function HomeScreen() {
               {t('home.nextStop.label')}
               {nextStopIndex ? ` · ${nextStopIndex}` : ''}
             </Text>
-            <Text style={[monoStyle(11), styles.tagMuted, { color: colors.onAccent }]}>
-              {t('home.nextStop.distanceEta', {
-                distance: formatDecimal(nextStopDistanceKm),
-                minutes: nextStopEtaMinutes,
-              })}
-            </Text>
+            {nextStopDistanceKm !== null && (
+              <Text style={[monoStyle(11), styles.tagMuted, { color: colors.onAccent }]}>
+                {t('home.nextStop.distanceEta', {
+                  distance: formatDecimal(nextStopDistanceKm),
+                  minutes: nextStopEtaMinutes,
+                })}
+              </Text>
+            )}
           </View>
           <View style={styles.nextStopBody}>
             <View style={styles.nextStopText}>

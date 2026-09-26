@@ -3,8 +3,12 @@
  * names and result shapes as `mock-api.ts`, so screens don't care which one
  * answers. `services/api.ts` picks per function.
  *
- * Connected so far: login, and the signed-in driver's details that come
- * with it. Everything else still answers from the mock.
+ * Connected so far (read-only apart from login):
+ *   - login, and the signed-in driver's details that come with it
+ *   - GET /api/runsheets/driver/{driverId}/active  → the driver's runsheets
+ *   - GET /api/runsheets/{id}                      → one runsheet with its items
+ *   - GET /api/parcels/tracking/{trackingNumber}   → search (see getJobDetail)
+ * Everything that writes to the server still answers from the mock.
  *
  * Three small layers, top to bottom:
  *   1. HTTP client  — base URL, the Bearer token, errors, and 401 → sign out
@@ -13,12 +17,18 @@
  */
 
 import { API_BASE_URL, API_TIMEOUT_MS } from '../constants/backend';
+import * as device from '../lib/deviceStore';
+import { FALLBACK_ORIGIN } from '../lib/geo';
+import { nearestNeighborOrder } from '../lib/route';
 import { clearSession, expireSession, getSession, saveSession, type Session } from '../lib/session';
 import { getToken } from '../lib/token';
 import type {
   DeliveryFailureReason,
+  GeoPoint,
+  Job,
   JobStatus,
   PickupStatus,
+  Runsheet,
   RunsheetStatus,
   TransferStatus,
   User,
@@ -180,6 +190,228 @@ export function toSession(apiUser: ApiLoginUser): Session {
   };
 }
 
+/** A parcel as the runsheet endpoints send it (a JPA entity, so most fields can be null). */
+export interface ApiParcel {
+  id?: number | string | null;
+  trackingNumber?: string | null;
+  status?: string | null;
+  recipientName?: string | null;
+  recipientPhone?: string | null;
+  recipientAddress?: string | null;
+  recipientCity?: string | null;
+  recipientLat?: number | null;
+  recipientLng?: number | null;
+  senderName?: string | null;
+  senderPhone?: string | null;
+  senderAgencyName?: string | null;
+  agencyName?: string | null;
+  agencyCity?: string | null;
+  destinationAgencyName?: string | null;
+  destinationAgencyCity?: string | null;
+  destinationAgency?: { name?: string | null; city?: string | null } | null;
+  companyName?: string | null;
+  driverName?: string | null;
+  price?: number | null;
+  deliveryFee?: number | null;
+  amountToCollect?: number | null;
+  isPaid?: boolean | null;
+  weight?: number | null;
+  description?: string | null;
+  pieces?: number | null;
+  type?: string | null;
+  fragile?: boolean | null;
+  lastScanLocation?: string | null;
+  lastScanTime?: string | null;
+  pickedUpAt?: string | null;
+  deliveredAt?: string | null;
+  createdAt?: string | null;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
+  deliveryPhotoUrl?: string | null;
+  deliverySignatureUrl?: string | null;
+  deliveryNotes?: string | null;
+  deliveryAttempts?: number | null;
+  failureReason?: string | null;
+  failureNotes?: string | null;
+  returnType?: string | null;
+}
+
+export interface ApiRunsheetItem {
+  id?: number | string | null;
+  status?: string | null;
+  sequenceOrder?: number | null;
+  failureReason?: string | null;
+  notes?: string | null;
+  deliveredAt?: string | null;
+  scannedAt?: string | null;
+  parcel?: ApiParcel | null;
+}
+
+export interface ApiRunsheet {
+  id?: number | string | null;
+  code?: string | null;
+  status?: string | null;
+  scheduledDate?: string | null;
+  totalParcels?: number | null;
+  notes?: string | null;
+  createdAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  driver?: { id?: number | string | null; fullName?: string | null } | null;
+  agency?: { id?: number | string | null; name?: string | null } | null;
+  items?: ApiRunsheetItem[] | null;
+}
+
+const text = (value: string | null | undefined) => value?.trim() || undefined;
+const num = (value: number | null | undefined) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
+function point(lat: number | null | undefined, lng: number | null | undefined): GeoPoint | undefined {
+  const la = num(lat);
+  const ln = num(lng);
+  return la === undefined || ln === undefined ? undefined : { lat: la, lng: ln };
+}
+
+/**
+ * A parcel onto our `Job`. The tracking number is the id, as on mock data —
+ * it's what's printed on the box and what the stop screen's route carries;
+ * the server's numeric ids ride along in `server` for the write-back phase.
+ *
+ * Cash: `amountToCollect` becomes what the driver collects. The server also
+ * sends `price` (in every parcel seen so far, `amountToCollect` +
+ * `deliveryFee`), which is what the Android app shows. Both are kept, and
+ * logged in development, until the backend team says which is right.
+ */
+export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: string): Job {
+  const id = text(parcel.trackingNumber) ?? `P-${idString(parcel.id) ?? idString(item?.id) ?? '?'}`;
+  const itemStatus = item ? text(item.status) : undefined;
+  const parcelStatus = text(parcel.status);
+  const status =
+    (item ? toJobStatus(itemStatus) : toJobStatusFromParcel(parcelStatus)) ??
+    // A status we don't know yet: shown as still to do, raw value kept below.
+    'PENDING';
+  const rawReason = text(item?.failureReason) ?? text(parcel.failureReason);
+  const failureReason = toFailureReason(rawReason);
+  const amountToCollect = num(parcel.amountToCollect);
+  const calls = device.callsFor(id);
+
+  return {
+    id,
+    customerName: text(parcel.recipientName) ?? '—',
+    customerPhone: text(parcel.recipientPhone) ?? '',
+    address: [text(parcel.recipientAddress), text(parcel.recipientCity)].filter(Boolean).join(', '),
+    packageInfo: {
+      count: num(parcel.pieces) ?? 1,
+      weightKg: num(parcel.weight) ?? 0,
+      fragile: parcel.fragile === true,
+      note: text(item?.notes) ?? text(parcel.deliveryNotes),
+    },
+    status,
+    cashToCollect: amountToCollect ?? 0,
+    cashCollected: status === 'DELIVERED' ? amountToCollect : undefined,
+    location: point(parcel.recipientLat, parcel.recipientLng),
+    failureReason: status === 'FAILED' ? failureReason : undefined,
+    failureNote: text(parcel.failureNotes),
+    proofPhotoUri: text(parcel.deliveryPhotoUrl),
+    callAttempts: calls.length,
+    lastCallAt: calls.at(-1),
+    server: {
+      parcelId: idString(parcel.id) ?? '',
+      itemId: idString(item?.id),
+      runsheetId,
+      sequenceOrder: num(item?.sequenceOrder),
+      itemStatus,
+      parcelStatus,
+      unknownFailureReason: rawReason && !failureReason ? rawReason : undefined,
+      price: num(parcel.price),
+      amountToCollect,
+      deliveryFee: num(parcel.deliveryFee),
+      isPaid: parcel.isPaid ?? undefined,
+      description: text(parcel.description),
+      parcelType: text(parcel.type),
+      senderName: text(parcel.senderName),
+      senderPhone: text(parcel.senderPhone),
+      senderAgencyName: text(parcel.senderAgencyName),
+      agencyName: text(parcel.agencyName),
+      agencyCity: text(parcel.agencyCity),
+      destinationAgencyName: text(parcel.destinationAgencyName) ?? text(parcel.destinationAgency?.name),
+      destinationAgencyCity: text(parcel.destinationAgencyCity) ?? text(parcel.destinationAgency?.city),
+      companyName: text(parcel.companyName),
+      driverName: text(parcel.driverName),
+      lastScanLocation: text(parcel.lastScanLocation),
+      lastScanTime: text(parcel.lastScanTime),
+      pickedUpAt: text(parcel.pickedUpAt),
+      deliveredAt: text(item?.deliveredAt) ?? text(parcel.deliveredAt),
+      createdAt: text(parcel.createdAt),
+      deliveryLocation: point(parcel.deliveryLat, parcel.deliveryLng),
+      deliveryPhotoUrl: text(parcel.deliveryPhotoUrl),
+      deliverySignatureUrl: text(parcel.deliverySignatureUrl),
+      deliveryAttempts: num(parcel.deliveryAttempts),
+      returnType: text(parcel.returnType),
+    },
+  };
+}
+
+/** A runsheet's parcels in dispatch's stop order (`sequenceOrder`, then as listed). */
+export function runsheetJobs(runsheet: ApiRunsheet): Job[] {
+  const runsheetId = idString(runsheet.id);
+  return [...(runsheet.items ?? [])]
+    .map((item, index) => ({ item, index }))
+    .sort(
+      (a, b) =>
+        (num(a.item.sequenceOrder) ?? Number.MAX_SAFE_INTEGER) -
+          (num(b.item.sequenceOrder) ?? Number.MAX_SAFE_INTEGER) || a.index - b.index
+    )
+    .filter(({ item }) => item.parcel)
+    .map(({ item }) => toJob(item.parcel!, item, runsheetId));
+}
+
+/**
+ * The delivery area, from the parcels' cities ("Tunis, Sidi Hassine" →
+ * "Tunis"). The server has no zone of its own; the agency name stands in
+ * when the parcels don't say.
+ */
+function zoneOf(runsheet: ApiRunsheet): string {
+  const governorates = [
+    ...new Set(
+      (runsheet.items ?? [])
+        .map((item) => text(item.parcel?.recipientCity)?.split(',')[0]?.trim())
+        .filter((city): city is string => !!city)
+    ),
+  ];
+  if (governorates.length) return governorates.slice(0, 2).join(', ');
+  return text(runsheet.agency?.name) ?? text(runsheet.code) ?? '';
+}
+
+/**
+ * A runsheet onto ours, or null for one a driver shouldn't see (a draft, or
+ * a cancelled run). A status we don't know yet is treated as waiting for the
+ * driver's confirmation — its parcels stay locked rather than open to
+ * updates nobody has thought through.
+ */
+export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
+  const raw = text(runsheet.status);
+  if (raw === 'DRAFT' || raw === 'CANCELLED') return null;
+  const status = toRunsheetStatus(raw) ?? 'A_CONFIRMER';
+  const jobs = runsheetJobs(runsheet);
+  const items = runsheet.items ?? [];
+  const delivered = jobs.filter((job) => job.status === 'DELIVERED').length;
+  const newParcelsToConfirm = items.some((item) => item.status === 'PENDING_DRIVER_CONFIRMATION');
+
+  return {
+    id: idString(runsheet.id) ?? '',
+    code: text(runsheet.code),
+    zone: zoneOf(runsheet),
+    agency: text(runsheet.agency?.name) ?? '',
+    status,
+    stopCount: jobs.length || (num(runsheet.totalParcels) ?? 0),
+    deliveredCount: delivered,
+    needsConfirmation: status === 'A_CONFIRMER' || newParcelsToConfirm,
+    completionPercent: jobs.length ? Math.round((delivered / jobs.length) * 100) : 0,
+    stopIds: jobs.map((job) => job.id),
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 3. Enum mapper
 // ═══════════════════════════════════════════════════════════════════════════
@@ -227,6 +459,48 @@ export function toJobStatus(status: string | null | undefined): JobStatus | null
     case 'FAILED':
     case 'RETURNED':
       return 'FAILED';
+    default:
+      return null;
+  }
+}
+
+/**
+ * A parcel's own lifecycle status, for a parcel found by search rather than
+ * on a runsheet line. Delivered and every return/closing state count as done;
+ * everything on its way counts as in transit.
+ */
+export function toJobStatusFromParcel(status: string | null | undefined): JobStatus | null {
+  switch (status) {
+    case 'DELIVERED':
+    case 'LIVRE_PAYE':
+      return 'DELIVERED';
+    case 'RTN_DEPOT':
+    case 'RETOUR_DEFINITIF':
+    case 'RETOUR_CLIENT_AGENCE':
+    case 'RETOUR_A_CHARGER':
+    case 'EN_TRANSIT_RETOUR':
+    case 'RETOUR_EXPEDITEUR':
+    case 'RETOUR_RECU':
+    case 'RETURNED':
+    case 'CANCELLED':
+    case 'LOST':
+      return 'FAILED';
+    case 'EN_COURS':
+    case 'OUT_FOR_DELIVERY':
+    case 'IN_TRANSIT':
+    case 'EN_TRANSIT_AGENCE':
+    case 'AU_DEPOT':
+    case 'AU_DEPOT_RELAIS':
+    case 'AU_DEPOT_DESTINATION':
+      return 'IN_TRANSIT';
+    case 'PENDING':
+    case 'A_ENLEVER':
+    case 'PICKUP':
+    case 'CREATED':
+    case 'PICKED_UP':
+    case 'SCANNED':
+    case 'A_VERIFIER':
+      return 'PENDING';
     default:
       return null;
   }
@@ -363,5 +637,234 @@ export async function getUser(): Promise<User> {
 }
 
 export async function logout(): Promise<void> {
+  forgetDriverData();
   await clearSession();
+}
+
+// ── The driver's runsheets ────────────────────────────────────────────────
+
+interface DriverData {
+  runsheets: Runsheet[];
+  /** Every parcel on those runsheets, runsheet by runsheet, each in stop order. */
+  jobs: Job[];
+  /** Which runsheet each parcel is on — how the driver's saved order is filed. */
+  runsheetOf: Map<string, string>;
+}
+
+/**
+ * One screen asks for runsheets, parcels and totals at once, and each of
+ * those is a separate call here. They share one fetch: answered from the
+ * same result for a few seconds, and a request already on its way is
+ * joined rather than repeated.
+ */
+const DRIVER_DATA_TTL_MS = 3_000;
+let driverData: { at: number; promise: Promise<DriverData> } | null = null;
+
+function forgetDriverData() {
+  driverData = null;
+}
+
+async function requireSession(): Promise<Session> {
+  const session = await getSession();
+  if (!session || session.mode !== 'real') {
+    await expireSession();
+    throw new ApiError(401, 'not signed in');
+  }
+  return session;
+}
+
+/** Logs both cash figures once per parcel per launch, in development only. */
+const cashLogged = new Set<string>();
+function logCash(jobs: Job[]) {
+  if (!__DEV__) return;
+  for (const job of jobs) {
+    if (cashLogged.has(job.id)) continue;
+    cashLogged.add(job.id);
+    const info = job.server;
+    console.log(
+      `[cash] ${job.id}: amountToCollect=${info?.amountToCollect ?? '-'} price=${info?.price ?? '-'} ` +
+        `deliveryFee=${info?.deliveryFee ?? '-'} → collecting ${job.cashToCollect}`
+    );
+  }
+}
+
+async function fetchDriverData(): Promise<DriverData> {
+  // The DRIVER record's id — not the user account's, which the
+  // notification endpoints take. They can differ; see lib/session.
+  const { driverId } = await requireSession();
+  const [list] = await Promise.all([
+    request<ApiRunsheet[] | null>(`api/runsheets/driver/${encodeURIComponent(driverId)}/active`),
+    device.hydrateDeviceStore(),
+  ]);
+
+  // The list normally carries each runsheet's items; fetch any that doesn't.
+  const full = await Promise.all(
+    (list ?? []).map((runsheet) =>
+      Array.isArray(runsheet.items) || runsheet.id === null || runsheet.id === undefined
+        ? runsheet
+        : request<ApiRunsheet>(`api/runsheets/${encodeURIComponent(String(runsheet.id))}`)
+    )
+  );
+
+  const runsheets: Runsheet[] = [];
+  const jobs: Job[] = [];
+  const runsheetOf = new Map<string, string>();
+  for (const apiRunsheet of full) {
+    const runsheet = toRunsheet(apiRunsheet);
+    if (!runsheet) continue;
+    runsheets.push(runsheet);
+    for (const job of runsheetJobs(apiRunsheet)) {
+      if (runsheetOf.has(job.id)) continue;
+      runsheetOf.set(job.id, runsheet.id);
+      jobs.push(job);
+    }
+  }
+  logCash(jobs);
+  return { runsheets, jobs, runsheetOf };
+}
+
+function loadDriverData(): Promise<DriverData> {
+  if (driverData && Date.now() - driverData.at < DRIVER_DATA_TTL_MS) return driverData.promise;
+  const promise = fetchDriverData();
+  driverData = { at: Date.now(), promise };
+  // A failed load isn't kept: the next screen to ask tries again.
+  promise.catch(() => {
+    if (driverData?.promise === promise) driverData = null;
+  });
+  return promise;
+}
+
+const copy = (job: Job): Job => ({ ...job, packageInfo: { ...job.packageInfo } });
+const isOpen = (job: Job) => job.status !== 'DELIVERED' && job.status !== 'FAILED';
+
+/**
+ * The order the driver works open stops in: nearest-first when it's on and
+ * the stops have coordinates, otherwise the driver's own drag order laid over
+ * dispatch's sequence (stops they haven't placed keep dispatch's order).
+ */
+function orderOpen(jobs: Job[], runsheetOf: Map<string, string>): Job[] {
+  const byRunsheet = (id: string) => runsheetOf.get(id);
+  if (device.isNearestFirst() && jobs.some((job) => job.location)) {
+    return nearestNeighborOrder(jobs, FALLBACK_ORIGIN);
+  }
+  return device.applyStopOrder(jobs, byRunsheet);
+}
+
+/** `GET /api/runsheets/driver/{driverId}/active`, drafts and cancelled runs left out. */
+export async function getRunsheets(): Promise<Runsheet[]> {
+  const { runsheets } = await loadDriverData();
+  return runsheets.map((runsheet) => ({ ...runsheet, stopIds: [...runsheet.stopIds] }));
+}
+
+/** `GET /api/runsheets/{id}`. */
+export async function getRunsheet(id: string): Promise<Runsheet> {
+  const apiRunsheet = await request<ApiRunsheet>(`api/runsheets/${encodeURIComponent(id)}`);
+  const runsheet = toRunsheet(apiRunsheet);
+  if (!runsheet) throw new ApiError(404, `Runsheet ${id} not found`);
+  return runsheet;
+}
+
+/** A runsheet's own parcels, in dispatch's stop order. */
+export async function getRunsheetJobs(id: string): Promise<Job[]> {
+  const apiRunsheet = await request<ApiRunsheet>(`api/runsheets/${encodeURIComponent(id)}`);
+  await device.hydrateDeviceStore();
+  const jobs = runsheetJobs(apiRunsheet);
+  logCash(jobs);
+  return jobs;
+}
+
+/**
+ * Every parcel still to deliver, across the driver's runsheets. Delivered and
+ * failed ones drop out (they're history). Parcels on a run the driver hasn't
+ * signed for yet sit at the end, locked.
+ */
+export async function getActiveParcels(): Promise<Job[]> {
+  const { runsheets, jobs, runsheetOf } = await loadDriverData();
+  const locked = new Set(runsheets.filter((r) => r.needsConfirmation).map((r) => r.id));
+  const open = jobs.filter(isOpen);
+  const workable = open.filter((job) => !locked.has(runsheetOf.get(job.id) ?? ''));
+  const blocked = open.filter((job) => locked.has(runsheetOf.get(job.id) ?? ''));
+  return [...orderOpen(workable, runsheetOf), ...blocked].map(copy);
+}
+
+/**
+ * Delivered and failed parcels on the driver's current runsheets. (Finished
+ * runsheets aren't fetched in this phase, so older history isn't here yet.)
+ */
+export async function getHistoryParcels(): Promise<Job[]> {
+  const { jobs } = await loadDriverData();
+  return jobs.filter((job) => !isOpen(job)).map(copy);
+}
+
+export async function getJobsByIds(ids: string[]): Promise<Job[]> {
+  const { jobs } = await loadDriverData();
+  const wanted = new Set(ids);
+  return jobs.filter((job) => wanted.has(job.id)).map(copy);
+}
+
+/** Same order as the Runsheets list, so Home's "next stop" never disagrees with it. */
+export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
+  const { jobs, runsheetOf } = await loadDriverData();
+  const wanted = new Set(stopIds);
+  const mine = jobs.filter((job) => wanted.has(job.id));
+  const open = orderOpen(mine.filter(isOpen), runsheetOf);
+  return [...open, ...mine.filter((job) => !isOpen(job))].map((job) => job.id);
+}
+
+/** The next open stop on the same runsheet, in the order the list shows. */
+export async function getNextStopId(currentId: string): Promise<string | null> {
+  const { runsheetOf } = await loadDriverData();
+  const runsheetId = runsheetOf.get(currentId);
+  if (!runsheetId) return null;
+  const next = (await getActiveParcels()).find(
+    (job) => job.id !== currentId && runsheetOf.get(job.id) === runsheetId
+  );
+  return next?.id ?? null;
+}
+
+/**
+ * One parcel, by tracking number — the stop screen and the search box.
+ *
+ * The driver's own runsheets are checked first: that's where nearly every
+ * lookup lands, and it needs no extra request. Anything else goes to
+ * `GET /api/parcels/tracking/{n}`, which currently answers 403 for driver
+ * accounts; until the backend opens it to drivers, that reads as "not found".
+ */
+export async function getJobDetail(id: string): Promise<Job> {
+  const { jobs } = await loadDriverData();
+  const wanted = id.trim().toUpperCase();
+  const own = jobs.find((job) => job.id.toUpperCase() === wanted);
+  if (own) return copy(own);
+
+  try {
+    const parcel = await request<ApiParcel>(`api/parcels/tracking/${encodeURIComponent(id.trim())}`);
+    const job = toJob(parcel);
+    logCash([job]);
+    return job;
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+      throw new ApiError(404, `Parcel ${id} not found`);
+    }
+    throw error;
+  }
+}
+
+// ── Phone-only state over real parcels ────────────────────────────────────
+// No server write: the call log and the driver's order live on the phone
+// (lib/deviceStore). These real versions only exist because the mock ones
+// look parcels up in the mock data.
+
+/** Logs a call to this parcel's customer. The delivery gate reads the same log. */
+export async function logCallAttempt(id: string): Promise<Job> {
+  await device.hydrateDeviceStore();
+  const calls = await device.recordCall(id);
+  forgetDriverData();
+  const job = await getJobDetail(id);
+  return { ...job, callAttempts: calls.length, lastCallAt: calls.at(-1) };
+}
+
+/** The driver dragged their stops into a new order: saved per runsheet, on the phone. */
+export async function setStopOrder(orderedIds: string[]): Promise<void> {
+  const { runsheetOf } = await loadDriverData();
+  await device.saveStopOrder(orderedIds, (id) => runsheetOf.get(id));
 }

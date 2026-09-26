@@ -176,6 +176,7 @@ const fr: TranslationResource = {
     moreOptionsToast: "Plus d'options — bientôt disponible",
     mapBadge: '{{distance}} km · ≈{{minutes}} min',
     navigate: 'Itinéraire',
+    byAddress: "Pas de repère sur la carte · itinéraire par l'adresse",
     codLabel: 'Encaissement à la livraison',
     billLabel: 'Bon',
     parcelLabel: 'Colis',

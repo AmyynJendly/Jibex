@@ -177,6 +177,7 @@ const en = {
     moreOptionsToast: 'More options — coming soon',
     mapBadge: '{{distance}} km · ≈{{minutes}} min away',
     navigate: 'Navigate',
+    byAddress: 'No map pin · tap for directions by address',
     codLabel: 'Collect on Delivery',
     billLabel: 'Bill',
     parcelLabel: 'Parcel',
