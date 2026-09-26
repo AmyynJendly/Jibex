@@ -21,4 +21,15 @@ export interface Pickup {
   contactName: string;
   contactPhone: string;
   parcels: PickupParcel[];
+  /** What the real server says beyond the fields above. Absent on mock data. */
+  server?: {
+    /** The pickup request's numeric id — what the start/complete endpoints take. */
+    pickupId: string;
+    requestNumber?: string;
+    /** Raw status, including PENDING / IN_PROGRESS, which our two states fold together. */
+    status?: string;
+    estimatedParcelsCount?: number;
+    notes?: string;
+    completedAt?: string;
+  };
 }

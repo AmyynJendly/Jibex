@@ -8,6 +8,12 @@
  *   - GET /api/runsheets/driver/{driverId}/active  → the driver's runsheets
  *   - GET /api/runsheets/{id}                      → one runsheet with its items
  *   - GET /api/parcels/tracking/{trackingNumber}   → search (see getJobDetail)
+ *   - GET /api/pickup-requests/driver/{driverId}   → pickups
+ *   - GET /api/pickup-requests/{id}/parcels        → a pickup's parcels
+ *   - GET /api/transfers/driver/{driverId}         → transfers
+ *   - GET /api/transfers/{id}                      → one transfer
+ *   - GET /api/return-management/driver/{driverId}/assigned → returns
+ *   - GET /api/notifications/user/{userId}         → notifications (USER id)
  * Everything that writes to the server still answers from the mock.
  *
  * Three small layers, top to bottom:
@@ -18,7 +24,9 @@
 
 import { API_BASE_URL, API_TIMEOUT_MS } from '../constants/backend';
 import * as device from '../lib/deviceStore';
+import { localeTag } from '../lib/date';
 import { FALLBACK_ORIGIN } from '../lib/geo';
+import { i18next } from '../lib/i18n';
 import { nearestNeighborOrder } from '../lib/route';
 import { clearSession, expireSession, getSession, saveSession, type Session } from '../lib/session';
 import { getToken } from '../lib/token';
@@ -27,10 +35,18 @@ import type {
   GeoPoint,
   Job,
   JobStatus,
+  Notification,
+  NotificationTarget,
+  NotificationType,
+  Pickup,
   PickupStatus,
+  Return,
+  ReturnStatus,
   Runsheet,
   RunsheetStatus,
+  Transfer,
   TransferStatus,
+  TransferType,
   User,
 } from '../types';
 import type { LoginResult } from './mock-api';
@@ -412,6 +428,248 @@ export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
   };
 }
 
+// ── Pickups, transfers, returns, notifications ────────────────────────────
+// Some nested objects the server sends are whole database records — a
+// merchant's bank details and national id on `sender`, a driver's national
+// id, licence and salary on `assignedDriver`/`driver`. Only the fields below
+// are ever read; nothing else is mapped, stored or shown.
+
+export interface ApiPickup {
+  id?: number | string | null;
+  requestNumber?: string | null;
+  status?: string | null;
+  pickupAddress?: string | null;
+  pickupCity?: string | null;
+  contactPerson?: string | null;
+  contactPhone?: string | null;
+  scheduledAt?: string | null;
+  requestedDate?: string | null;
+  timeSlot?: string | null;
+  estimatedParcelsCount?: number | null;
+  notes?: string | null;
+  completedAt?: string | null;
+  createdAt?: string | null;
+  sender?: { id?: number | string | null; name?: string | null; senderName?: string | null; phone?: string | null } | null;
+}
+
+interface ApiNamed {
+  id?: number | string | null;
+  name?: string | null;
+  city?: string | null;
+}
+
+export interface ApiTransfer {
+  id?: number | string | null;
+  transferNumber?: string | null;
+  status?: string | null;
+  transferType?: string | null;
+  fromAgency?: ApiNamed | null;
+  toAgency?: ApiNamed | null;
+  fromCompany?: ApiNamed | null;
+  toCompany?: ApiNamed | null;
+  driver?: { id?: number | string | null; fullName?: string | null } | null;
+  driverName?: string | null;
+  vehicleRegistration?: string | null;
+  parcels?: { trackingNumber?: string | null }[] | null;
+  notes?: string | null;
+  scannedCount?: number | null;
+  scanDeparture?: boolean | null;
+  scanArrival?: boolean | null;
+  missingParcels?: number | null;
+  extraParcels?: number | null;
+  damagedParcels?: number | null;
+  discrepancyNotes?: string | null;
+  createdAt?: string | null;
+  validatedAt?: string | null;
+  shippedAt?: string | null;
+  confirmedAt?: string | null;
+  receivedAt?: string | null;
+  completedAt?: string | null;
+  closedAt?: string | null;
+  cancelledAt?: string | null;
+}
+
+export interface ApiNotification {
+  id?: number | string | null;
+  title?: string | null;
+  message?: string | null;
+  type?: string | null;
+  isRead?: boolean | null;
+  createdAt?: string | null;
+  referenceId?: number | string | null;
+  referenceType?: string | null;
+}
+
+/** A clock time in the app's language, e.g. "14:30" or "2:30 PM". */
+function clockTime(iso: string | undefined): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString(localeTag(i18next.language), { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * A pickup request onto ours, or null for a cancelled one. Cash on its
+ * parcels follows the same rule as runsheets (`amountToCollect`).
+ */
+export function toPickup(apiPickup: ApiPickup, apiParcels?: ApiParcel[] | null): Pickup | null {
+  const raw = text(apiPickup.status);
+  if (raw === 'CANCELLED') return null;
+  const parcels = (apiParcels ?? []).map((parcel) => ({
+    trackingNumber: text(parcel.trackingNumber) ?? `P-${idString(parcel.id) ?? '?'}`,
+    contactName: text(parcel.recipientName) ?? '—',
+    address: [text(parcel.recipientAddress), text(parcel.recipientCity)].filter(Boolean).join(', '),
+    codAmount: num(parcel.amountToCollect) ?? 0,
+  }));
+  const scheduledAt = text(apiPickup.scheduledAt) ?? text(apiPickup.requestedDate) ?? text(apiPickup.createdAt);
+  return {
+    id: idString(apiPickup.id) ?? '',
+    businessName: text(apiPickup.sender?.name) ?? text(apiPickup.sender?.senderName) ?? text(apiPickup.contactPerson) ?? '—',
+    address: [text(apiPickup.pickupAddress), text(apiPickup.pickupCity)].filter(Boolean).join(', '),
+    // A status we don't know shows in the completed list — read-only, no actions.
+    status: toPickupStatus(raw) ?? 'COMPLETED',
+    requestedByDate: scheduledAt ?? '',
+    timeWindow: text(apiPickup.timeSlot) ?? clockTime(scheduledAt),
+    packageCount: parcels.length || (num(apiPickup.estimatedParcelsCount) ?? 0),
+    contactName: text(apiPickup.contactPerson) ?? '',
+    contactPhone: text(apiPickup.contactPhone) ?? text(apiPickup.sender?.phone) ?? '',
+    parcels,
+    server: {
+      pickupId: idString(apiPickup.id) ?? '',
+      requestNumber: text(apiPickup.requestNumber),
+      status: raw,
+      estimatedParcelsCount: num(apiPickup.estimatedParcelsCount),
+      notes: text(apiPickup.notes),
+      completedAt: text(apiPickup.completedAt),
+    },
+  };
+}
+
+/** A transfer onto ours, or null for a draft, cancelled or rejected one. */
+export function toTransfer(apiTransfer: ApiTransfer): Transfer | null {
+  const raw = text(apiTransfer.status);
+  if (raw === 'DRAFT' || raw === 'CANCELLED' || raw === 'REJECTED') return null;
+  const parcels = (apiTransfer.parcels ?? [])
+    .map((parcel) => text(parcel?.trackingNumber))
+    .filter((tracking): tracking is string => !!tracking);
+  const rawType = text(apiTransfer.transferType);
+  const from = apiTransfer.fromAgency;
+  return {
+    id: text(apiTransfer.transferNumber) ?? `TRF-${idString(apiTransfer.id) ?? '?'}`,
+    // A status we don't know shows in history — read-only, no actions.
+    status: toTransferStatus(raw) ?? 'COMPLETED',
+    originAgency: text(from?.name) ?? '—',
+    destinationAgency: text(apiTransfer.toAgency?.name) ?? '—',
+    parcelCount: parcels.length,
+    // The handover happens where the batch leaves from.
+    location: text(from?.city) ?? text(from?.name) ?? '',
+    scheduledAt:
+      text(apiTransfer.validatedAt) ?? text(apiTransfer.confirmedAt) ?? text(apiTransfer.createdAt) ?? '',
+    server: {
+      transferId: idString(apiTransfer.id) ?? '',
+      status: raw,
+      rawType,
+      transferType: toTransferType(rawType),
+      fromCompany: text(apiTransfer.fromCompany?.name),
+      toCompany: text(apiTransfer.toCompany?.name),
+      driverName: text(apiTransfer.driverName) ?? text(apiTransfer.driver?.fullName),
+      vehicleRegistration: text(apiTransfer.vehicleRegistration),
+      notes: text(apiTransfer.notes),
+      parcelTrackingNumbers: parcels,
+      scannedCount: num(apiTransfer.scannedCount),
+      scanDeparture: apiTransfer.scanDeparture === true,
+      scanArrival: apiTransfer.scanArrival === true,
+      missingParcels: num(apiTransfer.missingParcels) ?? 0,
+      extraParcels: num(apiTransfer.extraParcels) ?? 0,
+      damagedParcels: num(apiTransfer.damagedParcels) ?? 0,
+      discrepancyNotes: text(apiTransfer.discrepancyNotes),
+      createdAt: text(apiTransfer.createdAt),
+      validatedAt: text(apiTransfer.validatedAt),
+      shippedAt: text(apiTransfer.shippedAt),
+      confirmedAt: text(apiTransfer.confirmedAt),
+      receivedAt: text(apiTransfer.receivedAt),
+      completedAt: text(apiTransfer.completedAt),
+      closedAt: text(apiTransfer.closedAt),
+      cancelledAt: text(apiTransfer.cancelledAt),
+    },
+  };
+}
+
+/**
+ * A returned parcel onto our `Return`. The server hands the driver single
+ * parcels to take back to their sender, not agency batches, so each becomes
+ * a return of one parcel: from the agency holding it, to the merchant.
+ */
+export function toReturn(parcel: ApiParcel & { senderAddress?: string | null; updatedAt?: string | null }): Return {
+  const tracking = text(parcel.trackingNumber) ?? `P-${idString(parcel.id) ?? '?'}`;
+  const raw = text(parcel.status);
+  return {
+    id: tracking,
+    status: toReturnStatus(raw),
+    fromAgency: text(parcel.senderAgencyName) ?? text(parcel.agencyName) ?? '—',
+    toAgency: text(parcel.senderName) ?? '—',
+    parcelCount: 1,
+    location: text(parcel.senderAddress) ?? '',
+    scheduledAt: text(parcel.lastScanTime) ?? text(parcel.updatedAt) ?? text(parcel.createdAt) ?? '',
+    server: {
+      parcelId: idString(parcel.id) ?? '',
+      trackingNumber: tracking,
+      parcelStatus: raw,
+      senderName: text(parcel.senderName),
+      senderPhone: text(parcel.senderPhone),
+      senderAddress: text(parcel.senderAddress),
+      returnType: text(parcel.returnType),
+    },
+  };
+}
+
+/**
+ * Where tapping an alert should go, from what it references. A parcel is
+ * opened directly when it's one of the driver's (`parcelTarget` resolves the
+ * server's numeric id to our tracking-number id); anything else lands on the
+ * list it belongs to.
+ */
+function targetOf(
+  referenceType: string | undefined,
+  referenceId: string | undefined,
+  parcelTarget: (parcelId: string) => string | undefined
+): NotificationTarget | undefined {
+  const kind = referenceType?.toUpperCase() ?? '';
+  if (kind.includes('PICKUP')) return { screen: 'pickups', tab: 'SCHEDULED' };
+  if (kind.includes('TRANSFER')) return { screen: 'transfers', tab: 'current' };
+  if (kind.includes('RETURN')) return { screen: 'returns', tab: 'current' };
+  if (kind.includes('RUNSHEET')) return { screen: 'runsheets', tab: 'current' };
+  if (kind.includes('PARCEL')) {
+    const jobId = referenceId ? parcelTarget(referenceId) : undefined;
+    return jobId ? { screen: 'job', jobId } : { screen: 'runsheets', tab: 'current' };
+  }
+  return undefined;
+}
+
+/**
+ * A server notification. Its title and message are shown as the server
+ * wrote them (one language for now); the raw type and reference are kept so
+ * the app can write its own bilingual text later.
+ */
+export function toNotification(
+  apiNotification: ApiNotification,
+  parcelTarget: (parcelId: string) => string | undefined = () => undefined
+): Notification {
+  const rawType = text(apiNotification.type);
+  const referenceType = text(apiNotification.referenceType);
+  const referenceId = idString(apiNotification.referenceId);
+  return {
+    id: idString(apiNotification.id) ?? '',
+    type: toNotificationType(rawType, referenceType),
+    title: text(apiNotification.title) ?? '',
+    message: text(apiNotification.message) ?? '',
+    timestamp: text(apiNotification.createdAt) ?? new Date(0).toISOString(),
+    read: apiNotification.isRead === true,
+    target: targetOf(referenceType, referenceId, parcelTarget),
+    server: { type: rawType, referenceId, referenceType },
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 3. Enum mapper
 // ═══════════════════════════════════════════════════════════════════════════
@@ -557,6 +815,51 @@ export function toPickupStatus(status: string | null | undefined): PickupStatus 
     default:
       return null;
   }
+}
+
+const TRANSFER_TYPES: readonly TransferType[] = ['INTER_AGENCY', 'HUB_RELAY', 'RETURN', 'RETURN_TO_SENDER'];
+
+export function toTransferType(type: string | null | undefined): TransferType | undefined {
+  return TRANSFER_TYPES.find((known) => known === type);
+}
+
+/**
+ * A returned parcel's status. Only the ones still with the driver are open;
+ * anything else (handed back, or a status we don't know) is read-only.
+ */
+export function toReturnStatus(status: string | null | undefined): ReturnStatus {
+  return status === 'RETOUR_A_CHARGER' || status === 'EN_TRANSIT_RETOUR' ? 'PENDING_PICKUP' : 'PROCESSED';
+}
+
+/**
+ * The server's notification kinds onto our five icons. Anything it sends
+ * that isn't about the driver's work (complaints, system alerts, plain info)
+ * or that we don't know becomes INFO.
+ */
+export function toNotificationType(
+  type: string | null | undefined,
+  referenceType?: string | null
+): NotificationType {
+  switch (type) {
+    case 'PICKUP_REQUESTED':
+    case 'PICKUP_ASSIGNED':
+    case 'PICKUP_SCHEDULED':
+      return 'PICKUP';
+    case 'PARCEL_STATUS_CHANGE':
+    case 'PARCEL_DELIVERED':
+    case 'RUNSHEET_CREATED':
+    case 'RUNSHEET_VALIDATED':
+      return 'DELIVERY';
+    case 'PARCEL_RETURNED':
+      return 'RETURN';
+    case 'PAYMENT_RECEIVED':
+      return 'CASH';
+  }
+  const kind = `${type ?? ''} ${referenceType ?? ''}`.toUpperCase();
+  if (kind.includes('TRANSFER')) return 'TRANSFER';
+  if (kind.includes('RETURN')) return 'RETURN';
+  if (kind.includes('PICKUP')) return 'PICKUP';
+  return 'INFO';
 }
 
 /** Transfers, including the legacy values older transfers still carry. */
@@ -847,6 +1150,94 @@ export async function getJobDetail(id: string): Promise<Job> {
     }
     throw error;
   }
+}
+
+// ── Pickups, transfers, returns ───────────────────────────────────────────
+
+/** Open ones first (in the driver's saved order), then the rest as the server listed them. */
+function openFirst<T extends { id: string }>(list: 'pickups' | 'transfers' | 'returns', items: T[], isOpenItem: (item: T) => boolean): T[] {
+  return [...device.applyListOrder(list, items.filter(isOpenItem)), ...items.filter((item) => !isOpenItem(item))];
+}
+
+/**
+ * `GET /api/pickup-requests/driver/{driverId}`, each with its parcels from
+ * `GET /api/pickup-requests/{id}/parcels`. A pickup whose parcel list can't
+ * be fetched still shows, with the server's estimated count.
+ */
+export async function getPickups(): Promise<Pickup[]> {
+  const { driverId } = await requireSession();
+  const [list] = await Promise.all([
+    request<ApiPickup[] | null>(`api/pickup-requests/driver/${encodeURIComponent(driverId)}`),
+    device.hydrateDeviceStore(),
+  ]);
+  const pickups = await Promise.all(
+    (list ?? []).map(async (apiPickup) => {
+      const parcels =
+        apiPickup.id === null || apiPickup.id === undefined
+          ? null
+          : await request<ApiParcel[] | null>(
+              `api/pickup-requests/${encodeURIComponent(String(apiPickup.id))}/parcels`
+            ).catch((error) => {
+              if (error instanceof ApiError && error.status === 401) throw error;
+              return null;
+            });
+      return toPickup(apiPickup, parcels);
+    })
+  );
+  const shown = pickups.filter((pickup): pickup is Pickup => !!pickup);
+  return openFirst('pickups', shown, (pickup) => pickup.status === 'SCHEDULED');
+}
+
+/** `GET /api/transfers/driver/{driverId}`. */
+export async function getTransfers(): Promise<Transfer[]> {
+  const { driverId } = await requireSession();
+  const [list] = await Promise.all([
+    request<ApiTransfer[] | null>(`api/transfers/driver/${encodeURIComponent(driverId)}`),
+    device.hydrateDeviceStore(),
+  ]);
+  const shown = (list ?? []).map((transfer) => toTransfer(transfer)).filter((t): t is Transfer => !!t);
+  return openFirst('transfers', shown, (transfer) => transfer.status === 'IN_PROGRESS');
+}
+
+/** `GET /api/transfers/{id}` — by the server's numeric id (`transfer.server.transferId`). */
+export async function getTransfer(transferId: string): Promise<Transfer> {
+  const transfer = toTransfer(await request<ApiTransfer>(`api/transfers/${encodeURIComponent(transferId)}`));
+  if (!transfer) throw new ApiError(404, `Transfer ${transferId} not found`);
+  return transfer;
+}
+
+/** `GET /api/return-management/driver/{driverId}/assigned`. */
+export async function getReturns(): Promise<Return[]> {
+  const { driverId } = await requireSession();
+  const [list] = await Promise.all([
+    request<ApiParcel[] | null>(`api/return-management/driver/${encodeURIComponent(driverId)}/assigned`),
+    device.hydrateDeviceStore(),
+  ]);
+  const returns = (list ?? []).map((parcel) => toReturn(parcel));
+  return openFirst('returns', returns, (item) => item.status === 'PENDING_PICKUP');
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────
+
+/**
+ * `GET /api/notifications/user/{userId}` — by the USER ACCOUNT id, unlike
+ * every other driver endpoint. Newest first.
+ */
+export async function getNotifications(): Promise<Notification[]> {
+  const { userId } = await requireSession();
+  const list = (await request<ApiNotification[] | null>(`api/notifications/user/${encodeURIComponent(userId)}`)) ?? [];
+
+  // Alerts about a parcel open it directly when it's on the driver's runs.
+  const mentionsParcel = list.some((n) => n.referenceType?.toUpperCase().includes('PARCEL'));
+  const byParcelId = new Map<string, string>();
+  if (mentionsParcel) {
+    const { jobs } = await loadDriverData().catch(() => ({ jobs: [] as Job[] }));
+    for (const job of jobs) if (job.server?.parcelId) byParcelId.set(job.server.parcelId, job.id);
+  }
+
+  return list
+    .map((n) => toNotification(n, (parcelId) => byParcelId.get(parcelId)))
+    .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 }
 
 // ── Phone-only state over real parcels ────────────────────────────────────

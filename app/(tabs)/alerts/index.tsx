@@ -68,6 +68,12 @@ function typeStyle(type: NotificationType, colors: ColorPalette) {
       };
     case 'RETURN':
       return { icon: 'arrow-undo-outline' as const, color: colors.danger, soft: colors.dangerSoft };
+    case 'INFO':
+      return {
+        icon: 'information-circle-outline' as const,
+        color: colors.textSecondary,
+        soft: colors.neutralSoft,
+      };
   }
 }
 

@@ -955,6 +955,14 @@ export async function completePickups(ids: string[]): Promise<Pickup[]> {
   return mockPickups.map((p) => ({ ...p }));
 }
 
+/** One transfer, by id. */
+export async function getTransfer(id: string): Promise<Transfer> {
+  await delay(undefined);
+  const transfer = mockTransfers.find((t) => t.id === id);
+  if (!transfer) throw new Error(`Transfer ${id} not found`);
+  return { ...transfer };
+}
+
 export async function getTransfers(): Promise<Transfer[]> {
   await delay(undefined);
   const current = device.applyListOrder(

@@ -18,4 +18,40 @@ export interface Transfer {
   /** Depot/hub where the handover happens. */
   location: string;
   scheduledAt: string;
+  /** What the real server says beyond the fields above. Absent on mock data. */
+  server?: TransferServerInfo;
+}
+
+/** The backend's transfer kinds. */
+export type TransferType = 'INTER_AGENCY' | 'HUB_RELAY' | 'RETURN' | 'RETURN_TO_SENDER';
+
+export interface TransferServerInfo {
+  /** The numeric id — what `confirm-pickup` takes. */
+  transferId: string;
+  /** Raw status, including legacy values our two states fold together. */
+  status?: string;
+  /** Raw type; `transferType` is set when it's one we know. */
+  rawType?: string;
+  transferType?: TransferType;
+  fromCompany?: string;
+  toCompany?: string;
+  driverName?: string;
+  vehicleRegistration?: string;
+  notes?: string;
+  parcelTrackingNumbers: string[];
+  scannedCount?: number;
+  scanDeparture: boolean;
+  scanArrival: boolean;
+  missingParcels: number;
+  extraParcels: number;
+  damagedParcels: number;
+  discrepancyNotes?: string;
+  createdAt?: string;
+  validatedAt?: string;
+  shippedAt?: string;
+  confirmedAt?: string;
+  receivedAt?: string;
+  completedAt?: string;
+  closedAt?: string;
+  cancelledAt?: string;
 }

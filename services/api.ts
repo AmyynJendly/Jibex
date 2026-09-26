@@ -32,6 +32,14 @@ export const getJobDetail = useReal ? real.getJobDetail : mock.getJobDetail;
 export const optimizeRouteOrder = useReal ? real.optimizeRouteOrder : mock.optimizeRouteOrder;
 export const getNextStopId = useReal ? real.getNextStopId : mock.getNextStopId;
 
+// Pickups, transfers, returns and notifications (read-only). Notifications
+// are fetched by the user account id; everything else by the driver id.
+export const getPickups = useReal ? real.getPickups : mock.getPickups;
+export const getTransfers = useReal ? real.getTransfers : mock.getTransfers;
+export const getTransfer = useReal ? real.getTransfer : mock.getTransfer;
+export const getReturns = useReal ? real.getReturns : mock.getReturns;
+export const getNotifications = useReal ? real.getNotifications : mock.getNotifications;
+
 // Phone-only state over real parcels (the call log and the driver's order
 // live on the phone; the mock versions only know mock parcels).
 export const logCallAttempt = useReal ? real.logCallAttempt : mock.logCallAttempt;

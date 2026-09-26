@@ -1,5 +1,5 @@
 /** Matches the real backend's uppercase enum strings. */
-export type NotificationType = 'PICKUP' | 'DELIVERY' | 'CASH' | 'RETURN' | 'TRANSFER';
+export type NotificationType = 'PICKUP' | 'DELIVERY' | 'CASH' | 'RETURN' | 'TRANSFER' | 'INFO';
 
 /**
  * Where tapping a notification takes the driver.
@@ -27,4 +27,14 @@ export interface Notification {
   read: boolean;
   /** Omitted when the alert is purely informational and has nowhere to go. */
   target?: NotificationTarget;
+  /**
+   * The server's own classification, kept as sent. Its title and message
+   * arrive pre-written in one language; the type and reference are what
+   * would let the app write its own bilingual text later. Absent on mock data.
+   */
+  server?: {
+    type?: string;
+    referenceId?: string;
+    referenceType?: string;
+  };
 }

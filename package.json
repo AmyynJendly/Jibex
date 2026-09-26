@@ -10,7 +10,8 @@
     "test": "jest",
     "lint": "expo lint",
     "probe:login": "node --env-file-if-exists=.env.local scripts/probe-login.mjs",
-    "probe:runsheets": "node --env-file-if-exists=.env.local scripts/probe-runsheets.mjs"
+    "probe:runsheets": "node --env-file-if-exists=.env.local scripts/probe-runsheets.mjs",
+    "probe:driver-data": "node --env-file-if-exists=.env.local scripts/probe-driver-data.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/archivo": "^0.4.2",

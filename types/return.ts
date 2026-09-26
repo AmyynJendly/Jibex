@@ -22,4 +22,18 @@ export interface Return {
   scheduledAt: string;
   /** Local device photo URIs documenting damage — populated via `attachReturnPhoto`. */
   photoUris?: string[];
+  /**
+   * What the real server says. It sends returns as single parcels, not
+   * batches: each one becomes a return of one parcel. Absent on mock data.
+   */
+  server?: {
+    parcelId: string;
+    trackingNumber: string;
+    /** RETOUR_A_CHARGER (still to load) or EN_TRANSIT_RETOUR (loaded, to hand back). */
+    parcelStatus?: string;
+    senderName?: string;
+    senderPhone?: string;
+    senderAddress?: string;
+    returnType?: string;
+  };
 }
