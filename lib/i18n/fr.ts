@@ -145,6 +145,12 @@ const fr: TranslationResource = {
       current: 'Tous les colis sont traités',
       history: 'Aucun historique',
     },
+    history: {
+      correctableNote:
+        'Une erreur ? Touchez Maj pour la corriger — possible tant que l’agence n’a pas clôturé la tournée. Les colis des tournées clôturées sont verrouillés.',
+      allClosedNote: 'Ces tournées sont clôturées par l’agence : ces colis ne peuvent plus être modifiés.',
+      closedTag: 'Tournée clôturée',
+    },
     filters: {
       label: 'Filtrer',
       all: 'Tout',
@@ -165,6 +171,7 @@ const fr: TranslationResource = {
     correctSection: 'Corriger une erreur',
     markPending: 'Remettre en attente',
     reopenedToast: 'Statut rouvert',
+    runClosed: 'Cette tournée est clôturée par l’agence — elle ne peut plus être modifiée.',
     moreReasons: 'Autres motifs…',
   },
 
@@ -293,7 +300,12 @@ const fr: TranslationResource = {
     selectLabel: 'Marquer cette collecte comme effectuée',
     done: 'Terminer',
     doneWithCount: 'Terminer ({{count}})',
-    doneHint: 'Cochez les collectes effectuées, puis appuyez sur Terminer.',
+    doneHint: 'Clôturez toutes les collectes d’un coup, ou cochez seulement celles effectuées.',
+    doneAllWithCount: 'Tout terminer ({{count}})',
+    doneAllConfirmTitle_one: 'Marquer la collecte comme effectuée ?',
+    doneAllConfirmTitle_other: 'Marquer les {{count}} collectes comme effectuées ?',
+    doneAllConfirmMessage_one: 'Avec tous ses colis : {{names}}',
+    doneAllConfirmMessage_other: 'Avec tous leurs colis : {{names}}',
     doneSelectedNote_one: '{{count}} collecte prête à clôturer',
     doneSelectedNote_other: '{{count}} collectes prêtes à clôturer',
     doneConfirmTitle: 'Marquer les collectes',
@@ -358,6 +370,12 @@ const fr: TranslationResource = {
     toggleHistory: 'Historique',
     emptyHistory: 'Aucun retour passé',
     reorderedToast: 'Ordre enregistré',
+  },
+
+  historyFilter: {
+    all: 'Tout',
+    today: 'Aujourd’hui',
+    week: '7 derniers jours',
   },
 
   alerts: {

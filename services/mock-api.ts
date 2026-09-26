@@ -835,25 +835,36 @@ export async function getActiveParcels(): Promise<Job[]> {
   return [...ordered, ...locked].map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
-/** Everything already resolved — the read-only history list. Most recent runsheets first. */
+/**
+ * Everything already resolved — the history list. A parcel on a run that's
+ * still open can be corrected; one on a closed (VALIDE) run is read-only.
+ */
 export async function getHistoryParcels(): Promise<Job[]> {
   await delay(undefined);
   const ids = new Set(mockRunsheets.flatMap((r) => r.stopIds));
   return mockJobs
     .filter((j) => ids.has(j.id) && (j.status === 'DELIVERED' || j.status === 'FAILED'))
-    .map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+    .map((j) => ({
+      ...j,
+      packageInfo: { ...j.packageInfo },
+      correctable: mockRunsheets.find((r) => r.stopIds.includes(j.id))?.status !== 'VALIDE',
+    }));
 }
 
 /**
  * Puts a resolved parcel back into the active list — the driver's escape
  * hatch for marking the wrong package. Rolls back whatever the original
- * resolution contributed to the running stats.
+ * resolution contributed to the running stats. Only while its run is open:
+ * once the agency has closed it (VALIDE), the record stands.
  */
 export async function reopenParcel(id: string): Promise<ConfirmDeliveryResult> {
   await delay(undefined);
   const job = mockJobs.find((j) => j.id === id);
   if (!job) {
     return { success: false, error: 'common.genericError' };
+  }
+  if (mockRunsheets.find((r) => r.stopIds.includes(id))?.status === 'VALIDE') {
+    return { success: false, error: 'statusUpdate.runClosed' };
   }
 
   if (job.status === 'DELIVERED') {
@@ -886,12 +897,6 @@ export async function reopenParcel(id: string): Promise<ConfirmDeliveryResult> {
 
   job.status = 'PENDING';
 
-  // The runsheet is no longer finished, so it leaves history too.
-  const seed = mockRunsheets.find((r) => r.stopIds.includes(id));
-  if (seed && seed.status === 'VALIDE') {
-    seed.status = 'EN_COURS';
-  }
-
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
 
@@ -919,18 +924,6 @@ function isJobBlockedByUnconfirmedRunsheet(jobId: string): boolean {
   // Both cases block: never confirmed, and confirmed against a count that has
   // since changed (dispatch added or pulled a parcel mid-day).
   return seed.status === 'A_CONFIRMER' || seed.confirmedStopCount !== seed.stopIds.length;
-}
-
-/** Once every stop on a runsheet has been attempted (delivered or failed), the runsheet itself is done — flips it to VALIDE so it moves out of "current" into history. */
-function maybeCompleteRunsheet(jobId: string) {
-  const seed = mockRunsheets.find((r) => r.stopIds.includes(jobId));
-  if (!seed || seed.status === 'VALIDE') return;
-
-  const jobs = seed.stopIds.map((id) => mockJobs.find((j) => j.id === id)).filter((j): j is Job => !!j);
-  const allAttempted = jobs.length > 0 && jobs.every((j) => j.status === 'DELIVERED' || j.status === 'FAILED');
-  if (allAttempted) {
-    seed.status = 'VALIDE';
-  }
 }
 
 export async function getPickups(): Promise<Pickup[]> {
@@ -1145,7 +1138,6 @@ export async function confirmDeliveryWithOTP(
   if (!wasAlreadyDelivered) {
     recordDeliveryCompletion(cashAmount);
   }
-  maybeCompleteRunsheet(id);
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
@@ -1183,7 +1175,6 @@ export async function confirmDelivery(
   if (!wasAlreadyDelivered) {
     recordDeliveryCompletion(cashAmount);
   }
-  maybeCompleteRunsheet(id);
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
@@ -1215,7 +1206,6 @@ export async function confirmDeliveryWithPhoto(
   if (!wasAlreadyDelivered) {
     recordDeliveryCompletion(cashAmount);
   }
-  maybeCompleteRunsheet(id);
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
@@ -1251,7 +1241,6 @@ export async function markDeliveryFailed(
   if (!wasAlreadyFailed) {
     recordDeliveryFailure();
   }
-  maybeCompleteRunsheet(id);
 
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }

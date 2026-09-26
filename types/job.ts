@@ -81,6 +81,13 @@ export interface Job {
   callAttempts: number;
   /** ISO timestamp of the most recent call attempt, if any. */
   lastCallAt?: string;
+  /**
+   * Set on history parcels: whether a mistake on this one can still be put
+   * right. True while its runsheet is open — on the real server, until the
+   * agency closes the run (only an IN_PROGRESS run takes updates). Parcels
+   * on a closed run are read-only.
+   */
+  correctable?: boolean;
   /** What the real server says about this parcel beyond the fields above. Absent on mock data. */
   server?: ParcelServerInfo;
 }

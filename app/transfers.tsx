@@ -11,6 +11,7 @@ import { Card } from '../components/Card';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { HandoffQrSheet } from '../components/HandoffQrSheet';
 import { EmptyState } from '../components/EmptyState';
+import { HistoryDateFilter } from '../components/HistoryDateFilter';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
@@ -28,6 +29,7 @@ import {
   useColors,
 } from '../constants';
 import { localeTag } from '../lib/date';
+import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { useScreenState, useTransfers } from '../lib/query';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { setTransferOrder } from '../services/api';
@@ -47,6 +49,7 @@ export default function TransfersScreen() {
   const highlightedId = useFocusHighlight();
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
@@ -61,7 +64,16 @@ export default function TransfersScreen() {
   }
 
   const current = transfers?.filter((tr) => tr.status === 'IN_PROGRESS') ?? [];
-  const history = transfers?.filter((tr) => tr.status === 'COMPLETED') ?? [];
+  // History, by when the batch was handed over (or scheduled, on mock data).
+  const history =
+    transfers?.filter(
+      (tr) =>
+        tr.status === 'COMPLETED' &&
+        matchesDateFilter(
+          tr.server?.completedAt ?? tr.server?.receivedAt ?? tr.server?.closedAt ?? tr.scheduledAt,
+          dateFilter
+        )
+    ) ?? [];
   // History is read-only: no QR, no actions of any kind.
   const isHistory = toggle === 'history';
   const displayed = isHistory ? history : current;
@@ -166,6 +178,7 @@ export default function TransfersScreen() {
           value={toggle}
           onChange={setToggle}
         />
+        {isHistory && <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />}
 
         {screen.isError && !transfers ? (
           <LoadError onRetry={screen.retry} retrying={screen.retrying} />

@@ -1173,7 +1173,16 @@ export async function getHistoryParcels(): Promise<Job[]> {
   const { runsheets, jobs } = await loadDriverData();
   const current = jobs.filter((job) => !isOpen(job));
   const past = await pastRunsheetJobs(new Set(runsheets.map((r) => r.id)));
-  return [...current, ...past].map(copy);
+  return [...current, ...past].map((job) => ({ ...copy(job), correctable: isCorrectable(job) }));
+}
+
+/**
+ * A delivered or failed parcel can still be put right while its run is
+ * open — the server takes parcel updates only while the run is
+ * IN_PROGRESS, and stops once the agency closes it.
+ */
+function isCorrectable(job: Job): boolean {
+  return job.server?.runsheetStatus === 'IN_PROGRESS';
 }
 
 // ── The driver's numbers ──────────────────────────────────────────────────

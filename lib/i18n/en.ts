@@ -147,6 +147,12 @@ const en = {
       current: 'All packages done - nothing left to deliver',
       history: 'No history yet',
     },
+    history: {
+      correctableNote:
+        'Marked one wrong? Tap Update to fix it — possible until the agency closes the run. Parcels on closed runs are locked.',
+      allClosedNote: 'These runs are closed by the agency, so these parcels can’t be changed.',
+      closedTag: 'Run closed',
+    },
     filters: {
       label: 'Filter',
       all: 'All',
@@ -167,6 +173,7 @@ const en = {
     correctSection: 'Correct a mistake',
     markPending: 'Move back to pending',
     reopenedToast: 'Status reopened',
+    runClosed: 'This run is closed by the agency — it can’t be changed any more.',
     moreReasons: 'More reasons…',
   },
 
@@ -295,7 +302,12 @@ const en = {
     selectLabel: 'Mark this stop collected',
     done: 'Done',
     doneWithCount: 'Done ({{count}})',
-    doneHint: 'Tick the stops you have collected, then press Done.',
+    doneHint: 'Close every stop at once, or tick only the ones you collected.',
+    doneAllWithCount: 'Done All ({{count}})',
+    doneAllConfirmTitle_one: 'Mark the {{count}} pickup as collected?',
+    doneAllConfirmTitle_other: 'Mark all {{count}} pickups as collected?',
+    doneAllConfirmMessage_one: 'With every package in it: {{names}}',
+    doneAllConfirmMessage_other: 'With every package in them: {{names}}',
     doneSelectedNote_one: '{{count}} stop ready to close out',
     doneSelectedNote_other: '{{count}} stops ready to close out',
     doneConfirmTitle: 'Mark pickups collected',
@@ -360,6 +372,12 @@ const en = {
     toggleHistory: 'History',
     emptyHistory: 'No past returns',
     reorderedToast: 'Order saved',
+  },
+
+  historyFilter: {
+    all: 'All',
+    today: 'Today',
+    week: 'Last 7 days',
   },
 
   alerts: {

@@ -77,6 +77,11 @@ interface ParcelCardProps {
   readOnly?: boolean;
   /** Parcels on a run the driver hasn't signed for yet: visible, but inert. */
   locked?: boolean;
+  /**
+   * History only: the parcel's run is closed, so it can't be changed any
+   * more. Shown as a lock and this label where the Update button would be.
+   */
+  closedLabel?: string;
   /** Present only for a workable stop in the current tab — spreads onto `DragHandle`. */
   drag?: DragBinding;
   /** Tapping the card opens its stop screen, zooming out of the card on iOS. */
@@ -98,6 +103,7 @@ function ParcelCard({
   stopNumber,
   readOnly = false,
   locked = false,
+  closedLabel,
   drag,
   opensStop = false,
   onCall,
@@ -173,10 +179,12 @@ function ParcelCard({
           label={hasCod ? formatCurrency(job.cashToCollect) : t('runsheets.paidTag')}
         />
 
-        {locked ? (
+        {locked || closedLabel ? (
           <View style={styles.lockedRow}>
             <Icon name="lock-closed-outline" size={13} color={colors.textTertiary} />
-            <Text style={[styles.lockedText, { color: colors.textTertiary }]}>{lockedLabel}</Text>
+            <Text style={[styles.lockedText, { color: colors.textTertiary }]}>
+              {closedLabel ?? lockedLabel}
+            </Text>
           </View>
         ) : (
           <View style={styles.cardActions}>
@@ -328,6 +336,7 @@ export default function RunsheetsScreen() {
   const filteredHistory = (history ?? []).filter((j) =>
     filter === 'all' ? true : j.status === filter
   );
+  const anyCorrectable = (history ?? []).some((j) => j.correctable);
   const codTotal = (active ?? []).reduce((sum, j) => sum + j.cashToCollect, 0);
   const currentCount = workable.length + lockedParcels.length;
 
@@ -400,6 +409,17 @@ export default function RunsheetsScreen() {
                 value={filter}
                 onChange={setFilter}
               />
+              {/* Why some cards have Update and others a lock. */}
+              {(history?.length ?? 0) > 0 && (
+                <View style={[styles.historyNote, { backgroundColor: colors.accentSoft }]}>
+                  <Icon name="information-circle-outline" size={16} color={colors.accent} />
+                  <Text style={[styles.historyNoteText, { color: colors.text }]}>
+                    {anyCorrectable
+                      ? t('runsheets.history.correctableNote')
+                      : t('runsheets.history.allClosedNote')}
+                  </Text>
+                </View>
+              )}
             </View>
           }
           ListEmptyComponent={empty}
@@ -411,6 +431,9 @@ export default function RunsheetsScreen() {
                 scheme={scheme}
                 highlighted={job.id === highlightedId}
                 readOnly
+                // Open run: Update, to put a mistake right. Closed run: a lock.
+                onUpdate={job.correctable ? () => setSheetJob(job) : undefined}
+                closedLabel={job.correctable ? undefined : t('runsheets.history.closedTag')}
                 updateLabel={t('runsheets.update')}
                 callLabel={t('runsheets.call')}
                 lockedLabel={t('runsheets.confirm.lockedTag')}
@@ -622,6 +645,19 @@ const styles = StyleSheet.create({
     gap: Spacing.mlg,
   },
   skeletonGroup: { gap: Spacing.md },
+  historyNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    borderRadius: Radii.lg,
+    padding: Spacing.md,
+  },
+  historyNoteText: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   confirmCard: {
     borderRadius: Radii.card,
     borderWidth: 1.5,

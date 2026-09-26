@@ -11,6 +11,7 @@ import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
+import { HistoryDateFilter } from '../components/HistoryDateFilter';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
@@ -26,6 +27,7 @@ import {
   useColors,
 } from '../constants';
 import { localeTag } from '../lib/date';
+import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
@@ -50,6 +52,7 @@ export default function ReturnsScreen() {
   const highlightedId = useFocusHighlight();
   const [confirming, setConfirming] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(localeTag(i18n.language), {
@@ -59,7 +62,8 @@ export default function ReturnsScreen() {
   }
 
   const pending = returns?.filter((r) => r.status === 'PENDING_PICKUP') ?? [];
-  const processed = returns?.filter((r) => r.status === 'PROCESSED') ?? [];
+  const processed =
+    returns?.filter((r) => r.status === 'PROCESSED' && matchesDateFilter(r.scheduledAt, dateFilter)) ?? [];
   const isHistory = toggle === 'history';
   const displayed = isHistory ? processed : pending;
   const pendingParcelTotal = displayed.reduce((sum, r) => sum + r.parcelCount, 0);
@@ -216,6 +220,7 @@ export default function ReturnsScreen() {
           value={toggle}
           onChange={setToggle}
         />
+        {isHistory && <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />}
 
         {!isHistory && pending.length > 0 && (
           <View style={[styles.inverseNote, { backgroundColor: colors.warningSoft }]}>

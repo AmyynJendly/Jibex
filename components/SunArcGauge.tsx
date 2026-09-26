@@ -10,6 +10,7 @@ import Animated, {
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { monoLabelStyle, monoStyle, useColors } from '../constants';
+import { formatDecimal } from '../lib/currency';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -105,7 +106,7 @@ export function SunArcGauge({ percent, caption, style, scale = 1 }: SunArcGaugeP
       </Svg>
       <View style={styles.textStack} pointerEvents="none">
         <Text style={[monoStyle(40 * scale, 'medium'), { color: colors.text }]}>
-          {Math.round(clamped)}%
+          {formatDecimal(clamped)}%
         </Text>
         <Text style={[monoLabelStyle(11 * scale, 0.18), { color: colors.textTertiary }]}>{caption}</Text>
       </View>

@@ -13,6 +13,7 @@ import { PackageCube } from '../components/PackageCube';
 import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
 import { EmptyState } from '../components/EmptyState';
+import { HistoryDateFilter } from '../components/HistoryDateFilter';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -29,6 +30,7 @@ import {
   type ColorPalette,
 } from '../constants';
 import { formatCurrency } from '../lib/currency';
+import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
@@ -218,9 +220,16 @@ export default function PickupsScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
-  const completed = pickups?.filter((p) => p.status === 'COMPLETED') ?? [];
+  // History, by when it was collected (or was due, when the server has no time for it).
+  const completed =
+    pickups?.filter(
+      (p) =>
+        p.status === 'COMPLETED' &&
+        matchesDateFilter(p.server?.completedAt ?? p.requestedByDate, dateFilter)
+    ) ?? [];
   const displayed = segment === 'SCHEDULED' ? scheduled : completed;
 
   // Ticking a stop is how the driver picks which ones they've actually
@@ -243,6 +252,25 @@ export default function PickupsScreen() {
     if (!confirmed) return;
 
     await completeAndReport(selected.map((p) => p.id));
+  }
+
+  /** "Done all": every scheduled pickup at once, no ticking — after one confirmation. */
+  async function handleDoneAll() {
+    if (scheduled.length === 0 || completing) return;
+    if (!requireOnline()) return;
+
+    const confirmed = await confirm({
+      title: t('pickups.doneAllConfirmTitle', { count: scheduled.length }),
+      message: t('pickups.doneAllConfirmMessage', {
+        count: scheduled.length,
+        names: scheduled.map((p) => p.businessName).join(', '),
+      }),
+      confirmLabel: t('pickups.doneConfirmAction'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!confirmed) return;
+
+    await completeAndReport(scheduled.map((p) => p.id));
   }
 
   /**
@@ -333,6 +361,7 @@ export default function PickupsScreen() {
                 value={segment}
                 onChange={setSegment}
               />
+              <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />
             </View>
           }
           ListEmptyComponent={
@@ -429,22 +458,21 @@ export default function PickupsScreen() {
               ? t('pickups.doneHint')
               : t('pickups.doneSelectedNote', { count: selected.length })}
           </Text>
+          {/* Nothing ticked: the button closes every stop at once. Tick some,
+              and it closes just those. */}
           <AnimatedPressable
             scaleTo={0.95}
-            disabled={selected.length === 0 || completing}
+            disabled={completing}
             style={[
               styles.doneButton,
-              {
-                backgroundColor: colors.success,
-                opacity: selected.length === 0 || completing ? 0.4 : 1,
-              },
+              { backgroundColor: colors.success, opacity: completing ? 0.4 : 1 },
             ]}
-            onPress={handleDoneSelected}>
+            onPress={selected.length > 0 ? handleDoneSelected : handleDoneAll}>
             <Icon name="checkmark-done" size={17} color="#fff" />
             <Text style={styles.doneButtonText}>
               {selected.length > 0
                 ? t('pickups.doneWithCount', { count: selected.length })
-                : t('pickups.done')}
+                : t('pickups.doneAllWithCount', { count: scheduled.length })}
             </Text>
           </AnimatedPressable>
         </View>

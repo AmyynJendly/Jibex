@@ -215,6 +215,19 @@ describe('real runsheets', () => {
     expect(history.find((job) => job.id === 'TRK-00000401')?.server?.runsheetStatus).toBe('COMPLETED');
   });
 
+  it('lets a mistake be corrected only while its run is open', async () => {
+    const api = await signedIn();
+    const correctable = Object.fromEntries((await api.getHistoryParcels()).map((job) => [job.id, job.correctable]));
+    // IN_PROGRESS run: correctable. Runs the agency closed: read-only.
+    expect(correctable).toEqual({
+      'TRK-00000503': true,
+      'TRK-00000504': true,
+      'TRK-00000401': false,
+      'TRK-00000402': false,
+      'TRK-00000301': false,
+    });
+  });
+
   it('works the Profile numbers out from real runs, and leaves out what it can’t know', async () => {
     const api = await signedIn();
     const stats = await api.getDriverStats();

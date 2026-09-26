@@ -244,8 +244,10 @@ describe('undoing a delivery gives the money back', () => {
   });
 });
 
-describe('a run finishes when its last parcel is done', () => {
-  it('stays open while parcels remain, and closes on the last one', async () => {
+// The agency closes a run, not the driver's last parcel — so a mistake on
+// the last stop can still be put right, same as on the real server.
+describe('a run stays open after its last parcel', () => {
+  it('stays open through the last parcel, so every stop stays correctable', async () => {
     const api = freshApi();
     const runsheets = await api.getRunsheets();
     const run = runsheets.find((r) => !r.needsConfirmation && r.status === 'EN_COURS');
@@ -255,14 +257,31 @@ describe('a run finishes when its last parcel is done', () => {
     const open = active.filter((p) => run.stopIds.includes(p.id));
     expect(open.length).toBeGreaterThan(0);
 
-    for (const [index, parcel] of open.entries()) {
+    for (const parcel of open) {
       await api.logCallAttempt(parcel.id);
       await api.confirmDeliveryWithPhoto(parcel.id, 'file://proof.jpg', parcel.cashToCollect);
 
       const state = (await api.getRunsheets()).find((r) => r.id === run.id);
-      const isLast = index === open.length - 1;
-      expect(state?.status).toBe(isLast ? 'VALIDE' : 'EN_COURS');
+      expect(state?.status).toBe('EN_COURS');
     }
+    const history = await api.getHistoryParcels();
+    for (const parcel of open) {
+      expect(history.find((p) => p.id === parcel.id)?.correctable).toBe(true);
+    }
+  });
+
+  it('keeps parcels on a closed run read-only', async () => {
+    const api = freshApi();
+    const closed = (await api.getRunsheets()).find((r) => r.status === 'VALIDE');
+    if (!closed) throw new Error('seed data has no closed run');
+    const history = await api.getHistoryParcels();
+    const onClosed = history.filter((p) => closed.stopIds.includes(p.id));
+    expect(onClosed.length).toBeGreaterThan(0);
+    expect(onClosed.every((p) => p.correctable === false)).toBe(true);
+
+    const refused = await api.reopenParcel(onClosed[0].id);
+    expect(refused).toEqual({ success: false, error: 'statusUpdate.runClosed' });
+    expect((await api.getHistoryParcels()).map((p) => p.id)).toContain(onClosed[0].id);
   });
 });
 
