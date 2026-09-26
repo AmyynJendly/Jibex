@@ -11,6 +11,7 @@ import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
+import { COMMON_REASONS } from '../lib/failureReasons';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
 import {
   confirmDelivery,
@@ -20,16 +21,12 @@ import {
 } from '../services/mock-api';
 import type { DeliveryFailureReason, Job } from '../types';
 
-/** The real 7 failure reasons — same list as the full-screen Can't Deliver flow. */
-const REASONS: DeliveryFailureReason[] = [
-  'CUSTOMER_ABSENT',
-  'REFUSED',
-  'INCORRECT_ADDRESS',
-  'INCOMPLETE_ADDRESS',
-  'PHONE_UNREACHABLE',
-  'NO_ANSWER',
-  'OTHER',
-];
+/**
+ * The sheet offers only the reasons drivers pick most, as one tap each; the
+ * other thirteen (and "Other", which needs a note) are one tap further, on
+ * the full Can't Deliver screen with search and groups.
+ */
+const QUICK_REASONS: DeliveryFailureReason[] = COMMON_REASONS.map((r) => r.value);
 
 interface StatusUpdateSheetProps {
   /** The sheet is visible whenever this is non-null. */
@@ -121,6 +118,14 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
     });
   }
 
+  /** Every reason, searchable, on its own screen. */
+  function handleMoreReasons() {
+    if (!job) return;
+    const { id } = job;
+    handleClose();
+    router.push({ pathname: '/job/[id]/cant-deliver', params: { id } });
+  }
+
   async function handleConfirmFailed() {
     if (!job || !reason || submitting) return;
     setSubmitting(true);
@@ -203,7 +208,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                   {t('statusUpdate.failedSection')}
                 </Text>
                 <View style={styles.chipRow}>
-                  {REASONS.map((value) => {
+                  {QUICK_REASONS.map((value) => {
                     const selected = reason === value;
                     return (
                       <AnimatedPressable
@@ -223,6 +228,15 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                       </AnimatedPressable>
                     );
                   })}
+                  <AnimatedPressable
+                    scaleTo={0.95}
+                    accessibilityRole="button"
+                    onPress={handleMoreReasons}
+                    style={[styles.chip, { backgroundColor: 'transparent', borderColor: colors.separator }]}>
+                    <Text style={[styles.chipText, { color: colors.textSecondary }]}>
+                      {t('statusUpdate.moreReasons')}
+                    </Text>
+                  </AnimatedPressable>
                 </View>
 
                 <PrimaryButton

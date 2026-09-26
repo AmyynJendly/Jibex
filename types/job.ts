@@ -9,14 +9,33 @@ export interface PackageInfo {
 }
 
 /** Why a delivery attempt failed — drives the Can't Deliver reason picker. Matches the real backend's uppercase enum strings. */
+/**
+ * The backend's failure reasons, by their exact enum names — stored and sent
+ * as-is. Labels, grouping and which ones the driver may pick live in
+ * `lib/failureReasons`.
+ */
 export type DeliveryFailureReason =
-  | 'CUSTOMER_ABSENT'
+  | 'ABSENT'
   | 'REFUSED'
-  | 'INCORRECT_ADDRESS'
+  | 'WRONG_ADDRESS'
   | 'INCOMPLETE_ADDRESS'
-  | 'PHONE_UNREACHABLE'
+  | 'PHONE_OFF'
   | 'NO_ANSWER'
-  | 'OTHER';
+  | 'OTHER'
+  | 'CANCELLED_BY_CLIENT'
+  | 'NOT_INTERESTED_2ND_ATTEMPT'
+  | 'WRONG_NUMBER_2ND_ATTEMPT'
+  | 'DUPLICATE_ORDER'
+  | 'RETURN_CONFIRMED_BY_SENDER'
+  | 'NON_COMPLIANT_ORDER'
+  | 'INCORRECT_AMOUNT'
+  | 'NOT_AVAILABLE_RESCHEDULED'
+  | 'UNRELIABLE_CLIENT'
+  | 'CALL_REFUSED'
+  | 'LINE_BUSY'
+  | 'WRONG_PAYMENT_MODE'
+  | 'PARCEL_POSTPONED'
+  | 'FORCE_MAJEURE';
 
 export interface GeoPoint {
   lat: number;

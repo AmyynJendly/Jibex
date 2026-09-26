@@ -1,5 +1,7 @@
 import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
+import * as device from '../lib/deviceStore';
+import { reasonNeedsNote } from '../lib/failureReasons';
 import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids';
 import type {
   DeliveryFailureReason,
@@ -36,8 +38,17 @@ import type {
  * staring at placeholders. Kept as a function (rather than deleted from ~40
  * call sites) so these stay `async` for the day they hit a real API.
  */
+/**
+ * Every call waits for the phone's own saved state (stop order, call log) to
+ * load once, so nothing is answered from defaults and then contradicted a
+ * moment later — the first list after a restart already has the driver's
+ * order and their calls in it.
+ */
+let deviceReady: Promise<void> | null = null;
+
 function delay<T>(value: T): Promise<T> {
-  return Promise.resolve(value);
+  deviceReady ??= device.hydrateDeviceStore().then(syncCallsFromDevice);
+  return deviceReady.then(() => value);
 }
 
 // ---------------------------------------------------------------------------
@@ -106,63 +117,58 @@ function nearestNeighborOrder(jobs: Job[], start: GeoPoint): Job[] {
   return ordered;
 }
 
-/**
- * Restores a driver's hand-picked order over a fresh set of items: whatever
- * `order` lists comes first (in that sequence), anything new that dispatch
- * added since — a stop, a pickup, a batch — falls in after, rather than
- * vanishing or forcing a re-drag of everything.
- */
-function reseat<T extends { id: string }>(order: string[], items: T[]): T[] {
-  const byId = new Map(items.map((item) => [item.id, item] as const));
-  const kept = order.map((id) => byId.get(id)).filter((item): item is T => !!item);
-  const keptIds = new Set(kept.map((item) => item.id));
-  return [...kept, ...items.filter((item) => !keptIds.has(item.id))];
-}
-
 // ---------------------------------------------------------------------------
 // Driver-owned order — stop sequence for Runsheets/Home, and one manual sort
 // per list for Pickups/Transfers/Returns. `nearestFirst` only applies to
-// stops (the only list with real GPS coordinates to sort by); dragging any
-// of these lists persists an id order that survives until the driver drags
-// again or, for stops, flips nearest-first back on.
+// stops (the only list with real GPS coordinates to sort by). None of it
+// exists on the server, so it's kept on the phone (`lib/deviceStore`) and
+// survives the app being closed.
 // ---------------------------------------------------------------------------
 
-let mockNearestFirst = true;
-let mockStopOrder: string[] = [];
-let mockPickupOrder: string[] = [];
-let mockTransferOrder: string[] = [];
-let mockReturnOrder: string[] = [];
+/** Which runsheet a stop belongs to — how the saved order is filed. */
+function runsheetOf(stopId: string): string | undefined {
+  return mockRunsheets.find((r) => r.stopIds.includes(stopId))?.id;
+}
 
 export async function getNearestFirst(): Promise<boolean> {
-  return delay(mockNearestFirst);
+  await delay(undefined);
+  return device.isNearestFirst();
 }
 
 /** Toggled on, the driver's manual stop order is kept but stops driving anything — flip it back off to resume it. */
 export async function setNearestFirst(enabled: boolean): Promise<void> {
   await delay(undefined);
-  mockNearestFirst = enabled;
+  await device.setNearestFirst(enabled);
 }
 
 /** A driver dragging their own order is a deliberate override — it turns nearest-first off rather than fighting it. */
 export async function setStopOrder(orderedIds: string[]): Promise<void> {
   await delay(undefined);
-  mockStopOrder = orderedIds;
-  mockNearestFirst = false;
+  await device.saveStopOrder(orderedIds, runsheetOf);
 }
 
 export async function setPickupOrder(orderedIds: string[]): Promise<void> {
   await delay(undefined);
-  mockPickupOrder = orderedIds;
+  await device.saveListOrder('pickups', orderedIds);
 }
 
 export async function setTransferOrder(orderedIds: string[]): Promise<void> {
   await delay(undefined);
-  mockTransferOrder = orderedIds;
+  await device.saveListOrder('transfers', orderedIds);
 }
 
 export async function setReturnOrder(orderedIds: string[]): Promise<void> {
   await delay(undefined);
-  mockReturnOrder = orderedIds;
+  await device.saveListOrder('returns', orderedIds);
+}
+
+/** The seed parcels' call counts come from the phone's saved call log. */
+function syncCallsFromDevice() {
+  for (const job of mockJobs) {
+    const calls = device.callsFor(job.id);
+    job.callAttempts = calls.length;
+    job.lastCallAt = calls.at(-1);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -246,7 +252,7 @@ const mockJobs: Job[] = [
     address: 'Zone Industrielle, Sfax',
     packageInfo: { count: 4, weightLbs: 12.5, fragile: false },
     status: 'FAILED',
-    failureReason: 'INCORRECT_ADDRESS',
+    failureReason: 'WRONG_ADDRESS',
     cashToCollect: 0,
     location: { lat: 34.72, lng: 10.69 },
     callAttempts: 0,
@@ -842,7 +848,9 @@ export async function getActiveParcels(): Promise<Job[]> {
   // ordering for a slot among them.
   const workable = jobs.filter((j) => !isJobBlockedByUnconfirmedRunsheet(j.id));
   const locked = jobs.filter((j) => isJobBlockedByUnconfirmedRunsheet(j.id));
-  const ordered = mockNearestFirst ? nearestNeighborOrder(workable, DEPOT) : reseat(mockStopOrder, workable);
+  const ordered = device.isNearestFirst()
+    ? nearestNeighborOrder(workable, DEPOT)
+    : device.applyStopOrder(workable, runsheetOf);
   return [...ordered, ...locked].map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
@@ -917,8 +925,9 @@ export async function logCallAttempt(id: string): Promise<Job> {
   if (!job) {
     throw new Error(`Job ${id} not found`);
   }
-  job.callAttempts += 1;
-  job.lastCallAt = new Date().toISOString();
+  const calls = await device.recordCall(id);
+  job.callAttempts = calls.length;
+  job.lastCallAt = calls.at(-1);
   return { ...job, packageInfo: { ...job.packageInfo } };
 }
 
@@ -945,8 +954,8 @@ function maybeCompleteRunsheet(jobId: string) {
 
 export async function getPickups(): Promise<Pickup[]> {
   await delay(undefined);
-  const scheduled = reseat(
-    mockPickupOrder,
+  const scheduled = device.applyListOrder(
+    'pickups',
     mockPickups.filter((p) => p.status === 'SCHEDULED')
   );
   const rest = mockPickups.filter((p) => p.status !== 'SCHEDULED');
@@ -971,8 +980,8 @@ export async function completePickups(ids: string[]): Promise<Pickup[]> {
 
 export async function getTransfers(): Promise<Transfer[]> {
   await delay(undefined);
-  const current = reseat(
-    mockTransferOrder,
+  const current = device.applyListOrder(
+    'transfers',
     mockTransfers.filter((tr) => tr.status === 'IN_PROGRESS')
   );
   const rest = mockTransfers.filter((tr) => tr.status !== 'IN_PROGRESS');
@@ -997,8 +1006,8 @@ export async function confirmReturns(ids: string[]): Promise<Return[]> {
 
 export async function getReturns(): Promise<Return[]> {
   await delay(undefined);
-  const pending = reseat(
-    mockReturnOrder,
+  const pending = device.applyListOrder(
+    'returns',
     mockReturns.filter((r) => r.status === 'PENDING_PICKUP')
   );
   const rest = mockReturns.filter((r) => r.status !== 'PENDING_PICKUP');
@@ -1082,10 +1091,11 @@ export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
   const outstanding = jobs.filter((j) => j.status === 'PENDING' || j.status === 'IN_TRANSIT');
   const done = jobs.filter((j) => j.status === 'DELIVERED' || j.status === 'FAILED');
 
-  const ordered = mockNearestFirst
+  await delay(undefined);
+  const ordered = device.isNearestFirst()
     ? nearestNeighborOrder(outstanding, DEPOT)
-    : reseat(mockStopOrder, outstanding);
-  return delay([...ordered.map((j) => j.id), ...done.map((j) => j.id)]);
+    : device.applyStopOrder(outstanding, runsheetOf);
+  return ([...ordered.map((j) => j.id), ...done.map((j) => j.id)]);
 }
 
 /** The nearest not-yet-delivered stop to wherever the driver just finished — recomputed live, not a fixed index. */
@@ -1118,7 +1128,7 @@ export async function confirmDeliveryWithOTP(
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
     return { success: false, error: 'runsheets.confirm.blockedError' };
   }
-  if (job.callAttempts === 0) {
+  if (!device.hasCalled(id)) {
     return { success: false, error: 'statusUpdate.callRequired' };
   }
 
@@ -1161,7 +1171,7 @@ export async function confirmDelivery(
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
     return { success: false, error: 'runsheets.confirm.blockedError' };
   }
-  if (job.callAttempts === 0) {
+  if (!device.hasCalled(id)) {
     return { success: false, error: 'statusUpdate.callRequired' };
   }
 
@@ -1192,7 +1202,7 @@ export async function confirmDeliveryWithPhoto(
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
     return { success: false, error: 'runsheets.confirm.blockedError' };
   }
-  if (job.callAttempts === 0) {
+  if (!device.hasCalled(id)) {
     return { success: false, error: 'statusUpdate.callRequired' };
   }
 
@@ -1229,6 +1239,10 @@ export async function markDeliveryFailed(
   }
   if (isJobBlockedByUnconfirmedRunsheet(id)) {
     return { success: false, error: 'runsheets.confirm.blockedError' };
+  }
+  // "Other" tells dispatch nothing by itself — the note is the reason.
+  if (reasonNeedsNote(reason) && !note?.trim()) {
+    return { success: false, error: 'cantDeliver.noteRequired' };
   }
 
   const wasAlreadyFailed = job.status === 'FAILED';

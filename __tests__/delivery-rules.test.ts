@@ -13,6 +13,11 @@
 
 type Api = typeof import('../services/mock-api');
 
+// Each test starts on a phone with nothing saved yet (see jest.setup.ts).
+beforeEach(() => {
+  (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
+});
+
 /** A fresh copy of the API with untouched seed data. */
 function freshApi(): Api {
   let api!: Api;
@@ -80,7 +85,7 @@ describe('a failure reason can carry the driver\'s location', () => {
     const parcel = await workableParcel(api);
     const fix = { lat: 35.848, lng: 10.5975 };
 
-    const result = await api.markDeliveryFailed(parcel.id, 'CUSTOMER_ABSENT', undefined, fix);
+    const result = await api.markDeliveryFailed(parcel.id, 'ABSENT', undefined, fix);
 
     expect(result.success).toBe(true);
     expect(result.job?.failureLocation).toEqual(fix);
@@ -90,7 +95,7 @@ describe('a failure reason can carry the driver\'s location', () => {
     const api = freshApi();
     const parcel = await workableParcel(api);
 
-    const result = await api.markDeliveryFailed(parcel.id, 'CUSTOMER_ABSENT');
+    const result = await api.markDeliveryFailed(parcel.id, 'ABSENT');
 
     expect(result.success).toBe(true);
     expect(result.job?.failureLocation).toBeUndefined();
@@ -101,7 +106,7 @@ describe('a failure reason can carry the driver\'s location', () => {
     const parcel = await workableParcel(api);
     const fix = { lat: 35.848, lng: 10.5975 };
 
-    await api.markDeliveryFailed(parcel.id, 'CUSTOMER_ABSENT', undefined, fix);
+    await api.markDeliveryFailed(parcel.id, 'ABSENT', undefined, fix);
     const reopened = await api.reopenParcel(parcel.id);
 
     expect(reopened.failureLocation).toBeUndefined();
@@ -275,5 +280,60 @@ describe('re-confirmation when the count changes', () => {
 
     const after = (await api.getRunsheets()).find((r) => r.id === recount.id);
     expect(after?.needsConfirmation).toBe(false);
+  });
+});
+
+/**
+ * What only the phone knows — the driver's stop order and the calls they
+ * placed — has to outlive the app being closed. A fresh `freshApi()` is a
+ * relaunch: all in-memory state is gone, only saved storage carries over.
+ */
+describe('phone-side state survives closing the app', () => {
+  it('keeps a logged call, so the delivery gate still opens after a restart', async () => {
+    const before = freshApi();
+    const parcel = await workableParcel(before);
+    await before.logCallAttempt(parcel.id);
+    await before.logCallAttempt(parcel.id);
+
+    const after = freshApi();
+    const reloaded = (await after.getActiveParcels()).find((p) => p.id === parcel.id);
+    expect(reloaded?.callAttempts).toBe(2);
+    expect(reloaded?.lastCallAt).toBeDefined();
+
+    const result = await after.confirmDelivery(parcel.id, parcel.cashToCollect);
+    expect(result.success).toBe(true);
+  });
+
+  it('still blocks delivery after a restart when the driver never called', async () => {
+    const before = freshApi();
+    const parcel = await workableParcel(before);
+
+    const after = freshApi();
+    const result = await after.confirmDelivery(parcel.id, parcel.cashToCollect);
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('statusUpdate.callRequired');
+  });
+
+  it('re-applies the dragged stop order, with nearest-first still off', async () => {
+    // Sign for every run so all stops can be ordered. The mock server's seed
+    // data resets on reload (a real server wouldn't), so the relaunched app
+    // signs for them again — only the order itself comes from the phone.
+    const signForAll = async (api: Api) => {
+      for (const run of await api.getRunsheets()) {
+        if (run.needsConfirmation) await api.confirmRunsheetReceipt(run.id);
+      }
+    };
+
+    const before = freshApi();
+    await signForAll(before);
+    const dragged = (await before.getActiveParcels()).map((p) => p.id).reverse();
+    expect(dragged.length).toBeGreaterThan(1);
+    await before.setStopOrder(dragged);
+
+    const after = freshApi();
+    await signForAll(after);
+    expect(await after.getNearestFirst()).toBe(false);
+    const reloaded = (await after.getActiveParcels()).map((p) => p.id);
+    expect(reloaded).toEqual(dragged);
   });
 });
