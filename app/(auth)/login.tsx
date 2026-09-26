@@ -14,8 +14,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { TickerMarquee } from '../../components/TickerMarquee';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, morphIn, useColors } from '../../constants';
 import { DISPATCH_PHONE, telUrl } from '../../lib/phone';
-import { saveToken } from '../../lib/token';
-import { login } from '../../services/mock-api';
+import { login } from '../../services/api';
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -39,7 +38,7 @@ export default function LoginScreen() {
       return;
     }
 
-    await saveToken(result.token);
+    // `login` has already stored the session securely.
     router.replace('/(tabs)/home');
   }
 

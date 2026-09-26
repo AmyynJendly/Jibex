@@ -1,6 +1,6 @@
 import { Linking, Platform } from 'react-native';
 
-import { logCallAttempt } from '../services/mock-api';
+import { logCallAttempt } from '../services/api';
 import type { Job } from '../types';
 import { telUrl } from './phone';
 import { invalidateDeliveryData } from './query';

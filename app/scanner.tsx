@@ -20,7 +20,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useToast } from '../components/Toast';
 import { Fonts, Radii, Spacing, Typography, monoStyle } from '../constants';
 import { invalidateDeliveryData, invalidateReturns, invalidateTransfers } from '../lib/query';
-import { confirmScan } from '../services/mock-api';
+import { confirmScan } from '../services/api';
 
 /**
  * Scanner is always dark, regardless of system theme — it's a camera

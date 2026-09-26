@@ -2,6 +2,7 @@ import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
 import { reasonNeedsNote } from '../lib/failureReasons';
+import { clearSession, saveSession } from '../lib/session';
 import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids';
 import type {
   DeliveryFailureReason,
@@ -748,11 +749,20 @@ export async function login(username: string, password: string): Promise<LoginRe
     return { success: false, error: 'auth.login.errors.invalidCredentials' };
   }
 
-  return {
-    success: true,
+  const token = `mock-token-${mockUser.id}-${Date.now()}`;
+  // Kept exactly as a real sign-in is, so the app's start-up and sign-out
+  // behave the same on mock data as on the server.
+  await saveSession(token, {
+    mode: 'mock',
     user: { ...mockUser },
-    token: `mock-token-${mockUser.id}-${Date.now()}`,
-  };
+    userId: mockUser.id,
+    driverId: mockUser.id,
+  });
+  return { success: true, user: { ...mockUser }, token };
+}
+
+export async function logout(): Promise<void> {
+  await clearSession();
 }
 
 export interface RegisterParams {

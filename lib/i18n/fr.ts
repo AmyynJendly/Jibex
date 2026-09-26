@@ -76,8 +76,12 @@ const fr: TranslationResource = {
       ticker: ['Assistance dispatch : {{phone}}', "Conditions d'utilisation", 'Politique de confidentialité'],
       errors: {
         invalidCredentials: "Nom d'utilisateur ou mot de passe incorrect.",
+        notDriver: "Ce compte n'est pas un compte chauffeur. Connectez-vous avec le compte fourni par votre agence.",
+        inactive: 'Ce compte a été désactivé. Contactez votre agence.',
+        network: 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',
       },
     },
+    sessionExpired: 'Votre session a expiré. Veuillez vous reconnecter.',
   },
 
   home: {

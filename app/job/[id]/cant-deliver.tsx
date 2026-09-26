@@ -28,7 +28,7 @@ import {
 import { invalidateDeliveryData } from '../../../lib/query';
 import { captureCurrentCoords } from '../../../lib/useLiveCoords';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
-import { markDeliveryFailed } from '../../../services/mock-api';
+import { markDeliveryFailed } from '../../../services/api';
 import type { DeliveryFailureReason } from '../../../types';
 
 /** Case- and accent-insensitive, so "reporte" finds "reporté". */

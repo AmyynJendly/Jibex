@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../components/EmptyState';
 import { FormField } from '../components/FormField';
 import { Spacing, Typography, useColors } from '../constants';
-import { getJobDetail } from '../services/mock-api';
+import { getJobDetail } from '../services/api';
 
 /** "TRK-" + 8 hex chars — only worth hitting the mock API once the query could plausibly be a complete id. */
 const TRACKING_ID_LENGTH = 12;

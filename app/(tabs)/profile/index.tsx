@@ -25,11 +25,11 @@ import {
 import { CURRENCY_DECIMALS, formatDecimal } from '../../../lib/currency';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
 import { useLanguage } from '../../../lib/i18n/LanguageProvider';
-import { clearToken } from '../../../lib/token';
+import { logout } from '../../../services/api';
 import { useHapticsEnabled } from '../../../lib/haptics';
 import { useNextStopBarEnabled } from '../../../lib/nextStopBar';
 import { supports } from '../../../lib/platformSupport';
-import { useDriverStats, useRunsheets, useUser, useVehicle } from '../../../lib/query';
+import { clearQueryCache, useDriverStats, useRunsheets, useUser, useVehicle } from '../../../lib/query';
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -52,7 +52,9 @@ export default function ProfileScreen() {
     useNextStopBarEnabled();
 
   async function handleLogOut() {
-    await clearToken();
+    await logout();
+    // Nothing of this driver's should be on screen for the next one.
+    clearQueryCache();
     router.replace('/(auth)/login');
   }
 

@@ -47,7 +47,7 @@ import {
   useScreenState,
   useUser,
 } from '../../../lib/query';
-import { confirmRunsheetReceipt } from '../../../services/mock-api';
+import { confirmRunsheetReceipt } from '../../../services/api';
 import type { DriverStats, Runsheet, User } from '../../../types';
 
 interface HomeData {

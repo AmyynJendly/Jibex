@@ -1,0 +1,22 @@
+/**
+ * Which backend the app talks to — the one switch for the whole app.
+ *
+ * Set `EXPO_PUBLIC_API_MODE=real` in `.env.local` (gitignored) and restart
+ * with `npx expo start --clear` to use the real server; anything else, or
+ * nothing, means the built-in mock data. Expo bakes `EXPO_PUBLIC_*` values
+ * into the bundle, and Metro keeps its cached copy of this file unless
+ * `--clear` is passed — a plain restart can keep the old mode.
+ *
+ * While the backend is being connected piece by piece, "real" only covers
+ * what `services/real-api.ts` implements; everything else still answers from
+ * the mock (see `services/api.ts`).
+ */
+export type ApiMode = 'mock' | 'real';
+
+export const API_MODE: ApiMode = process.env.EXPO_PUBLIC_API_MODE === 'real' ? 'real' : 'mock';
+
+/** The live server. `EXPO_PUBLIC_API_BASE_URL` overrides it (a staging server, say). */
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://jibex.cloud/';
+
+/** How long a request may take before it's treated as a network failure. */
+export const API_TIMEOUT_MS = 20_000;

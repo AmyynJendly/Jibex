@@ -25,6 +25,7 @@ import { QueryProvider } from '../lib/query';
 import { ConfirmDialogProvider } from '../components/ConfirmDialog';
 import { useColors } from '../constants';
 import { OfflineBanner } from '../components/OfflineBanner';
+import { SessionExpiryWatcher } from '../components/SessionExpiryWatcher';
 import { ToastProvider } from '../components/Toast';
 import { LanguageProvider } from '../lib/i18n/LanguageProvider';
 import { HapticsProvider } from '../lib/haptics';
@@ -110,6 +111,7 @@ export default function RootLayout() {
                         <Stack.Screen name="search" options={standardHeader} />
                       </Stack>
                       <OfflineBanner />
+                      <SessionExpiryWatcher />
                       <StatusBar style="auto" />
                     </ConfirmDialogProvider>
                   </ToastProvider>

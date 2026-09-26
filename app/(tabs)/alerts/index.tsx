@@ -45,7 +45,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   markNotificationUnread,
-} from '../../../services/mock-api';
+} from '../../../services/api';
 import { useHapticsEnabled } from '../../../lib/haptics';
 import type { Notification, NotificationTarget, NotificationType } from '../../../types';
 

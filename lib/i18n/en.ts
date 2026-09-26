@@ -74,8 +74,12 @@ const en = {
       ticker: ['Dispatch Support: {{phone}}', 'Terms of Service', 'Privacy Policy'],
       errors: {
         invalidCredentials: 'Incorrect username or password.',
+        notDriver: 'This account isn’t a driver account. Sign in with the account your agency gave you.',
+        inactive: 'This account has been deactivated. Contact your agency.',
+        network: 'Can’t reach the server. Check your connection and try again.',
       },
     },
+    sessionExpired: 'Your session has expired. Please sign in again.',
   },
 
   home: {

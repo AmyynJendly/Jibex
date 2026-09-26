@@ -15,7 +15,7 @@ import { Fonts, Radii, Spacing, morphIn, useColors } from '../../../constants';
 import { useHapticsEnabled } from '../../../lib/haptics';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
-import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/mock-api';
+import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/api';
 import type { Job } from '../../../types';
 
 /** 44pt minimum target for the small text actions on this screen. */

@@ -30,7 +30,7 @@ import {
 import { localeTag } from '../lib/date';
 import { useScreenState, useTransfers } from '../lib/query';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
-import { setTransferOrder } from '../services/mock-api';
+import { setTransferOrder } from '../services/api';
 import type { Transfer } from '../types';
 
 type Toggle = 'current' | 'history';

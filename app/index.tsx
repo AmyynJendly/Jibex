@@ -9,7 +9,9 @@ import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Fonts, Spacing, Typography, useColors } from '../constants';
-import { clearToken, getToken } from '../lib/token';
+import { clearQueryCache } from '../lib/query';
+import { hasActiveSession } from '../lib/session';
+import { logout } from '../services/api';
 
 type Gate =
   /** Reading the stored session — nothing decided yet. */
@@ -68,10 +70,12 @@ export default function Index() {
     let cancelled = false;
 
     (async () => {
-      const token = await getToken().catch(() => null);
+      // A token alone isn't enough: it has to come with the driver it belongs
+      // to, from the backend the app is pointed at right now.
+      const signedIn = await hasActiveSession();
       if (cancelled) return;
 
-      if (!token) {
+      if (!signedIn) {
         setGate({ phase: 'signedOut' });
         return;
       }
@@ -110,7 +114,8 @@ export default function Index() {
   }, [unlock]);
 
   async function handleSignOut() {
-    await clearToken();
+    await logout();
+    clearQueryCache();
     setGate({ phase: 'signedOut' });
     router.replace('/(auth)/login');
   }

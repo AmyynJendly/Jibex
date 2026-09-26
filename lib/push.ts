@@ -1,7 +1,7 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 
-import { registerPushToken } from '../services/mock-api';
+import { registerPushToken } from '../services/api';
 
 /**
  * Requests notification permission and registers the device's Expo push

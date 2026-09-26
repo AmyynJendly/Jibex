@@ -30,7 +30,7 @@ import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
-import { confirmReturns, setReturnOrder } from '../services/mock-api';
+import { confirmReturns, setReturnOrder } from '../services/api';
 import type { Return } from '../types';
 
 type Toggle = 'current' | 'history';

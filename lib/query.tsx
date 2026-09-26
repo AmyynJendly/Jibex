@@ -16,7 +16,7 @@ import {
   getUser,
   getVehicle,
   optimizeRouteOrder,
-} from '../services/mock-api';
+} from '../services/api';
 
 /**
  * Screens used to call the API directly from a `useFocusEffect`, which meant
@@ -88,6 +88,11 @@ export const keys = {
  * numbers derived from them. Called after a mutation so every screen holding
  * that data updates, not only the one that made the change.
  */
+/** Forgets every cached answer — on sign-out, so the next driver starts clean. */
+export function clearQueryCache() {
+  queryClient.clear();
+}
+
 export function invalidateDeliveryData() {
   return queryClient.invalidateQueries({
     predicate: ({ queryKey }) =>

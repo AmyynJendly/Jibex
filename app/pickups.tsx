@@ -34,7 +34,7 @@ import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { openDirections } from '../lib/stopActions';
-import { completePickups, setPickupOrder } from '../services/mock-api';
+import { completePickups, setPickupOrder } from '../services/api';
 import type { Pickup, PickupStatus } from '../types';
 
 interface PickupCardProps {

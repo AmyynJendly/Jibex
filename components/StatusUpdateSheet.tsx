@@ -18,7 +18,7 @@ import {
   getDriverStats,
   markDeliveryFailed,
   reopenParcel,
-} from '../services/mock-api';
+} from '../services/api';
 import type { DeliveryFailureReason, Job } from '../types';
 
 /**
