@@ -161,7 +161,6 @@ const en = {
     },
   },
 
-
   statusUpdate: {
     title: 'Update Status',
     delivered: 'Package Delivered',
@@ -194,22 +193,15 @@ const en = {
     billLabel: 'Bill',
     parcelLabel: 'Parcel',
     careLabel: 'Care',
-    packageInfo_one: '{{count}} package · {{weight}} lbs',
-    packageInfo_other: '{{count}} packages · {{weight}} lbs',
     fragile: 'Fragile',
     standard: 'Standard',
     deliveryFailed: 'Delivery Failed',
     cantDeliver: "Can't Deliver",
   },
 
+  // Only the OTP route's error is left: the OTP screen is gone, its mock
+  // function is kept in case the step comes back.
   otp: {
-    title: 'Delivery Code',
-    subtitle: "Ask {{name}} for the 4-digit code sent by SMS. This is your proof of delivery.",
-    resend: 'Resend Code',
-    resendIn: 'Resend in 00:{{seconds}}',
-    call: 'Call',
-    verify: 'Verify & Complete',
-    takePhotoInstead: 'Take Photo Instead',
     errors: {
       incorrectCode: 'Incorrect code. Ask the customer to confirm and try again.',
     },
@@ -249,7 +241,6 @@ const en = {
     openCamera: 'Open camera',
     retake: 'Retake Photo',
   },
-
 
   scanner: {
     a11yTorch: 'Toggle flashlight',
@@ -403,41 +394,13 @@ const en = {
 
   profile: {
     headerTitle: 'Profile',
-    hub: 'Hub Sousse',
     stats: { lifetimeDeliveries: 'Deliveries', deliveryRate: 'Delivery Rate', weeklyCash: 'DT / Week' },
-    sectionAccount: 'Account',
     sectionSupport: 'Support',
     rows: {
-      personalInfo: 'Personal Info',
-      vehicleDetails: 'Vehicle & Driver Info',
       helpCenter: 'Help Center',
       logOut: 'Log Out',
     },
   },
-
-
-
-  personalInfo: {
-    headerTitle: 'Personal Info',
-    readOnlyNotice: 'Managed by your agency. Contact dispatch to correct anything here.',
-    fullNameLabel: 'Full Name',
-    usernameLabel: 'Username',
-    emailLabel: 'Email',
-    driverCodeLabel: 'Driver Code',
-  },
-
-  vehicleDetails: {
-    headerTitle: 'Vehicle & Driver Info',
-    readOnlyNotice: 'Managed by your agency. Contact dispatch to correct anything here.',
-    types: { motorcycle: 'Motorcycle', car: 'Car', van: 'Van', bicycle: 'Bicycle' },
-    driverLabel: 'Driver',
-    driverCodeLabel: 'Driver Code',
-    typeLabel: 'Vehicle Type',
-    plateLabel: 'Plate Number',
-    modelLabel: 'Model',
-    colorLabel: 'Color',
-  },
-
 
   helpCenter: {
     headerTitle: 'Help Center',
@@ -468,18 +431,11 @@ const en = {
   },
 
   settings: {
-    headerTitle: 'Settings',
     sectionLanguage: 'Language',
     sectionSecurity: 'Security',
     biometricLogin: 'Biometric Login',
     hapticFeedback: 'Haptic Feedback',
     nextStopBar: 'Next Stop Bar',
-    sectionNotifications: 'Notifications',
-    newJobAlerts: 'New job alerts',
-    sectionAppearance: 'Appearance',
-    theme: 'Theme',
-    themeMatchesSystem: 'Matches System',
-    sectionAbout: 'About',
     appVersion: 'App Version',
     languages: { en: 'English', fr: 'Français' },
   },

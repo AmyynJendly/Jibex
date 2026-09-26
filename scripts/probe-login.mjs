@@ -9,6 +9,8 @@
  * claims (who it names, its role, when it expires), never the token itself;
  * email and phone are masked.
  */
+import { Buffer } from 'node:buffer';
+
 const base = (process.env.EXPO_PUBLIC_API_BASE_URL || 'https://jibex.cloud/').replace(/\/+$/, '');
 const username = process.env.JIBEX_TEST_USERNAME;
 const password = process.env.JIBEX_TEST_PASSWORD;

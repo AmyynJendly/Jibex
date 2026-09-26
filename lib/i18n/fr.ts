@@ -159,7 +159,6 @@ const fr: TranslationResource = {
     },
   },
 
-
   statusUpdate: {
     title: 'Mettre à jour le statut',
     delivered: 'Colis livré',
@@ -192,22 +191,15 @@ const fr: TranslationResource = {
     billLabel: 'Bon',
     parcelLabel: 'Colis',
     careLabel: 'Soin',
-    packageInfo_one: '{{count}} colis · {{weight}} lbs',
-    packageInfo_other: '{{count}} colis · {{weight}} lbs',
     fragile: 'Fragile',
     standard: 'Standard',
     deliveryFailed: 'Échec de livraison',
     cantDeliver: 'Impossible de livrer',
   },
 
+  // Only the OTP route's error is left: the OTP screen is gone, its mock
+  // function is kept in case the step comes back.
   otp: {
-    title: 'Code de remise',
-    subtitle: 'Demandez à {{name}} les 4 chiffres envoyés par SMS. C\'est votre preuve de remise.',
-    resend: 'Renvoyer le code',
-    resendIn: 'Renvoi dans 00:{{seconds}}',
-    call: 'Appeler',
-    verify: 'Vérifier et terminer',
-    takePhotoInstead: 'Prendre une photo à la place',
     errors: {
       incorrectCode: 'Code incorrect. Demandez au client de le confirmer et réessayez.',
     },
@@ -247,7 +239,6 @@ const fr: TranslationResource = {
     openCamera: 'Ouvrir l’appareil photo',
     retake: 'Reprendre la photo',
   },
-
 
   scanner: {
     a11yTorch: 'Activer la lampe',
@@ -401,45 +392,17 @@ const fr: TranslationResource = {
 
   profile: {
     headerTitle: 'Profil',
-    hub: 'Hub Sousse',
     stats: {
       lifetimeDeliveries: 'Livraisons',
       deliveryRate: 'Taux de livraison',
       weeklyCash: 'DT / semaine',
     },
-    sectionAccount: 'Compte',
     sectionSupport: 'Assistance',
     rows: {
-      personalInfo: 'Informations personnelles',
-      vehicleDetails: 'Véhicule & chauffeur',
       helpCenter: "Centre d'aide",
       logOut: 'Déconnexion',
     },
   },
-
-
-
-  personalInfo: {
-    headerTitle: 'Informations personnelles',
-    readOnlyNotice: 'Gérées par votre agence. Contactez le dispatch pour toute correction.',
-    fullNameLabel: 'Nom complet',
-    usernameLabel: "Nom d'utilisateur",
-    emailLabel: 'E-mail',
-    driverCodeLabel: 'Code chauffeur',
-  },
-
-  vehicleDetails: {
-    headerTitle: 'Véhicule & chauffeur',
-    readOnlyNotice: 'Gérées par votre agence. Contactez le dispatch pour toute correction.',
-    types: { motorcycle: 'Moto', car: 'Voiture', van: 'Camionnette', bicycle: 'Vélo' },
-    driverLabel: 'Chauffeur',
-    driverCodeLabel: 'Code chauffeur',
-    typeLabel: 'Type de véhicule',
-    plateLabel: "Numéro d'immatriculation",
-    modelLabel: 'Modèle',
-    colorLabel: 'Couleur',
-  },
-
 
   helpCenter: {
     headerTitle: "Centre d'aide",
@@ -470,18 +433,11 @@ const fr: TranslationResource = {
   },
 
   settings: {
-    headerTitle: 'Réglages',
     sectionLanguage: 'Langue',
     sectionSecurity: 'Sécurité',
     biometricLogin: 'Connexion biométrique',
     hapticFeedback: 'Vibrations tactiles',
     nextStopBar: 'Barre du prochain arrêt',
-    sectionNotifications: 'Notifications',
-    newJobAlerts: 'Alertes nouvelle course',
-    sectionAppearance: 'Apparence',
-    theme: 'Thème',
-    themeMatchesSystem: 'Correspond au système',
-    sectionAbout: 'À propos',
     appVersion: "Version de l'application",
     languages: { en: 'English', fr: 'Français' },
   },

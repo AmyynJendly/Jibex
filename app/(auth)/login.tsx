@@ -13,7 +13,8 @@ import { LanguageToggle } from '../../components/LanguageToggle';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { TickerMarquee } from '../../components/TickerMarquee';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, morphIn, useColors } from '../../constants';
-import { DISPATCH_PHONE, telUrl } from '../../lib/phone';
+import { DISPATCH_PHONE } from '../../constants/contact';
+import { telUrl } from '../../lib/phone';
 import { login } from '../../services/api';
 
 export default function LoginScreen() {

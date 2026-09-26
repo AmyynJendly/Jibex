@@ -1,4 +1,4 @@
-import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
+import { addDays, toCompactDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
 import { nearestNeighborOrder } from '../lib/route';
@@ -731,23 +731,6 @@ export async function logout(): Promise<void> {
   await clearSession();
 }
 
-export interface RegisterParams {
-  name: string;
-  phone: string;
-  email?: string;
-  vehiclePlate: string;
-  password: string;
-}
-
-function initialsFor(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((word) => word[0]?.toUpperCase() ?? '')
-    .slice(0, 2)
-    .join('');
-}
-
 /** The driver's vehicle, or null when nobody has recorded one. */
 export async function getVehicle(): Promise<Vehicle | null> {
   return delay({ ...mockVehicle });
@@ -1312,12 +1295,6 @@ export async function confirmScan(code: string): Promise<ScanResult> {
   }
 
   return { success: false, error: 'scanner.errors.notRecognized' };
-}
-
-/** Driver hands off the day's cash (deposit, office drop-off, etc.) — zeroes the running total. */
-export async function confirmCashHandoff(): Promise<void> {
-  await delay(undefined);
-  mockDriverStats = { ...mockDriverStats, cashCollectedTotal: 0 };
 }
 
 /** A real backend would associate this token with the driver's account for server-sent push. */

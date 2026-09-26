@@ -10,7 +10,8 @@
  * (gitignored). People's names, phones and addresses are masked.
  */
 const base = (process.env.EXPO_PUBLIC_API_BASE_URL || 'https://jibex.cloud/').replace(/\/+$/, '');
-const { JIBEX_TEST_USERNAME: username, JIBEX_TEST_PASSWORD: password } = process.env;
+const username = process.env.JIBEX_TEST_USERNAME;
+const password = process.env.JIBEX_TEST_PASSWORD;
 if (!username || !password) {
   console.log('Set JIBEX_TEST_USERNAME and JIBEX_TEST_PASSWORD in .env.local first (see .env.example).');
   process.exit(1);

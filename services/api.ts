@@ -17,7 +17,27 @@ import { API_MODE, SERVER_WRITES_OFF } from '../constants/backend';
 import * as mock from './mock-api';
 import * as real from './real-api';
 
-export * from './mock-api';
+// Nothing is passed through from the mock wholesale: every function a
+// screen can call is named below, so a new mock write can't slip into real
+// mode unnoticed.
+export type {
+  ConfirmDeliveryResult,
+  FailDeliveryResult,
+  LoginResult,
+  RunsheetWriteResult,
+  ScanResult,
+} from './mock-api';
+
+// Phone-only settings. The mock versions already keep these in
+// lib/deviceStore, which is the same store in both modes.
+export const getNearestFirst = mock.getNearestFirst;
+export const setNearestFirst = mock.setNearestFirst;
+export const setPickupOrder = mock.setPickupOrder;
+export const setTransferOrder = mock.setTransferOrder;
+export const setReturnOrder = mock.setReturnOrder;
+
+/** Unused for now (see lib/push.ts): push isn't connected to any server, so this is a no-op either way. */
+export const registerPushToken = mock.registerPushToken;
 
 const useReal = API_MODE === 'real';
 

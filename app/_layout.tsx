@@ -30,6 +30,7 @@ import { ToastProvider } from '../components/Toast';
 import { LanguageProvider } from '../lib/i18n/LanguageProvider';
 import { HapticsProvider } from '../lib/haptics';
 import { NextStopBarProvider } from '../lib/nextStopBar';
+import { BiometricLockProvider } from '../lib/biometricLock';
 import { nativeHeaderOptions } from '../lib/nativeHeader';
 
 // Without this the stack mounts `index` (the `/` -> `/login` redirect) beneath
@@ -93,28 +94,30 @@ export default function RootLayout() {
             <LanguageProvider>
               <HapticsProvider>
                 <NextStopBarProvider>
-                  <ToastProvider>
-                    <ConfirmDialogProvider>
-                      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-                        <Stack.Screen name="(auth)" />
-                        <Stack.Screen name="(tabs)" />
-                        <Stack.Screen name="job/[id]" />
-                        {/* Apple's navigation bar on pushed screens, so the
-                            push, the back swipe and the title all move the
-                            way they do in the system apps. Each screen sets
-                            its own (translated) title. */}
-                        <Stack.Screen name="pickups" options={solidHeader} />
-                        <Stack.Screen name="transfers" options={largeTitleHeader} />
-                        <Stack.Screen name="returns" options={largeTitleHeader} />
-                        <Stack.Screen name="help-center" options={standardHeader} />
-                        <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
-                        <Stack.Screen name="search" options={standardHeader} />
-                      </Stack>
-                      <OfflineBanner />
-                      <SessionExpiryWatcher />
-                      <StatusBar style="auto" />
-                    </ConfirmDialogProvider>
-                  </ToastProvider>
+                  <BiometricLockProvider>
+                    <ToastProvider>
+                      <ConfirmDialogProvider>
+                        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+                          <Stack.Screen name="(auth)" />
+                          <Stack.Screen name="(tabs)" />
+                          <Stack.Screen name="job/[id]" />
+                          {/* Apple's navigation bar on pushed screens, so the
+                              push, the back swipe and the title all move the
+                              way they do in the system apps. Each screen sets
+                              its own (translated) title. */}
+                          <Stack.Screen name="pickups" options={solidHeader} />
+                          <Stack.Screen name="transfers" options={largeTitleHeader} />
+                          <Stack.Screen name="returns" options={largeTitleHeader} />
+                          <Stack.Screen name="help-center" options={standardHeader} />
+                          <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
+                          <Stack.Screen name="search" options={standardHeader} />
+                        </Stack>
+                        <OfflineBanner />
+                        <SessionExpiryWatcher />
+                        <StatusBar style="auto" />
+                      </ConfirmDialogProvider>
+                    </ToastProvider>
+                  </BiometricLockProvider>
                 </NextStopBarProvider>
               </HapticsProvider>
             </LanguageProvider>

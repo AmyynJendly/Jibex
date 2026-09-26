@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FaqList } from '../components/FaqList';
 import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
+import { SUPPORT_EMAIL } from '../constants/contact';
 
 interface Faq {
   question: string;
@@ -23,14 +24,14 @@ export default function HelpCenterScreen() {
   const contactCard = (
     <AnimatedPressable
       scaleTo={0.98}
-      onPress={() => Linking.openURL('mailto:support@jibex.app')}
+      onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
       style={[styles.contactRow, { backgroundColor: colors.accent }]}>
       <View style={styles.contactIcon}>
         <Icon name="chatbubbles-outline" size={20} color="#fff" />
       </View>
       <View style={styles.contactText}>
         <Text style={styles.contactTitle}>{t('helpCenter.contactSupport')}</Text>
-        <Text style={styles.contactSubtitle}>support@jibex.app</Text>
+        <Text style={styles.contactSubtitle}>{SUPPORT_EMAIL}</Text>
       </View>
       <Icon name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
     </AnimatedPressable>

@@ -1,7 +1,6 @@
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack } from 'expo-router';
-import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +25,7 @@ import { CURRENCY_DECIMALS, formatDecimal } from '../../../lib/currency';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
 import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { logout } from '../../../services/api';
+import { useBiometricLock } from '../../../lib/biometricLock';
 import { useHapticsEnabled } from '../../../lib/haptics';
 import { useNextStopBarEnabled } from '../../../lib/nextStopBar';
 import { supports } from '../../../lib/platformSupport';
@@ -45,8 +45,8 @@ export default function ProfileScreen() {
   const stats = statsQuery.data ?? null;
   const vehicle = vehicleQuery.data ?? null;
   const hub = runsheetsQuery.data?.[0]?.agency ?? null;
-  const [biometricLogin, setBiometricLogin] = useState(true);
-  const [newJobAlerts, setNewJobAlerts] = useState(true);
+  // Saved, and read by the start-up gate: off means no Face ID lock.
+  const { enabled: biometricLogin, setEnabled: setBiometricLogin } = useBiometricLock();
   const { enabled: hapticsEnabled, setEnabled: setHapticsEnabled } = useHapticsEnabled();
   const { enabled: nextStopBarEnabled, setEnabled: setNextStopBarEnabled } =
     useNextStopBarEnabled();
@@ -77,8 +77,9 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.nameBlock}>
             <Text style={styles.name}>{user.name}</Text>
+            {/* The agency only when a runsheet names it — never a made-up one. */}
             <Text style={styles.handle}>
-              {user.driverCode} · {hub ?? t('profile.hub')}
+              {hub ? `${user.driverCode} · ${hub}` : user.driverCode}
             </Text>
           </View>
         </View>
@@ -156,7 +157,6 @@ export default function ProfileScreen() {
             biometric: t('settings.biometricLogin'),
             haptics: t('settings.hapticFeedback'),
             nextStopBar: t('settings.nextStopBar'),
-            newJobAlerts: t('settings.newJobAlerts'),
             support: t('profile.sectionSupport'),
             helpCenter: t('profile.rows.helpCenter'),
             appVersion: t('settings.appVersion'),
@@ -174,8 +174,6 @@ export default function ProfileScreen() {
           onHapticsChange={setHapticsEnabled}
           nextStopBar={supports.tabBarAccessory ? nextStopBarEnabled : null}
           onNextStopBarChange={setNextStopBarEnabled}
-          newJobAlerts={newJobAlerts}
-          onNewJobAlertsChange={setNewJobAlerts}
           appVersion={Constants.expoConfig?.version ?? '1.0.0'}
           onOpenHelpCenter={() => router.push('/help-center')}
           onLogOut={handleLogOut}
@@ -259,7 +257,11 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.row,
-                  { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
+                  // A divider only when another row follows it.
+                  supports.tabBarAccessory && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.separator,
+                  },
                 ]}>
                 <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
                   <Icon name="phone-portrait-outline" size={15} color={colors.accent} />
@@ -275,11 +277,7 @@ export default function ProfileScreen() {
               {/* Only on iPhones that can show the bar — a switch for
                   something that can't appear would just be noise. */}
               {supports.tabBarAccessory && (
-                <View
-                  style={[
-                    styles.row,
-                    { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
-                  ]}>
+                <View style={styles.row}>
                   <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
                     <Icon name="navigate-outline" size={15} color={colors.accent} />
                   </View>
@@ -289,18 +287,6 @@ export default function ProfileScreen() {
                   <NativeSwitch value={nextStopBarEnabled} onValueChange={setNextStopBarEnabled} />
                 </View>
               )}
-              <View style={styles.row}>
-                <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
-                  <Icon name="notifications-outline" size={15} color={colors.accent} />
-                </View>
-                <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
-                  {t('settings.newJobAlerts')}
-                </Text>
-                <NativeSwitch
-                  value={newJobAlerts}
-                  onValueChange={setNewJobAlerts}
-                />
-              </View>
             </View>
           </View>
 

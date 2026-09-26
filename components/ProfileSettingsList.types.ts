@@ -9,7 +9,6 @@ export interface ProfileSettingsListProps {
     biometric: string;
     haptics: string;
     nextStopBar: string;
-    newJobAlerts: string;
     support: string;
     helpCenter: string;
     appVersion: string;
@@ -25,8 +24,6 @@ export interface ProfileSettingsListProps {
   /** `null` hides the row — on iPhones that can't show the bar. */
   nextStopBar: boolean | null;
   onNextStopBarChange: (on: boolean) => void;
-  newJobAlerts: boolean;
-  onNewJobAlertsChange: (on: boolean) => void;
   appVersion: string;
   onOpenHelpCenter: () => void;
   onLogOut: () => void;

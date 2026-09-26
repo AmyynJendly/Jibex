@@ -3,5 +3,3 @@ export function telUrl(phone: string): string {
   return `tel:${phone.replace(/[^0-9+]/g, '')}`;
 }
 
-/** Dispatch's phone number — shared by every "Call Dispatch" affordance in the app. */
-export const DISPATCH_PHONE = '+216 71 200 300';

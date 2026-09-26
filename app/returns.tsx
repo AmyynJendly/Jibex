@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +41,6 @@ type Toggle = 'current' | 'history';
 export default function ReturnsScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const requireOnline = useOnlineGuard();

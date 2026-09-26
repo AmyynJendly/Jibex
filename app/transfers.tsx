@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -20,7 +20,6 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import {
-  Fonts,
   Radii,
   Spacing,
   Typography,
@@ -41,7 +40,6 @@ export default function TransfersScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
   const transfers = transfersQuery.data ?? null;

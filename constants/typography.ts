@@ -19,8 +19,6 @@ export const Fonts = {
   dmMonoMedium: 'DMMono_500Medium',
 } as const;
 
-const fontFamily = Fonts.archivoMedium;
-
 type TextStyleName =
   | 'largeTitle'
   | 'title1'

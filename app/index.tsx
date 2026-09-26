@@ -9,6 +9,7 @@ import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Fonts, Spacing, Typography, useColors } from '../constants';
+import { readBiometricLock } from '../lib/biometricLock';
 import { clearQueryCache } from '../lib/query';
 import { hasActiveSession } from '../lib/session';
 import { logout } from '../services/api';
@@ -77,6 +78,14 @@ export default function Index() {
 
       if (!signedIn) {
         setGate({ phase: 'signedOut' });
+        return;
+      }
+
+      // The driver switched the lock off in Profile: straight in.
+      const lockWanted = await readBiometricLock();
+      if (cancelled) return;
+      if (!lockWanted) {
+        setGate({ phase: 'unlocked' });
         return;
       }
 

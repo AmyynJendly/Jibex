@@ -16,6 +16,16 @@ export function createPersistedToggle(storageKey: string, defaultValue: boolean)
   const isWeb = Platform.OS === 'web';
   const Context = createContext<ToggleContextValue | null>(null);
 
+  /** The saved value, read straight from storage — for code that runs before the provider has loaded it. */
+  async function read(): Promise<boolean> {
+    try {
+      const stored = isWeb ? localStorage.getItem(storageKey) : await SecureStore.getItemAsync(storageKey);
+      return stored === null ? defaultValue : stored === '1';
+    } catch {
+      return defaultValue;
+    }
+  }
+
   function Provider({ children }: { children: ReactNode }) {
     const [enabled, setEnabledState] = useState(defaultValue);
 
@@ -44,5 +54,5 @@ export function createPersistedToggle(storageKey: string, defaultValue: boolean)
     return ctx;
   }
 
-  return { Provider, useToggle };
+  return { Provider, useToggle, read };
 }

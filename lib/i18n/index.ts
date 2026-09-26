@@ -10,6 +10,8 @@ export * from './languages';
 // Synchronous init with the device-language best guess so the very first
 // frame already renders in a sensible language — `LanguageProvider` then
 // swaps in a persisted override, if any, once SecureStore resolves.
+// The app uses i18next's default instance throughout; `use` is its method.
+// eslint-disable-next-line import/no-named-as-default-member
 i18next.use(initReactI18next).init({
   resources: {
     en: { translation: en },

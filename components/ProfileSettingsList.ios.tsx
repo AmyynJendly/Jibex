@@ -111,7 +111,6 @@ export function ProfileSettingsList(props: ProfileSettingsListProps) {
               props.nextStopBar,
               props.onNextStopBarChange
             )}
-          {toggleRow(props.labels.newJobAlerts, 'bell', props.newJobAlerts, props.onNewJobAlertsChange)}
         </Section>
 
         <Section title={props.labels.support}>
