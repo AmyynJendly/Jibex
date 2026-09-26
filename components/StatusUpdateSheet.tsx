@@ -13,6 +13,7 @@ import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
 import { COMMON_REASONS } from '../lib/failureReasons';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
+import { safely, writeErrorText } from '../lib/writeResult';
 import {
   confirmDelivery,
   getDriverStats,
@@ -102,11 +103,13 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
       return;
     }
     setSubmitting(true);
-    const previousTotal = (await getDriverStats()).cashCollectedTotal;
-    const result = await confirmDelivery(job.id, job.cashToCollect);
+    const previousTotal = await getDriverStats()
+      .then((stats) => stats.cashCollectedTotal)
+      .catch(() => 0);
+    const result = await safely(() => confirmDelivery(job.id, job.cashToCollect));
     setSubmitting(false);
     if (!result.success) {
-      showToast(t(result.error ?? 'common.genericError'));
+      showToast(writeErrorText(t, result));
       return;
     }
     const { id, cashToCollect } = job;
@@ -132,13 +135,16 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
     // Same capture as the full-screen Can't Deliver flow — this sheet is the
     // other place a failure reason gets set, so it needs the same proof.
     const location = await captureCurrentCoords().catch(() => null);
-    const result = await markDeliveryFailed(job.id, reason, undefined, location ?? undefined);
+    const result = await safely(() =>
+      markDeliveryFailed(job.id, reason, undefined, location ?? undefined)
+    );
     setSubmitting(false);
-    setReason(null);
     if (!result.success) {
-      showToast(t(result.error ?? 'common.genericError'));
+      // The reason stays picked, so trying again is one tap.
+      showToast(writeErrorText(t, result));
       return;
     }
+    setReason(null);
     showToast(t('statusUpdate.failedToast'));
     onDone();
   }
@@ -146,8 +152,12 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   async function handleReopen() {
     if (!job || submitting) return;
     setSubmitting(true);
-    await reopenParcel(job.id);
+    const result = await safely(() => reopenParcel(job.id));
     setSubmitting(false);
+    if (!result.success) {
+      showToast(writeErrorText(t, result));
+      return;
+    }
     setReason(null);
     showToast(t('statusUpdate.reopenedToast'));
     onDone();

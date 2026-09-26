@@ -37,6 +37,7 @@ import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { useNow } from '../../../lib/useNow';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
+import { safely, writeErrorText } from '../../../lib/writeResult';
 import {
   confirmDelivery,
   getDriverStats,
@@ -153,12 +154,14 @@ export default function JobDetailScreen() {
     if (!requireOnline()) return;
 
     setDelivering(true);
-    const previousTotal = (await getDriverStats()).cashCollectedTotal;
-    const result = await confirmDelivery(job.id, job.cashToCollect);
+    const previousTotal = await getDriverStats()
+      .then((stats) => stats.cashCollectedTotal)
+      .catch(() => 0);
+    const result = await safely(() => confirmDelivery(job.id, job.cashToCollect));
     setDelivering(false);
 
     if (!result.success) {
-      showToast(t(result.error ?? 'common.genericError'));
+      showToast(writeErrorText(t, result));
       return;
     }
 

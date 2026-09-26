@@ -6,6 +6,7 @@
  * Connected so far (read-only apart from login):
  *   - login, and the signed-in driver's details that come with it
  *   - GET /api/runsheets/driver/{driverId}/active  → the driver's runsheets
+ *   - GET /api/runsheets?driverId={driverId}       → every runsheet, for history and totals
  *   - GET /api/runsheets/{id}                      → one runsheet with its items
  *   - GET /api/parcels/tracking/{trackingNumber}   → search (see getJobDetail)
  *   - GET /api/pickup-requests/driver/{driverId}   → pickups
@@ -14,7 +15,10 @@
  *   - GET /api/transfers/{id}                      → one transfer
  *   - GET /api/return-management/driver/{driverId}/assigned → returns
  *   - GET /api/notifications/user/{userId}         → notifications (USER id)
- * Everything that writes to the server still answers from the mock.
+ * Every action that would write to the server is refused on the phone for
+ * now ("Not connected to the server yet") — nothing is sent. Deleting an
+ * alert and marking one unread have no server endpoint at all; those stay on
+ * the phone (lib/deviceStore).
  *
  * Three small layers, top to bottom:
  *   1. HTTP client  — base URL, the Bearer token, errors, and 401 → sign out
@@ -48,8 +52,18 @@ import type {
   TransferStatus,
   TransferType,
   User,
+  Vehicle,
+  WriteResult,
+  BatchWriteResult,
+  DriverStats,
 } from '../types';
-import type { LoginResult } from './mock-api';
+import type {
+  ConfirmDeliveryResult,
+  FailDeliveryResult,
+  LoginResult,
+  RunsheetWriteResult,
+  ScanResult,
+} from './mock-api';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. HTTP client
@@ -273,6 +287,9 @@ export interface ApiRunsheet {
   createdAt?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  vehiclePlate?: string | null;
+  deliveredParcels?: number | null;
+  failedParcels?: number | null;
   driver?: { id?: number | string | null; fullName?: string | null } | null;
   agency?: { id?: number | string | null; name?: string | null } | null;
   items?: ApiRunsheetItem[] | null;
@@ -371,6 +388,7 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
 /** A runsheet's parcels in dispatch's stop order (`sequenceOrder`, then as listed). */
 export function runsheetJobs(runsheet: ApiRunsheet): Job[] {
   const runsheetId = idString(runsheet.id);
+  const runsheetStatus = text(runsheet.status);
   return [...(runsheet.items ?? [])]
     .map((item, index) => ({ item, index }))
     .sort(
@@ -379,7 +397,11 @@ export function runsheetJobs(runsheet: ApiRunsheet): Job[] {
           (num(b.item.sequenceOrder) ?? Number.MAX_SAFE_INTEGER) || a.index - b.index
     )
     .filter(({ item }) => item.parcel)
-    .map(({ item }) => toJob(item.parcel!, item, runsheetId));
+    .map(({ item }) => {
+      const job = toJob(item.parcel!, item, runsheetId);
+      if (job.server) job.server.runsheetStatus = runsheetStatus;
+      return job;
+    });
 }
 
 /**
@@ -425,6 +447,7 @@ export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
     needsConfirmation: status === 'A_CONFIRMER' || newParcelsToConfirm,
     completionPercent: jobs.length ? Math.round((delivered / jobs.length) * 100) : 0,
     stopIds: jobs.map((job) => job.id),
+    vehiclePlate: text(runsheet.vehiclePlate),
   };
 }
 
@@ -948,6 +971,8 @@ export async function logout(): Promise<void> {
 
 interface DriverData {
   runsheets: Runsheet[];
+  /** The same runsheets as the server sent them — for fields ours don't carry. */
+  raw: ApiRunsheet[];
   /** Every parcel on those runsheets, runsheet by runsheet, each in stop order. */
   jobs: Job[];
   /** Which runsheet each parcel is on — how the driver's saved order is filed. */
@@ -965,6 +990,7 @@ let driverData: { at: number; promise: Promise<DriverData> } | null = null;
 
 function forgetDriverData() {
   driverData = null;
+  pastRunsheets = null;
 }
 
 async function requireSession(): Promise<Session> {
@@ -1010,12 +1036,14 @@ async function fetchDriverData(): Promise<DriverData> {
   );
 
   const runsheets: Runsheet[] = [];
+  const raw: ApiRunsheet[] = [];
   const jobs: Job[] = [];
   const runsheetOf = new Map<string, string>();
   for (const apiRunsheet of full) {
     const runsheet = toRunsheet(apiRunsheet);
     if (!runsheet) continue;
     runsheets.push(runsheet);
+    raw.push(apiRunsheet);
     for (const job of runsheetJobs(apiRunsheet)) {
       if (runsheetOf.has(job.id)) continue;
       runsheetOf.set(job.id, runsheet.id);
@@ -1023,7 +1051,7 @@ async function fetchDriverData(): Promise<DriverData> {
     }
   }
   logCash(jobs);
-  return { runsheets, jobs, runsheetOf };
+  return { runsheets, raw, jobs, runsheetOf };
 }
 
 function loadDriverData(): Promise<DriverData> {
@@ -1090,13 +1118,116 @@ export async function getActiveParcels(): Promise<Job[]> {
   return [...orderOpen(workable, runsheetOf), ...blocked].map(copy);
 }
 
+// ── Finished runsheets ────────────────────────────────────────────────────
+
 /**
- * Delivered and failed parcels on the driver's current runsheets. (Finished
- * runsheets aren't fetched in this phase, so older history isn't here yet.)
+ * `GET /api/runsheets?driverId={driverId}` — every runsheet the driver ever
+ * had, whatever its status, each with its items. Only the ones the agency
+ * has closed (COMPLETED) are used from here; the open ones come from the
+ * active endpoint above. Kept for a minute: history doesn't move fast, and
+ * the list grows with every run.
+ */
+const PAST_RUNSHEETS_TTL_MS = 60_000;
+let pastRunsheets: { at: number; promise: Promise<ApiRunsheet[]> } | null = null;
+
+function loadPastRunsheets(): Promise<ApiRunsheet[]> {
+  if (pastRunsheets && Date.now() - pastRunsheets.at < PAST_RUNSHEETS_TTL_MS) return pastRunsheets.promise;
+  const promise = (async () => {
+    const { driverId } = await requireSession();
+    const list = await request<ApiRunsheet[] | null>(`api/runsheets?driverId=${encodeURIComponent(driverId)}`);
+    return (Array.isArray(list) ? list : []).filter((runsheet) => text(runsheet.status) === 'COMPLETED');
+  })();
+  pastRunsheets = { at: Date.now(), promise };
+  promise.catch(() => {
+    if (pastRunsheets?.promise === promise) pastRunsheets = null;
+  });
+  return promise;
+}
+
+/** Newest run first: by the day it was for, then by when it was closed. */
+function newestFirst(a: ApiRunsheet, b: ApiRunsheet): number {
+  const day = (r: ApiRunsheet) => text(r.scheduledDate) ?? text(r.createdAt) ?? '';
+  const closed = (r: ApiRunsheet) => text(r.completedAt) ?? '';
+  return day(b).localeCompare(day(a)) || closed(b).localeCompare(closed(a));
+}
+
+/**
+ * Parcels on runs the agency has closed, newest run first, delivered and
+ * failed ones only — a parcel left PENDING on a closed run was neither, and
+ * isn't shown as either.
+ */
+async function pastRunsheetJobs(excludeRunsheetIds: Set<string>): Promise<Job[]> {
+  const past = (await loadPastRunsheets())
+    .filter((runsheet) => !excludeRunsheetIds.has(idString(runsheet.id) ?? ''))
+    .sort(newestFirst);
+  const jobs = past.flatMap((runsheet) => runsheetJobs(runsheet));
+  logCash(jobs);
+  return jobs.filter((job) => !isOpen(job));
+}
+
+/**
+ * History: delivered and failed parcels on the driver's open runsheets
+ * first, then those on runsheets the agency has closed, newest first.
  */
 export async function getHistoryParcels(): Promise<Job[]> {
-  const { jobs } = await loadDriverData();
-  return jobs.filter((job) => !isOpen(job)).map(copy);
+  const { runsheets, jobs } = await loadDriverData();
+  const current = jobs.filter((job) => !isOpen(job));
+  const past = await pastRunsheetJobs(new Set(runsheets.map((r) => r.id)));
+  return [...current, ...past].map(copy);
+}
+
+// ── The driver's numbers ──────────────────────────────────────────────────
+
+/**
+ * Worked out on the phone from the driver's real runsheets — the server has
+ * no stats endpoint for a driver.
+ *
+ *  - Deliveries and delivery rate: every delivered / failed parcel on every
+ *    runsheet (open and closed). Rate = delivered ÷ (delivered + failed).
+ *  - Cash on hand: the `amountToCollect` of every delivered parcel on a run
+ *    the agency hasn't closed yet — closing a run is when the agency takes
+ *    the cash in. PENDING CONFIRMATION: which cash field the customer
+ *    actually pays (`amountToCollect` or `price`) is still an open question
+ *    for the backend team; see `toJob`.
+ *  - Weekly cash and the "on pace" finish time: not given. The first waits
+ *    on the same cash question; the second has nothing honest to go on.
+ */
+export async function getDriverStats(): Promise<DriverStats> {
+  const { runsheets, jobs } = await loadDriverData();
+  const past = await pastRunsheetJobs(new Set(runsheets.map((r) => r.id)));
+
+  const delivered = jobs.filter((job) => job.status === 'DELIVERED');
+  const failed = jobs.filter((job) => job.status === 'FAILED');
+  const everDelivered = delivered.length + past.filter((job) => job.status === 'DELIVERED').length;
+  const everFailed = failed.length + past.filter((job) => job.status === 'FAILED').length;
+  const attempted = everDelivered + everFailed;
+
+  // PENDING CONFIRMATION of the cash field (amountToCollect vs price).
+  const cashOnHand = delivered.reduce((sum, job) => sum + (job.server?.amountToCollect ?? 0), 0);
+
+  return {
+    delivered: delivered.length,
+    pending: jobs.length - delivered.length - failed.length,
+    failed: failed.length,
+    cashCollectedTotal: Math.round(cashOnHand * 1000) / 1000,
+    completionPercent: jobs.length ? Math.round((delivered.length / jobs.length) * 100) : 0,
+    lifetimeDeliveries: everDelivered,
+    deliveryRate: attempted ? (everDelivered / attempted) * 100 : 0,
+  };
+}
+
+/**
+ * The plate dispatch put on the driver's runs: the current run's if it has
+ * one, otherwise the most recent closed run's. Null — and not shown — when
+ * no run has one.
+ */
+export async function getVehicle(): Promise<Vehicle | null> {
+  const { raw } = await loadDriverData();
+  const fromCurrent = raw.map((runsheet) => text(runsheet.vehiclePlate)).find(Boolean);
+  if (fromCurrent) return { plate: fromCurrent };
+  const past = [...(await loadPastRunsheets())].sort(newestFirst);
+  const fromPast = past.map((runsheet) => text(runsheet.vehiclePlate)).find(Boolean);
+  return fromPast ? { plate: fromPast } : null;
 }
 
 export async function getJobsByIds(ids: string[]): Promise<Job[]> {
@@ -1219,13 +1350,20 @@ export async function getReturns(): Promise<Return[]> {
 
 // ── Notifications ─────────────────────────────────────────────────────────
 
+/** The driver's alerts exactly as the server has them. */
+async function fetchNotifications(): Promise<ApiNotification[]> {
+  const { userId } = await requireSession();
+  const list = await request<ApiNotification[] | null>(`api/notifications/user/${encodeURIComponent(userId)}`);
+  return Array.isArray(list) ? list : [];
+}
+
 /**
  * `GET /api/notifications/user/{userId}` — by the USER ACCOUNT id, unlike
- * every other driver endpoint. Newest first.
+ * every other driver endpoint. Newest first. Alerts the driver deleted, or
+ * marked unread, on this phone stay that way (see lib/deviceStore).
  */
 export async function getNotifications(): Promise<Notification[]> {
-  const { userId } = await requireSession();
-  const list = (await request<ApiNotification[] | null>(`api/notifications/user/${encodeURIComponent(userId)}`)) ?? [];
+  const [list] = await Promise.all([fetchNotifications(), device.hydrateDeviceStore()]);
 
   // Alerts about a parcel open it directly when it's on the driver's runs.
   const mentionsParcel = list.some((n) => n.referenceType?.toUpperCase().includes('PARCEL'));
@@ -1237,7 +1375,145 @@ export async function getNotifications(): Promise<Notification[]> {
 
   return list
     .map((n) => toNotification(n, (parcelId) => byParcelId.get(parcelId)))
+    .filter((n) => !device.isNotificationHidden(n.id))
+    .map((n) => (n.read && device.isMarkedUnread(n.id) ? { ...n, read: false } : n))
     .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+}
+
+// Deleting and marking unread: no server endpoint, so on the phone only.
+
+export async function markNotificationUnread(id: string): Promise<WriteResult> {
+  await device.hydrateDeviceStore();
+  await device.setMarkedUnread(id, true);
+  return { success: true };
+}
+
+export async function deleteNotification(id: string): Promise<WriteResult> {
+  await device.hydrateDeviceStore();
+  await device.hideNotifications([id]);
+  return { success: true };
+}
+
+/** "Clear all": hides every alert the server has now; newer ones still arrive. */
+export async function deleteAllNotifications(): Promise<WriteResult> {
+  try {
+    const [list] = await Promise.all([fetchNotifications(), device.hydrateDeviceStore()]);
+    await device.hideNotifications(list.map((n) => idString(n.id) ?? '').filter(Boolean));
+    return { success: true };
+  } catch (error) {
+    return writeFailure(error);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Writes
+// ═══════════════════════════════════════════════════════════════════════════
+// Nothing that changes server data is sent yet: each of these answers "Not
+// connected to the server yet" without a request, and the screens leave
+// everything as it was.
+
+const WRITES_OFF: WriteResult = { success: false, error: 'common.writesOff' };
+
+/** A failed request as a result a screen can show. Never throws. */
+export function writeFailure(error: unknown, { notAvailableOn404 = false } = {}): WriteResult {
+  if (error instanceof ApiError) {
+    if (error.status === 0) return { success: false, error: 'common.networkError' };
+    if (error.status === 401) return { success: false, error: 'auth.sessionExpired' };
+    if (notAvailableOn404 && (error.status === 404 || error.status === 405)) {
+      return { success: false, error: 'common.notAvailableYet' };
+    }
+    if (error.serverMessage) {
+      return { success: false, error: 'common.serverRefused', errorParams: { reason: error.serverMessage } };
+    }
+  }
+  return { success: false, error: 'common.genericError' };
+}
+
+export async function confirmRunsheetReceipt(_id: string): Promise<RunsheetWriteResult> {
+  return WRITES_OFF;
+}
+
+export async function confirmDelivery(_id: string, _cashAmount: number): Promise<ConfirmDeliveryResult> {
+  return WRITES_OFF;
+}
+
+/** The photo route has no server field to send a photo to; it stays refused. */
+export async function confirmDeliveryWithPhoto(
+  _id: string,
+  _photoUri: string,
+  _cashAmount: number
+): Promise<ConfirmDeliveryResult> {
+  return WRITES_OFF;
+}
+
+/** The OTP route was dropped from the app; refused here so it can't reach the mock by accident. */
+export async function confirmDeliveryWithOTP(
+  _id: string,
+  _otp: string,
+  _cashAmount: number
+): Promise<ConfirmDeliveryResult> {
+  return WRITES_OFF;
+}
+
+export async function markDeliveryFailed(
+  _id: string,
+  _reason: DeliveryFailureReason,
+  _note?: string,
+  _location?: GeoPoint
+): Promise<FailDeliveryResult> {
+  return WRITES_OFF;
+}
+
+export async function reopenParcel(_id: string): Promise<ConfirmDeliveryResult> {
+  return WRITES_OFF;
+}
+
+export async function completePickups(ids: string[]): Promise<BatchWriteResult> {
+  return { ...WRITES_OFF, succeeded: [], failed: [...ids] };
+}
+
+export async function confirmReturns(ids: string[]): Promise<BatchWriteResult> {
+  return { ...WRITES_OFF, succeeded: [], failed: [...ids] };
+}
+
+/**
+ * Marking read. An alert the driver only marked unread on this phone is
+ * still read on the server, so marking it read again just drops the local
+ * mark — no request needed.
+ */
+export async function markNotificationRead(id: string): Promise<WriteResult> {
+  await device.hydrateDeviceStore();
+  if (device.isMarkedUnread(id)) {
+    const serverHasItRead = await fetchNotifications()
+      .then((list) => list.find((n) => idString(n.id) === id)?.isRead === true)
+      .catch(() => false);
+    if (serverHasItRead) {
+      await device.setMarkedUnread(id, false);
+      return { success: true };
+    }
+  }
+  return WRITES_OFF;
+}
+
+export async function markAllNotificationsRead(): Promise<WriteResult> {
+  return WRITES_OFF;
+}
+
+/**
+ * The scanner, on real data: it finds the driver's own parcels and nothing
+ * more yet. A find is only a find — it changes nothing, and says so.
+ */
+export async function confirmScan(code: string): Promise<ScanResult> {
+  const wanted = code.trim().toUpperCase();
+  if (!wanted) return { success: false, error: 'scanner.errors.notRecognized' };
+  try {
+    const { jobs } = await loadDriverData();
+    const job = jobs.find((j) => j.id.toUpperCase() === wanted);
+    if (job) return { success: true, kind: 'job', id: job.id, label: job.customerName, checkedOnly: true };
+  } catch (error) {
+    return writeFailure(error);
+  }
+  return { success: false, error: 'scanner.errors.notRecognized' };
 }
 
 // ── Phone-only state over real parcels ────────────────────────────────────

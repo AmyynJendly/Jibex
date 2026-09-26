@@ -29,6 +29,7 @@ import { invalidateDeliveryData } from '../../../lib/query';
 import { captureCurrentCoords } from '../../../lib/useLiveCoords';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { markDeliveryFailed } from '../../../services/api';
+import { safely, writeErrorText } from '../../../lib/writeResult';
 import type { DeliveryFailureReason } from '../../../types';
 
 /** Case- and accent-insensitive, so "reporte" finds "reporté". */
@@ -87,14 +88,16 @@ export default function CantDeliverScreen() {
     // lets the failure go unlogged over it though — a denied permission or a
     // fix that never resolves falls back to `null`, not a blocked submit.
     const location = await captureCurrentCoords().catch(() => null);
-    const result = await markDeliveryFailed(id, reason, note.trim() || undefined, location ?? undefined);
+    const result = await safely(() =>
+      markDeliveryFailed(id, reason, note.trim() || undefined, location ?? undefined)
+    );
     setSubmitting(false);
 
     if (result.success) {
       await invalidateDeliveryData();
       router.replace('/(tabs)/runsheets');
     } else {
-      showToast(t(result.error ?? 'common.genericError'));
+      showToast(writeErrorText(t, result));
     }
   }
 

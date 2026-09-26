@@ -119,19 +119,25 @@ export default function ProfileScreen() {
             {t('profile.stats.deliveryRate')}
           </Text>
         </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
-        <View style={styles.statItem}>
-          {/* The number alone — the label right below it already says
-              "DT / Week", so `formatCurrency`'s own "TND" suffix would
-              name the same currency twice, in two different
-              abbreviations, on one stat. */}
-          <Text style={[styles.statValueSmall, { color: colors.accent }]}>
-            {formatDecimal(stats.weeklyCashCollected, CURRENCY_DECIMALS)}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-            {t('profile.stats.weeklyCash')}
-          </Text>
-        </View>
+        {/* Only with an honest figure: on the real server the cash field
+            itself is still unconfirmed, so the weekly total isn't shown. */}
+        {stats.weeklyCashCollected !== undefined && (
+          <>
+            <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
+            <View style={styles.statItem}>
+              {/* The number alone — the label right below it already says
+                  "DT / Week", so `formatCurrency`'s own "TND" suffix would
+                  name the same currency twice, in two different
+                  abbreviations, on one stat. */}
+              <Text style={[styles.statValueSmall, { color: colors.accent }]}>
+                {formatDecimal(stats.weeklyCashCollected, CURRENCY_DECIMALS)}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('profile.stats.weeklyCash')}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
       </View>
     ) : null;

@@ -34,6 +34,7 @@ import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { openDirections } from '../lib/stopActions';
+import { safely, writeErrorText } from '../lib/writeResult';
 import { completePickups, setPickupOrder } from '../services/api';
 import type { Pickup, PickupStatus } from '../types';
 
@@ -241,19 +242,37 @@ export default function PickupsScreen() {
     });
     if (!confirmed) return;
 
+    await completeAndReport(selected.map((p) => p.id));
+  }
+
+  /**
+   * Closes out these pickups and says exactly what happened: all of them,
+   * some of them ("3 of 4"), or none — in which case nothing on screen
+   * changes and the reason is shown.
+   */
+  async function completeAndReport(ids: string[]) {
     setCompleting(true);
-    const ids = selected.map((p) => p.id);
-    await completePickups(ids);
+    const result = await safely(() => completePickups(ids));
+    setCompleting(false);
+    const succeeded = 'succeeded' in result ? result.succeeded : [];
+    if (succeeded.length === 0) {
+      showToast(writeErrorText(t, result));
+      return;
+    }
+
     await invalidatePickups();
     const forget = (prev: Set<string>) => {
       const next = new Set(prev);
-      ids.forEach((id) => next.delete(id));
+      succeeded.forEach((id) => next.delete(id));
       return next;
     };
     setSelectedIds(forget);
     setExpandedIds(forget);
-    setCompleting(false);
-    showToast(t('pickups.doneToast', { count: ids.length }));
+    showToast(
+      succeeded.length === ids.length
+        ? t('pickups.doneToast', { count: succeeded.length })
+        : t('pickups.donePartialToast', { done: succeeded.length, total: ids.length })
+    );
   }
 
   async function handleReorder(orderedIds: string[]) {

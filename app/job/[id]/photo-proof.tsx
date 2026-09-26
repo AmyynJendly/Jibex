@@ -98,7 +98,9 @@ export default function PhotoProofScreen() {
     if (!requireOnline()) return;
     setSubmitting(true);
 
-    const previousTotal = (await getDriverStats()).cashCollectedTotal;
+    const previousTotal = await getDriverStats()
+      .then((stats) => stats.cashCollectedTotal)
+      .catch(() => 0);
     const result = await confirmDeliveryWithPhoto(id, photoUri, job.cashToCollect);
     setSubmitting(false);
 

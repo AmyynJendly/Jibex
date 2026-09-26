@@ -109,8 +109,10 @@ describe('a failure reason can carry the driver\'s location', () => {
     await api.markDeliveryFailed(parcel.id, 'ABSENT', undefined, fix);
     const reopened = await api.reopenParcel(parcel.id);
 
-    expect(reopened.failureLocation).toBeUndefined();
-    expect(reopened.failureReason).toBeUndefined();
+    expect(reopened.success).toBe(true);
+    expect(reopened.job?.status).toBe('PENDING');
+    expect(reopened.job?.failureLocation).toBeUndefined();
+    expect(reopened.job?.failureReason).toBeUndefined();
   });
 });
 

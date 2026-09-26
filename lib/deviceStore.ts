@@ -23,6 +23,8 @@ const KEYS = {
   stopRanks: 'jibex.device.stopRanks.v1',
   listOrders: 'jibex.device.listOrders.v1',
   callLog: 'jibex.device.callLog.v1',
+  hiddenNotifications: 'jibex.device.hiddenNotifications.v1',
+  unreadNotifications: 'jibex.device.unreadNotifications.v1',
 } as const;
 
 /** A call older than this is no longer evidence for any open parcel — dropped on load. */
@@ -48,6 +50,10 @@ const state = {
   stopRanks: {} as StopRanks,
   listOrders: {} as ListOrders,
   callLog: {} as CallLog,
+  /** Alerts the driver deleted or cleared. The server has no delete, so they're hidden here. */
+  hiddenNotifications: [] as string[],
+  /** Alerts the driver marked unread again. The server has no "unread", so it's kept here. */
+  unreadNotifications: [] as string[],
 };
 
 let hydration: Promise<void> | null = null;
@@ -72,6 +78,8 @@ export function hydrateDeviceStore(): Promise<void> {
         state.nearestFirst = parse(values[KEYS.nearestFirst], true);
         state.stopRanks = parse(values[KEYS.stopRanks], {});
         state.listOrders = parse(values[KEYS.listOrders], {});
+        state.hiddenNotifications = parse(values[KEYS.hiddenNotifications], []);
+        state.unreadNotifications = parse(values[KEYS.unreadNotifications], []);
 
         const cutoff = Date.now() - CALL_LOG_RETENTION_MS;
         const log = parse<CallLog>(values[KEYS.callLog], {});
@@ -186,4 +194,42 @@ export async function recordCall(parcelId: string): Promise<readonly string[]> {
   state.callLog = { ...state.callLog, [parcelId]: times };
   await persist('callLog', state.callLog);
   return times;
+}
+
+// ── Notifications: what the server can't store ────────────────────────────
+// The server can mark an alert read, but it can't delete one or mark it
+// unread again. Those two live here and are laid over the server's list on
+// every fetch, so they stay applied after a refresh or a restart.
+
+/** How many hidden / unread ids to remember — old alerts roll off the server anyway. */
+const NOTIFICATION_MEMORY = 500;
+
+export function isNotificationHidden(id: string): boolean {
+  return state.hiddenNotifications.includes(id);
+}
+
+export async function hideNotifications(ids: string[]): Promise<void> {
+  const next = [...new Set([...state.hiddenNotifications, ...ids])].slice(-NOTIFICATION_MEMORY);
+  state.hiddenNotifications = next;
+  state.unreadNotifications = state.unreadNotifications.filter((id) => !ids.includes(id));
+  await Promise.all([
+    persist('hiddenNotifications', next),
+    persist('unreadNotifications', state.unreadNotifications),
+  ]);
+}
+
+export function isMarkedUnread(id: string): boolean {
+  return state.unreadNotifications.includes(id);
+}
+
+export async function setMarkedUnread(id: string, unread: boolean): Promise<void> {
+  const others = state.unreadNotifications.filter((existing) => existing !== id);
+  state.unreadNotifications = (unread ? [...others, id] : others).slice(-NOTIFICATION_MEMORY);
+  await persist('unreadNotifications', state.unreadNotifications);
+}
+
+/** Read-all clears every local "unread" mark too. */
+export async function clearMarkedUnread(): Promise<void> {
+  state.unreadNotifications = [];
+  await persist('unreadNotifications', []);
 }

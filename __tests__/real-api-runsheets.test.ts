@@ -86,6 +86,35 @@ const ACTIVE = [
   { id: 61, code: 'RS-20260926-0002', status: 'CANCELLED', items: [] },
 ];
 
+/** `GET /api/runsheets?driverId=` — every status, as the live server sends it. */
+const ALL = [
+  ACTIVE[0],
+  {
+    id: 54,
+    code: 'RS-20260920-0001',
+    status: 'COMPLETED',
+    scheduledDate: '2026-09-20',
+    completedAt: '2026-09-20T18:00:00',
+    vehiclePlate: 'TUN-261',
+    items: [
+      item(401, 1, 'DELIVERED', parcel('TRK-00000401', { status: 'LIVRE_PAYE', amountToCollect: 50 })),
+      item(402, 2, 'FAILED', parcel('TRK-00000402', { status: 'RTN_DEPOT' }), { failureReason: 'ABSENT' }),
+      // Left pending on a closed run: neither delivered nor failed.
+      item(403, 3, 'PENDING', parcel('TRK-00000403')),
+    ],
+  },
+  {
+    id: 47,
+    code: 'RS-20260916-0001',
+    status: 'COMPLETED',
+    scheduledDate: '2026-09-16',
+    completedAt: '2026-09-16T18:00:00',
+    vehiclePlate: null,
+    items: [item(301, 1, 'DELIVERED', parcel('TRK-00000301', { status: 'LIVRE_PAYE' }))],
+  },
+  { id: 26, code: 'RS-20260712-0001', status: 'CANCELLED', items: [item(201, 1, 'DELIVERED', parcel('TRK-00000201'))] },
+];
+
 let fetchMock: jest.Mock;
 let urls: string[];
 
@@ -107,6 +136,7 @@ async function signedIn(): Promise<RealApi> {
       });
     }
     if (url.includes('/api/runsheets/driver/')) return json(200, ACTIVE);
+    if (url.includes('/api/runsheets?driverId=')) return json(200, ALL);
     if (url.includes('/api/parcels/tracking/')) {
       return json(403, { timestamp: 'x', status: 403, error: 'Forbidden', message: 'Forbidden', path: '/api/parcels/tracking/x' });
     }
@@ -163,10 +193,43 @@ describe('real runsheets', () => {
     const active = (await api.getActiveParcels()).map((job) => job.id);
     expect(active).toEqual(['TRK-00000501', 'TRK-00000502', 'TRK-00000505']);
     const history = await api.getHistoryParcels();
-    expect(history.map((job) => [job.id, job.status, job.failureReason])).toEqual([
+    expect(history.slice(0, 2).map((job) => [job.id, job.status, job.failureReason])).toEqual([
       ['TRK-00000503', 'DELIVERED', undefined],
       ['TRK-00000504', 'FAILED', 'NON_COMPLIANT_ORDER'],
     ]);
+  });
+
+  it('adds parcels from runs the agency closed to history, newest run first', async () => {
+    const api = await signedIn();
+    const history = await api.getHistoryParcels();
+    expect(urls).toContain(`https://jibex.cloud/api/runsheets?driverId=${DRIVER_ID}`);
+    expect(history.map((job) => job.id)).toEqual([
+      'TRK-00000503',
+      'TRK-00000504',
+      // Closed on the 20th, then the 16th. The parcel left pending on a
+      // closed run and the cancelled run's parcel are in neither list.
+      'TRK-00000401',
+      'TRK-00000402',
+      'TRK-00000301',
+    ]);
+    expect(history.find((job) => job.id === 'TRK-00000401')?.server?.runsheetStatus).toBe('COMPLETED');
+  });
+
+  it('works the Profile numbers out from real runs, and leaves out what it can’t know', async () => {
+    const api = await signedIn();
+    const stats = await api.getDriverStats();
+    // Delivered: 503 (open run), 401 and 301 (closed runs). Failed: 504, 402.
+    expect(stats.lifetimeDeliveries).toBe(3);
+    expect(stats.deliveryRate).toBeCloseTo(60);
+    // Cash on hand: delivered parcels on runs not yet closed — only 503.
+    expect(stats.cashCollectedTotal).toBe(110);
+    expect(stats.weeklyCashCollected).toBeUndefined();
+    expect(stats.onPaceFinishTime).toBeUndefined();
+  });
+
+  it('shows the plate from the runs, or nothing when no run has one', async () => {
+    const api = await signedIn();
+    expect(await api.getVehicle()).toEqual({ plate: 'TUN-261' });
   });
 
   it('shows a status it doesn’t know as still to do, keeping the raw value', async () => {

@@ -34,4 +34,6 @@ export interface Runsheet {
   completionPercent: number;
   /** Job ids belonging to this runsheet, in stop order. */
   stopIds: string[];
+  /** The vehicle dispatch put on this run, when they filled it in. Absent on mock data. */
+  vehiclePlate?: string;
 }

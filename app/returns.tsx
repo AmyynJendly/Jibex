@@ -29,6 +29,7 @@ import { localeTag } from '../lib/date';
 import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
+import { safely, writeErrorText } from '../lib/writeResult';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { confirmReturns, setReturnOrder } from '../services/api';
 import type { Return } from '../types';
@@ -82,10 +83,19 @@ export default function ReturnsScreen() {
     if (!accepted) return;
 
     setConfirming(true);
-    await confirmReturns(batches.map((r) => r.id));
-    await invalidateReturns();
+    const result = await safely(() => confirmReturns(batches.map((r) => r.id)));
     setConfirming(false);
-    showToast(t('returns.confirmToast', { count: batches.length }));
+    const succeeded = 'succeeded' in result ? result.succeeded : [];
+    if (succeeded.length === 0) {
+      showToast(writeErrorText(t, result));
+      return;
+    }
+    await invalidateReturns();
+    showToast(
+      succeeded.length === batches.length
+        ? t('returns.confirmToast', { count: succeeded.length })
+        : t('returns.confirmPartialToast', { done: succeeded.length, total: batches.length })
+    );
   }
 
   async function handleReorder(orderedIds: string[]) {

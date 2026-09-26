@@ -7,3 +7,4 @@ export * from './runsheet';
 export * from './transfer';
 export * from './user';
 export * from './vehicle';
+export * from './write';

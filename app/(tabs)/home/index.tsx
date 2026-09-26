@@ -43,16 +43,19 @@ import {
   invalidateDeliveryData,
   useDriverStats,
   useJobsByIds,
+  usePickups,
   useRunsheets,
   useScreenState,
   useUser,
 } from '../../../lib/query';
+import { safely, writeErrorText } from '../../../lib/writeResult';
 import { confirmRunsheetReceipt } from '../../../services/api';
 import type { DriverStats, Runsheet, User } from '../../../types';
 
 interface HomeData {
   user: User;
-  stats: DriverStats;
+  /** `pickupsCount`: pickups still to collect, from the pickups list itself. */
+  stats: DriverStats & { pickupsCount: number };
   /** Fallback shown until (or unless) a real GPS fix resolves — the driver's assigned runsheet zone. */
   zone: string | null;
   /** Runsheets still awaiting the driver's receipt confirmation — their parcels are excluded from `nextStop` since they're not deliverable yet. */
@@ -91,6 +94,7 @@ export default function HomeScreen() {
   const userQuery = useUser();
   const statsQuery = useDriverStats();
   const runsheetsQuery = useRunsheets();
+  const pickupsQuery = usePickups();
 
   const runsheets = useMemo(() => runsheetsQuery.data ?? [], [runsheetsQuery.data]);
 
@@ -127,11 +131,13 @@ export default function HomeScreen() {
     const allJobs = jobsQuery.data ?? [];
     const delivered = allJobs.filter((j) => j.status === 'DELIVERED').length;
     const failed = allJobs.filter((j) => j.status === 'FAILED').length;
+    const pickupsCount = (pickupsQuery.data ?? []).filter((p) => p.status === 'SCHEDULED').length;
 
     return {
       user,
       stats: {
         ...stats,
+        pickupsCount,
         delivered,
         pending: allJobs.length - delivered - failed,
         failed,
@@ -145,6 +151,7 @@ export default function HomeScreen() {
     userQuery.data,
     statsQuery.data,
     jobsQuery.data,
+    pickupsQuery.data,
     workableRunsheets,
     runsheets,
     unconfirmedRunsheets,
@@ -191,7 +198,13 @@ export default function HomeScreen() {
     });
     if (!confirmed) return;
 
-    await confirmRunsheetReceipt(runsheet.id);
+    // Never crashes on a server or network error: the failure is shown and
+    // the card stays exactly as it was.
+    const result = await safely(() => confirmRunsheetReceipt(runsheet.id));
+    if (!result.success) {
+      showToast(writeErrorText(t, result));
+      return;
+    }
     await invalidateDeliveryData();
     showToast(t('runsheets.confirm.toast'));
   }
@@ -423,12 +436,15 @@ export default function HomeScreen() {
           style={styles.arcGauge}
           scale={0.78}
         />
-        <View style={[styles.paceRow, { backgroundColor: colors.bg }]}>
-          <Icon name="time-outline" size={14} color={colors.textTertiary} />
-          <Text style={[Typography.footnote, styles.paceText, { color: colors.textSecondary }]}>
-            {t('home.onPace', { time: stats.onPaceFinishTime })}
-          </Text>
-        </View>
+        {/* Only when there's an honest estimate — the real server gives none. */}
+        {stats.onPaceFinishTime && (
+          <View style={[styles.paceRow, { backgroundColor: colors.bg }]}>
+            <Icon name="time-outline" size={14} color={colors.textTertiary} />
+            <Text style={[Typography.footnote, styles.paceText, { color: colors.textSecondary }]}>
+              {t('home.onPace', { time: stats.onPaceFinishTime })}
+            </Text>
+          </View>
+        )}
 
         <View style={[styles.divider, { backgroundColor: colors.separator }]} />
 

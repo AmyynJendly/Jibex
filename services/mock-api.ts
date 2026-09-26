@@ -6,6 +6,7 @@ import { reasonNeedsNote } from '../lib/failureReasons';
 import { clearSession, saveSession } from '../lib/session';
 import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids';
 import type {
+  BatchWriteResult,
   DeliveryFailureReason,
   DriverStats,
   GeoPoint,
@@ -18,6 +19,7 @@ import type {
   Transfer,
   User,
   Vehicle,
+  WriteResult,
 } from '../types';
 
 /**
@@ -619,7 +621,6 @@ let mockDriverStats: DriverStats = {
   delivered: 24,
   pending: 8,
   failed: 2,
-  pickupsCount: 5,
   cashCollectedTotal: 486.5,
   completionPercent: 70,
   onPaceFinishTime: '5:30 PM',
@@ -650,7 +651,7 @@ function recordDeliveryCompletion(cashAmount: number) {
     pending: Math.max(0, mockDriverStats.pending - 1),
     cashCollectedTotal: mockDriverStats.cashCollectedTotal + cashAmount,
     lifetimeDeliveries,
-    weeklyCashCollected: mockDriverStats.weeklyCashCollected + cashAmount,
+    weeklyCashCollected: (mockDriverStats.weeklyCashCollected ?? 0) + cashAmount,
     deliveryRate: recomputeDeliveryRate(lifetimeDeliveries),
   };
 }
@@ -698,10 +699,8 @@ export interface LoginResult {
   error?: string;
 }
 
-export interface ConfirmDeliveryResult {
-  success: boolean;
+export interface ConfirmDeliveryResult extends WriteResult {
   job?: Job;
-  error?: string;
 }
 
 /** Accepts either the provisioned username or the driver's work email, case-insensitively — same as the real backend will. */
@@ -749,7 +748,8 @@ function initialsFor(name: string) {
     .join('');
 }
 
-export async function getVehicle(): Promise<Vehicle> {
+/** The driver's vehicle, or null when nobody has recorded one. */
+export async function getVehicle(): Promise<Vehicle | null> {
   return delay({ ...mockVehicle });
 }
 
@@ -793,11 +793,15 @@ export async function getRunsheetJobs(id: string): Promise<Job[]> {
  * parcels' status updates below. No-op (but still returns the current
  * state) if it's already past `A_CONFIRMER`.
  */
-export async function confirmRunsheetReceipt(id: string): Promise<Runsheet> {
+export interface RunsheetWriteResult extends WriteResult {
+  runsheet?: Runsheet;
+}
+
+export async function confirmRunsheetReceipt(id: string): Promise<RunsheetWriteResult> {
   await delay(undefined);
   const seed = mockRunsheets.find((r) => r.id === id);
   if (!seed) {
-    throw new Error(`Runsheet ${id} not found`);
+    return { success: false, error: 'common.genericError' };
   }
   if (seed.status === 'A_CONFIRMER') {
     seed.status = 'EN_COURS';
@@ -805,7 +809,7 @@ export async function confirmRunsheetReceipt(id: string): Promise<Runsheet> {
   // Re-confirmation stamps whatever is actually in the van now, so a later
   // addition by dispatch flips `needsConfirmation` back on by itself.
   seed.confirmedStopCount = seed.stopIds.length;
-  return toRunsheet(seed);
+  return { success: true, runsheet: toRunsheet(seed) };
 }
 
 /**
@@ -845,11 +849,11 @@ export async function getHistoryParcels(): Promise<Job[]> {
  * hatch for marking the wrong package. Rolls back whatever the original
  * resolution contributed to the running stats.
  */
-export async function reopenParcel(id: string): Promise<Job> {
+export async function reopenParcel(id: string): Promise<ConfirmDeliveryResult> {
   await delay(undefined);
   const job = mockJobs.find((j) => j.id === id);
   if (!job) {
-    throw new Error(`Job ${id} not found`);
+    return { success: false, error: 'common.genericError' };
   }
 
   if (job.status === 'DELIVERED') {
@@ -861,7 +865,7 @@ export async function reopenParcel(id: string): Promise<Job> {
       delivered: Math.max(0, mockDriverStats.delivered - 1),
       pending: mockDriverStats.pending + 1,
       cashCollectedTotal: Math.max(0, mockDriverStats.cashCollectedTotal - refunded),
-      weeklyCashCollected: Math.max(0, mockDriverStats.weeklyCashCollected - refunded),
+      weeklyCashCollected: Math.max(0, (mockDriverStats.weeklyCashCollected ?? 0) - refunded),
       lifetimeDeliveries,
       deliveryRate: recomputeDeliveryRate(lifetimeDeliveries),
     };
@@ -888,7 +892,7 @@ export async function reopenParcel(id: string): Promise<Job> {
     seed.status = 'EN_COURS';
   }
 
-  return { ...job, packageInfo: { ...job.packageInfo } };
+  return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
 
 /**
@@ -944,15 +948,20 @@ export async function getPickups(): Promise<Pickup[]> {
  * run to hundreds of parcels, and scanning each one at the counter isn't
  * practical — the driver signs for the whole stop instead.
  */
-export async function completePickups(ids: string[]): Promise<Pickup[]> {
+export async function completePickups(ids: string[]): Promise<BatchWriteResult> {
   await delay(undefined);
-  const wanted = new Set(ids);
-  mockPickups.forEach((p) => {
-    if (wanted.has(p.id) && p.status === 'SCHEDULED') {
-      p.status = 'COMPLETED';
+  const succeeded: string[] = [];
+  const failed: string[] = [];
+  for (const id of ids) {
+    const pickup = mockPickups.find((p) => p.id === id);
+    if (pickup?.status === 'SCHEDULED') {
+      pickup.status = 'COMPLETED';
+      succeeded.push(id);
+    } else {
+      failed.push(id);
     }
-  });
-  return mockPickups.map((p) => ({ ...p }));
+  }
+  return { success: failed.length === 0, succeeded, failed };
 }
 
 /** One transfer, by id. */
@@ -978,15 +987,20 @@ export async function getTransfers(): Promise<Transfer[]> {
  * counted against the manifest at the counter, the same way a merchant pickup
  * is — scanning every batch individually is the exception, not the rule.
  */
-export async function confirmReturns(ids: string[]): Promise<Return[]> {
+export async function confirmReturns(ids: string[]): Promise<BatchWriteResult> {
   await delay(undefined);
-  const wanted = new Set(ids);
-  mockReturns.forEach((r) => {
-    if (wanted.has(r.id) && r.status === 'PENDING_PICKUP') {
-      r.status = 'PROCESSED';
+  const succeeded: string[] = [];
+  const failed: string[] = [];
+  for (const id of ids) {
+    const item = mockReturns.find((r) => r.id === id);
+    if (item?.status === 'PENDING_PICKUP') {
+      item.status = 'PROCESSED';
+      succeeded.push(id);
+    } else {
+      failed.push(id);
     }
-  });
-  return mockReturns.map((r) => ({ ...r }));
+  }
+  return { success: failed.length === 0, succeeded, failed };
 }
 
 export async function getReturns(): Promise<Return[]> {
@@ -1003,35 +1017,37 @@ export async function getNotifications(): Promise<Notification[]> {
   return delay(mockNotifications.map((n) => ({ ...n })));
 }
 
-export async function markNotificationRead(id: string): Promise<void> {
+const DONE: WriteResult = { success: true };
+
+export async function markNotificationRead(id: string): Promise<WriteResult> {
   const notification = mockNotifications.find((n) => n.id === id);
   if (notification) notification.read = true;
-  await delay(undefined);
+  return delay(DONE);
 }
 
 /** Puts an alert back to unread — the Mail-style swipe offers both ways. */
-export async function markNotificationUnread(id: string): Promise<void> {
+export async function markNotificationUnread(id: string): Promise<WriteResult> {
   const notification = mockNotifications.find((n) => n.id === id);
   if (notification) notification.read = false;
-  await delay(undefined);
+  return delay(DONE);
 }
 
-export async function deleteNotification(id: string): Promise<void> {
+export async function deleteNotification(id: string): Promise<WriteResult> {
   const index = mockNotifications.findIndex((n) => n.id === id);
   if (index >= 0) mockNotifications.splice(index, 1);
-  return delay(undefined);
+  return delay(DONE);
 }
 
-export async function deleteAllNotifications(): Promise<void> {
+export async function deleteAllNotifications(): Promise<WriteResult> {
   mockNotifications.length = 0;
-  return delay(undefined);
+  return delay(DONE);
 }
 
-export async function markAllNotificationsRead(): Promise<void> {
+export async function markAllNotificationsRead(): Promise<WriteResult> {
   mockNotifications.forEach((n) => {
     n.read = true;
   });
-  await delay(undefined);
+  return delay(DONE);
 }
 
 export async function getJobDetail(id: string): Promise<Job> {
@@ -1204,11 +1220,7 @@ export async function confirmDeliveryWithPhoto(
   return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
 }
 
-export interface FailDeliveryResult {
-  success: boolean;
-  job?: Job;
-  error?: string;
-}
+export type FailDeliveryResult = ConfirmDeliveryResult;
 
 export async function markDeliveryFailed(
   id: string,
@@ -1252,6 +1264,8 @@ export interface ScanResult {
   kind?: 'pickup' | 'job' | 'return' | 'transfer';
   /** The matched entity's own id — for returns/transfers this lets the caller track exactly which item in a list was just resolved. */
   id?: string;
+  /** Found, but nothing was changed — a lookup, not a confirmation. */
+  checkedOnly?: boolean;
 }
 
 /** QR payload generated by the Transfers screen — see `app/transfers.tsx`. */
@@ -1271,7 +1285,7 @@ export async function confirmScan(code: string): Promise<ScanResult> {
 
   const job = mockJobs.find((j) => j.id.toUpperCase() === trimmed);
   if (job) {
-    return { success: true, label: job.customerName, kind: 'job', id: job.id };
+    return { success: true, label: job.customerName, kind: 'job', id: job.id, checkedOnly: true };
   }
 
   // A return batch is scanned by the manifest id printed on its paperwork.

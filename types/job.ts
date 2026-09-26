@@ -96,6 +96,11 @@ export interface ParcelServerInfo {
   /** The runsheet line this parcel sits on — what status updates will be sent against. */
   itemId?: string;
   runsheetId?: string;
+  /**
+   * The runsheet's own raw status (PENDING, DRIVER_CONFIRMED, IN_PROGRESS,
+   * COMPLETED…). The server only takes parcel updates while it's IN_PROGRESS.
+   */
+  runsheetStatus?: string;
   /** Position dispatch gave the stop. The driver's own drag order sits on top of it. */
   sequenceOrder?: number;
   /** Raw statuses as the server sent them, including any we don't map yet. */

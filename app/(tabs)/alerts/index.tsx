@@ -39,6 +39,7 @@ import {
 } from '../../../constants';
 import { localeTag } from '../../../lib/date';
 import { useNow } from '../../../lib/useNow';
+import { safely, writeErrorText } from '../../../lib/writeResult';
 import {
   deleteAllNotifications,
   deleteNotification,
@@ -233,17 +234,27 @@ export default function AlertsScreen() {
       return;
     }
     if (notification.target) goToTarget(notification.target);
-    markNotificationRead(notification.id).then(invalidateNotifications);
+    // Opening is the point of the tap; the read mark follows only if the
+    // server takes it. Refused (writes off, offline), the dot simply stays.
+    safely(() => markNotificationRead(notification.id)).then((result) => {
+      if (result.success) invalidateNotifications();
+    });
   }
 
   /**
    * "Read all" as a wave: one light tick, then each unread row turns read in
    * turn from the top down — its dot shrinking away — rather than every row
-   * changing at once. The server write happens once the wave has passed.
+   * changing at once. The wave only plays once the server has taken the
+   * write; refused, nothing moves and the reason is shown.
    */
   async function handleMarkAllRead() {
     const unreadIds = (visible ?? []).filter((n) => !isRead(n)).map((n) => n.id);
     if (unreadIds.length === 0) return;
+    const result = await safely(() => markAllNotificationsRead());
+    if (!result.success) {
+      showToast(writeErrorText(t, result));
+      return;
+    }
     if (hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     const step = reduceMotion ? 0 : READ_WAVE_STEP_MS;
@@ -252,15 +263,26 @@ export default function AlertsScreen() {
       else setTimeout(() => setReadOverride(id, true), i * step);
     });
     await new Promise((resolve) => setTimeout(resolve, unreadIds.length * step + 250));
-    await markAllNotificationsRead();
     await invalidateNotifications();
     setReadOverrides(new Map());
   }
 
-  /** The Mail-style leading swipe: flips one alert between read and unread. */
+  /**
+   * The Mail-style leading swipe: flips one alert between read and unread.
+   * Marking unread lives on the phone, so it shows at once; marking read
+   * may need the server, so the dot only goes once it has agreed.
+   */
   async function handleToggleRead(id: string, currentlyUnread: boolean) {
-    setReadOverride(id, currentlyUnread);
-    await (currentlyUnread ? markNotificationRead(id) : markNotificationUnread(id));
+    if (!currentlyUnread) setReadOverride(id, false);
+    const result = await safely(() =>
+      currentlyUnread ? markNotificationRead(id) : markNotificationUnread(id)
+    );
+    if (!result.success) {
+      setReadOverride(id, null);
+      showToast(writeErrorText(t, result));
+      return;
+    }
+    if (currentlyUnread) setReadOverride(id, true);
     await invalidateNotifications();
     setReadOverride(id, null);
   }
@@ -278,7 +300,8 @@ export default function AlertsScreen() {
     setHidden(id, true);
     const timer = setTimeout(async () => {
       pendingDeletes.current.delete(id);
-      await deleteNotification(id);
+      const result = await safely(() => deleteNotification(id));
+      if (!result.success) showToast(writeErrorText(t, result));
       await invalidateNotifications();
       setHidden(id, false);
     }, ACTION_DISPLAY_MS);
@@ -317,7 +340,8 @@ export default function AlertsScreen() {
       setTimeout(async () => {
         pendingDeletes.current.forEach(clearTimeout);
         pendingDeletes.current.clear();
-        await deleteAllNotifications();
+        const result = await safely(() => deleteAllNotifications());
+        if (!result.success) showToast(writeErrorText(t, result));
         await invalidateNotifications();
         setHiddenIds(new Set());
       }, ids.length * step + 400);
@@ -334,7 +358,8 @@ export default function AlertsScreen() {
     setTimeout(async () => {
       pendingDeletes.current.forEach(clearTimeout);
       pendingDeletes.current.clear();
-      await deleteAllNotifications();
+      const result = await safely(() => deleteAllNotifications());
+      if (!result.success) showToast(writeErrorText(t, result));
       await invalidateNotifications();
       setHiddenIds(new Set());
       setClearingAll(false);

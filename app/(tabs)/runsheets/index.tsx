@@ -36,6 +36,7 @@ import {
 import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { telUrl } from '../../../lib/phone';
+import { safely, writeErrorText } from '../../../lib/writeResult';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
   invalidateDeliveryData,
@@ -300,7 +301,13 @@ export default function RunsheetsScreen() {
     });
     if (!confirmed) return;
 
-    await confirmRunsheetReceipt(runsheet.id);
+    // Never crashes on a server or network error: the failure is shown and
+    // the card stays exactly as it was.
+    const result = await safely(() => confirmRunsheetReceipt(runsheet.id));
+    if (!result.success) {
+      showToast(writeErrorText(t, result));
+      return;
+    }
     await invalidateDeliveryData();
     showToast(t('runsheets.confirm.toast'));
   }

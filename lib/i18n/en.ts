@@ -30,6 +30,11 @@ const en = {
     loading: 'Loading…',
     comingSoon: '{{feature}} — coming soon',
     genericError: 'Something went wrong. Please try again.',
+    // Real server, writes switched off: the action was refused on the phone.
+    writesOff: 'Not connected to the server yet',
+    networkError: 'Can’t reach the server. Check your connection and try again.',
+    serverRefused: 'The server refused this: {{reason}}',
+    notAvailableYet: 'Not available yet',
     nav: {
       home: 'Home',
       runsheets: 'Runsheets',
@@ -254,6 +259,7 @@ const en = {
     scannedCount_one: '{{count}} package scanned at this stop',
     scannedCount_other: '{{count}} packages scanned at this stop',
     confirmedToast: 'Confirmed — {{label}}',
+    foundToast: 'Found — {{label}}',
     transferConfirmedToast: 'Transfer completed — {{label}}',
     batchTitle: 'Scan Returns',
     batchProgress: '{{done}} of {{total}} scanned',
@@ -300,6 +306,7 @@ const en = {
     doneConfirmAction: 'Mark Collected',
     doneToast_one: '{{count}} pickup marked collected',
     doneToast_other: '{{count}} pickups marked collected',
+    donePartialToast: '{{done}} of {{total}} pickups collected — the rest didn’t go through. Try them again.',
     reorderedToast: 'Order saved',
     empty: {
       scheduled: 'No scheduled pickups',
@@ -346,6 +353,7 @@ const en = {
     confirmAction: 'Confirm',
     confirmToast_one: '{{count}} batch confirmed',
     confirmToast_other: '{{count}} batches confirmed',
+    confirmPartialToast: '{{done}} of {{total}} confirmed — the rest didn’t go through. Try them again.',
     scanNote: 'Return batches must be scanned at the depot before you close out the day.',
     empty: 'No pending returns',
     toggleCurrent: 'Current',
