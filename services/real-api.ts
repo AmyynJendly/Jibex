@@ -8,7 +8,6 @@
  *   - GET /api/runsheets/driver/{driverId}/active  → the driver's runsheets
  *   - GET /api/runsheets?driverId={driverId}       → every runsheet, for history and totals
  *   - GET /api/runsheets/{id}                      → one runsheet with its items
- *   - GET /api/parcels/tracking/{trackingNumber}   → search (see getJobDetail)
  *   - GET /api/pickup-requests/driver/{driverId}   → pickups
  *   - GET /api/pickup-requests/{id}/parcels        → a pickup's parcels
  *   - GET /api/transfers/driver/{driverId}         → transfers
@@ -39,6 +38,7 @@
 
 import { API_BASE_URL, API_TIMEOUT_MS, API_WRITES } from '../constants/backend';
 import { reasonNeedsNote } from '../lib/failureReasons';
+import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
 import { localeTag } from '../lib/date';
 import { FALLBACK_ORIGIN } from '../lib/geo';
@@ -1269,29 +1269,17 @@ export async function getNextStopId(currentId: string): Promise<string | null> {
 }
 
 /**
- * One parcel, by tracking number — the stop screen and the search box.
+ * One parcel, by tracking number — the stop screen.
  *
- * The driver's own runsheets are checked first: that's where nearly every
- * lookup lands, and it needs no extra request. Anything else goes to
- * `GET /api/parcels/tracking/{n}`, which currently answers 403 for driver
- * accounts; until the backend opens it to drivers, that reads as "not found".
+ * Only the driver's own parcels, as already loaded: their open runsheets,
+ * then the runsheets the agency closed. The backend asked that the app never
+ * call `GET /api/parcels/tracking/{n}`; anything not found here is "not
+ * found in your parcels".
  */
 export async function getJobDetail(id: string): Promise<Job> {
-  const { jobs } = await loadDriverData();
-  const wanted = id.trim().toUpperCase();
-  const own = jobs.find((job) => job.id.toUpperCase() === wanted);
-  if (own) return copy(own);
-
-  try {
-    const parcel = await request<ApiParcel>(`api/parcels/tracking/${encodeURIComponent(id.trim())}`);
-    const job = toJob(parcel);
-    return job;
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-      throw new ApiError(404, `Parcel ${id} not found`);
-    }
-    throw error;
-  }
+  const own = await ownParcel(id);
+  if (!own) throw new ApiError(404, `Parcel ${id} not found in the driver's parcels`);
+  return copy(own);
 }
 
 // ── Pickups, transfers, returns ───────────────────────────────────────────
@@ -1796,21 +1784,42 @@ export async function markAllNotificationsRead(): Promise<WriteResult> {
   return { success: true };
 }
 
+/** A transfer's handover QR carries its number after this prefix (see HandoffQrSheet). */
+const TRANSFER_CODE_PREFIX = 'JIBEX-TRANSFER:';
+
 /**
- * The scanner, on real data: it finds the driver's own parcels and nothing
- * more yet. A find is only a find — it changes nothing, and says so.
+ * The scanner, on real data: a lookup in the driver's own parcels — the same
+ * local search as the Search screen, exact tracking numbers only, no server
+ * lookup. A find is only a find: it changes nothing, and says so. A list
+ * that fails to load is skipped rather than failing the whole scan.
  */
 export async function confirmScan(code: string): Promise<ScanResult> {
-  const wanted = code.trim().toUpperCase();
+  const raw = code.trim().toUpperCase();
+  const wanted = raw.startsWith(TRANSFER_CODE_PREFIX) ? raw.slice(TRANSFER_CODE_PREFIX.length) : raw;
   if (!wanted) return { success: false, error: 'scanner.errors.notRecognized' };
-  try {
-    const { jobs } = await loadDriverData();
-    const job = jobs.find((j) => j.id.toUpperCase() === wanted);
-    if (job) return { success: true, kind: 'job', id: job.id, label: job.customerName, checkedOnly: true };
-  } catch (error) {
-    return writeFailure(error);
-  }
-  return { success: false, error: 'scanner.errors.notRecognized' };
+
+  const [driverData, history, pickups, transfers, returns] = await Promise.allSettled([
+    loadDriverData(),
+    getHistoryParcels(),
+    getPickups(),
+    getTransfers(),
+    getReturns(),
+  ]);
+  const value = <T,>(result: PromiseSettledResult<T>) => (result.status === 'fulfilled' ? result.value : null);
+  const hit = findExact(wanted, {
+    active: value(driverData)?.jobs.filter(isOpen),
+    history: value(history),
+    pickups: value(pickups),
+    transfers: value(transfers),
+    returns: value(returns),
+  })[0];
+  if (!hit) return { success: false, error: 'scanner.errors.notRecognized' };
+
+  const target = hit.target;
+  const kind: ScanResult['kind'] =
+    hit.source === 'pickup' ? 'pickup' : hit.source === 'transfer' ? 'transfer' : hit.source === 'return' ? 'return' : 'job';
+  const id = target.screen === 'job' ? target.jobId : (target.focusId ?? hit.trackingNumber);
+  return { success: true, kind, id, label: hit.name ?? hit.context ?? hit.trackingNumber, checkedOnly: true };
 }
 
 // ── Phone-only state over real parcels ────────────────────────────────────

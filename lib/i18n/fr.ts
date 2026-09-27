@@ -289,12 +289,22 @@ const fr: TranslationResource = {
 
   search: {
     headerTitle: 'Recherche',
-    label: 'Numéro de suivi',
-    placeholder: 'TRK-XXXXXXXX',
-    searching: 'Recherche…',
-    notFoundTitle: 'Aucun colis trouvé',
-    notFoundSubtitle: 'Aucune correspondance pour {{code}}',
-    instructions: 'Saisissez un numéro de suivi pour trouver un colis',
+    label: 'Numéro de suivi ou nom',
+    placeholder: 'TRK-… ou le nom d’un client',
+    loading: 'Chargement de vos colis…',
+    notFoundTitle: 'Introuvable dans vos colis',
+    notFoundSubtitle: 'Rien dans vos tournées, votre historique, vos collectes, transferts ou retours ne correspond à « {{code}} ».',
+    someNotLoaded: 'Certaines listes n’ont pas pu se charger — actualisez-les et réessayez.',
+    instructions: 'Retrouver un de vos colis',
+    scope: 'Par numéro de suivi ou nom du client, dans vos tournées, votre historique, vos collectes, transferts et retours.',
+    a11yOpens: 'Ouvre l’écran qui montre ce colis',
+    source: {
+      runsheet: 'Tournée',
+      history: 'Historique des tournées',
+      pickup: 'Collecte',
+      transfer: 'Transfert',
+      return: 'Retour',
+    },
   },
 
   pickups: {

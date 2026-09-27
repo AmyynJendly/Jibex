@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
@@ -38,6 +38,7 @@ import {
   morphIn,
 } from '../../../constants';
 import { localeTag } from '../../../lib/date';
+import { goToTarget } from '../../../lib/goToTarget';
 import { useNow } from '../../../lib/useNow';
 import { safely, writeErrorText } from '../../../lib/writeResult';
 import {
@@ -48,7 +49,7 @@ import {
   markNotificationUnread,
 } from '../../../services/api';
 import { useHapticsEnabled } from '../../../lib/haptics';
-import type { Notification, NotificationTarget, NotificationType } from '../../../types';
+import type { Notification, NotificationType } from '../../../types';
 
 /** Corner radius shared by the card, its shadow wrapper, and the swipeable's own clip mask — see `renderSwipeable`. */
 const CARD_RADIUS = 20;
@@ -76,42 +77,6 @@ function typeStyle(type: NotificationType, colors: ColorPalette) {
         soft: colors.neutralSoft,
       };
   }
-}
-
-/**
- * Resolves a notification's target to a route push.
- *
- * Every destination carries the tab to open on and, where the alert is about
- * one specific thing, that thing's id. Landing on the right list is not the
- * same as landing on the parcel — "Order #TRK-B6F31C08 refused" should put
- * the driver on that parcel in runsheet history, not on the runsheets tab
- * with ten cards to read through.
- */
-function goToTarget(target: NotificationTarget) {
-  switch (target.screen) {
-    case 'job':
-      router.push({ pathname: '/job/[id]', params: { id: target.jobId } });
-      return;
-    case 'pickups':
-      router.push({ pathname: '/pickups', params: focusParams(target.tab, target.focusId) });
-      return;
-    case 'transfers':
-      router.push({ pathname: '/transfers', params: focusParams(target.tab, target.focusId) });
-      return;
-    case 'returns':
-      router.push({ pathname: '/returns', params: focusParams(target.tab, target.focusId) });
-      return;
-    case 'runsheets':
-      router.push({
-        pathname: '/(tabs)/runsheets',
-        params: focusParams(target.tab, target.focusId),
-      });
-      return;
-  }
-}
-
-function focusParams(tab: string, focusId?: string) {
-  return focusId ? { tab, focus: focusId } : { tab };
 }
 
 function isToday(iso: string) {

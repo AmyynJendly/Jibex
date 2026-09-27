@@ -282,13 +282,14 @@ describe('real runsheets', () => {
     ]);
   });
 
-  it('finds the driver’s own parcel without the tracking endpoint, and reads its 403 as not found', async () => {
+  it('looks parcels up only among the driver’s own — never through the tracking endpoint', async () => {
     const api = await signedIn();
     const own = await api.getJobDetail('trk-00000502');
     expect(own.id).toBe('TRK-00000502');
-    expect(urls.some((url) => url.includes('/api/parcels/tracking/'))).toBe(false);
+    // A parcel on a run the agency closed opens too.
+    expect((await api.getJobDetail('TRK-00000401')).status).toBe('DELIVERED');
 
     await expect(api.getJobDetail('TRK-99999999')).rejects.toMatchObject({ status: 404 });
-    expect(urls.some((url) => url.includes('/api/parcels/tracking/TRK-99999999'))).toBe(true);
+    expect(urls.some((url) => url.includes('/api/parcels/tracking/'))).toBe(false);
   });
 });

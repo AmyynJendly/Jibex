@@ -246,3 +246,21 @@ describe('real notifications', () => {
     expect(notifications.find((n) => n.id === '14')!.server?.type).toBe('BRAND_NEW_KIND');
   });
 });
+
+describe('real scanner: a local lookup, never the tracking endpoint', () => {
+  it('finds a parcel in each of the driver’s lists, and says where', async () => {
+    const api = await signedIn();
+    expect(await api.confirmScan('trk-00000501')).toMatchObject({ success: true, kind: 'job', id: 'TRK-00000501', checkedOnly: true });
+    expect(await api.confirmScan('TRK-00000071')).toMatchObject({ success: true, kind: 'pickup', id: '1', label: 'Client A' });
+    expect(await api.confirmScan('TRK-00000082')).toMatchObject({ success: true, kind: 'transfer', id: 'TRF-7093829A' });
+    expect(await api.confirmScan('JIBEX-TRANSFER:TRF-7093829A')).toMatchObject({ success: true, kind: 'transfer', id: 'TRF-7093829A' });
+    expect(await api.confirmScan('TRK-00000091')).toMatchObject({ success: true, kind: 'return', id: 'TRK-00000091' });
+    expect(urls.some((url) => url.includes('/api/parcels/tracking/'))).toBe(false);
+  });
+
+  it('says "not recognized" for anything that isn’t the driver’s, without asking the server', async () => {
+    const api = await signedIn();
+    expect(await api.confirmScan('TRK-99999999')).toEqual({ success: false, error: 'scanner.errors.notRecognized' });
+    expect(urls.some((url) => url.includes('/api/parcels/tracking/'))).toBe(false);
+  });
+});

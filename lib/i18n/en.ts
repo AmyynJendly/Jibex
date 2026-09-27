@@ -292,12 +292,22 @@ const en = {
 
   search: {
     headerTitle: 'Search',
-    label: 'Tracking Number',
-    placeholder: 'TRK-XXXXXXXX',
-    searching: 'Searching…',
-    notFoundTitle: 'No parcel found',
-    notFoundSubtitle: "{{code}} doesn't match any tracking number",
-    instructions: 'Enter a tracking number to find a parcel',
+    label: 'Tracking number or name',
+    placeholder: 'TRK-… or a customer name',
+    loading: 'Loading your parcels…',
+    notFoundTitle: 'Not found in your parcels',
+    notFoundSubtitle: 'Nothing in your runsheets, history, pickups, transfers or returns matches “{{code}}”.',
+    someNotLoaded: 'Some of your lists couldn’t load — pull to refresh them and try again.',
+    instructions: 'Find one of your parcels',
+    scope: 'By tracking number or customer name, across your runsheets, history, pickups, transfers and returns.',
+    a11yOpens: 'Opens the screen that shows this parcel',
+    source: {
+      runsheet: 'Runsheet',
+      history: 'Runsheet history',
+      pickup: 'Pickup',
+      transfer: 'Transfer',
+      return: 'Return',
+    },
   },
 
   pickups: {
