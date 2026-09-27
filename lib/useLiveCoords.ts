@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 
+import type { DriverPosition, PositionProblem } from './driverPosition';
 import type { GeoPoint } from './geo';
 
 /**
@@ -19,17 +20,35 @@ let inFlight: Promise<GeoPoint | null> | null = null;
 const MAX_AGE_MS = 60_000;
 let fetchedAt = 0;
 
+/** Longest wait for a fix before giving up — a list waiting on GPS must not hang. */
+const FIX_TIMEOUT_MS = 10_000;
+
+let lastProblem: PositionProblem | null = null;
+
 async function resolveCoords(): Promise<GeoPoint | null> {
   const { status } = await Location.requestForegroundPermissionsAsync().catch(() => ({
     status: 'denied' as const,
   }));
-  if (status !== 'granted') return null;
+  if (status !== 'granted') {
+    lastProblem = 'denied';
+    return null;
+  }
 
-  const position = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
-  }).catch(() => null);
-  if (!position) return null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), FIX_TIMEOUT_MS);
+  });
+  const position = await Promise.race([
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null),
+    timeout,
+  ]);
+  clearTimeout(timer);
+  if (!position) {
+    lastProblem = 'unavailable';
+    return null;
+  }
 
+  lastProblem = null;
   cachedCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
   fetchedAt = Date.now();
   return cachedCoords;
@@ -54,6 +73,16 @@ export async function captureCurrentCoords(): Promise<GeoPoint | null> {
     inFlight = null;
   });
   return inFlight;
+}
+
+/**
+ * The driver's position for sorting, with the reason when there's none —
+ * so a list can say *why* it fell back to dispatch's order. Foreground
+ * permission only; shares the cache above.
+ */
+export async function locateDriver(): Promise<DriverPosition> {
+  const coords = await captureCurrentCoords().catch(() => null);
+  return coords ? { coords } : { coords: null, problem: lastProblem ?? 'unavailable' };
 }
 
 /**

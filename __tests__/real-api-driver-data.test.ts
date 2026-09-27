@@ -296,3 +296,27 @@ describe('pickup city from the addresses', () => {
     expect(pickup?.address).toBe('Rue X, Sousse');
   });
 });
+
+describe('dispatch contact: the manager’s phone before the placeholder', () => {
+  it('uses the agency manager’s number when the agency has no phone of its own', async () => {
+    const run = ACTIVE_RUNSHEETS[0] as Record<string, unknown>;
+    run.agency = { id: 2, name: 'jihed agence', phone: '', email: '', managerPhone: '98000000' };
+    try {
+      const api = await signedIn();
+      expect(await api.getDispatchContact()).toEqual({ phone: '98000000', email: undefined, agencyName: 'jihed agence' });
+    } finally {
+      delete run.agency;
+    }
+  });
+
+  it('prefers the agency’s own phone over its manager’s', async () => {
+    const run = ACTIVE_RUNSHEETS[0] as Record<string, unknown>;
+    run.agency = { id: 2, name: 'jihed agence', phone: '71111111', managerPhone: '98000000' };
+    try {
+      const api = await signedIn();
+      expect((await api.getDispatchContact()).phone).toBe('71111111');
+    } finally {
+      delete run.agency;
+    }
+  });
+});

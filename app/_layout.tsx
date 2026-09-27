@@ -32,6 +32,8 @@ import { HapticsProvider } from '../lib/haptics';
 import { NextStopBarProvider } from '../lib/nextStopBar';
 import { BiometricLockProvider } from '../lib/biometricLock';
 import { nativeHeaderOptions } from '../lib/nativeHeader';
+import { setDriverLocator } from '../lib/driverPosition';
+import { locateDriver } from '../lib/useLiveCoords';
 
 // Without this the stack mounts `index` (the `/` -> `/login` redirect) beneath
 // any deep link, and the redirect fires and clobbers the target route.
@@ -40,6 +42,9 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+// "Nearest first" measures from the phone's own position (foreground GPS).
+setDriverLocator(locateDriver);
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

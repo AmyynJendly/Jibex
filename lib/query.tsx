@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { useEffect, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
+import { driverPosition } from './driverPosition';
 import {
   getActiveParcels,
   getDriverStats,
@@ -77,6 +78,7 @@ export const keys = {
   jobsByIds: (ids: string[]) => ['jobs', ids.join(',')] as const,
   routeOrder: (ids: string[]) => ['routeOrder', ids.join(',')] as const,
   nearestFirst: ['nearestFirst'] as const,
+  driverPosition: ['driverPosition'] as const,
   notifications: ['notifications'] as const,
   pickups: ['pickups'] as const,
   transfers: ['transfers'] as const,
@@ -96,7 +98,7 @@ export function clearQueryCache() {
 export function invalidateDeliveryData() {
   return queryClient.invalidateQueries({
     predicate: ({ queryKey }) =>
-      ['parcels', 'jobs', 'runsheets', 'stats', 'notifications', 'routeOrder', 'nearestFirst'].includes(
+      ['parcels', 'jobs', 'runsheets', 'stats', 'notifications', 'routeOrder', 'nearestFirst', 'driverPosition'].includes(
         queryKey[0] as string
       ),
   });
@@ -131,6 +133,14 @@ export const useNotifications = () =>
 export const usePickups = () => useQuery({ queryKey: keys.pickups, queryFn: getPickups });
 export const useTransfers = () => useQuery({ queryKey: keys.transfers, queryFn: getTransfers });
 export const useReturns = () => useQuery({ queryKey: keys.returns, queryFn: getReturns });
+
+/**
+ * The driver's position as "Nearest first" sees it — the same lookup the
+ * list was sorted with — so the screen can say why it fell back to
+ * dispatch's order. Only asked for while "Nearest first" is on.
+ */
+export const useDriverPosition = (enabled: boolean) =>
+  useQuery({ queryKey: keys.driverPosition, queryFn: driverPosition, enabled, staleTime: 60_000 });
 
 export const useNearestFirst = () =>
   useQuery({ queryKey: keys.nearestFirst, queryFn: getNearestFirst });

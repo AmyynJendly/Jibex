@@ -59,6 +59,19 @@ export interface Job {
    * agency set them, so every use has an address-only fallback.
    */
   location?: GeoPoint;
+  /**
+   * The parcel's governorate, standard spelling ("Kasserine"), taken from
+   * the server's recipientCity. How "Nearest first" places a parcel that has
+   * no coordinates. Absent when the city names none.
+   */
+  governorate?: string;
+  /**
+   * Set while "Nearest first" orders the list: how far the driver is from
+   * this stop, in km. `distanceApprox` means it was measured to the centre of
+   * the parcel's governorate, not to the address.
+   */
+  distanceKm?: number;
+  distanceApprox?: boolean;
   /** ISO time the customer needs this by, if any — drives Home's time-sensitive callout. */
   deliverBy?: string;
   /** Set when a delivery attempt fails via the Can't Deliver flow. */

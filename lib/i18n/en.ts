@@ -128,6 +128,14 @@ const en = {
     reorderedToast: 'Order saved',
     nearestFirst: 'Nearest first',
     nearestFirstHint: 'Drag a stop to set your own order',
+    // "Nearest first" couldn't sort: why, in one line.
+    nearestFirstFallback: {
+      denied: 'Location is off for Jibex, so this is dispatch’s order. Allow location to sort nearest first.',
+      unavailable: 'Couldn’t get your position, so this is dispatch’s order.',
+    },
+    // Measured to the centre of the parcel's governorate, not the address.
+    distanceApprox: '≈ {{km}} km',
+    distanceExact: '{{km}} km',
     // Deliberately terse: the driver reads this standing in a van with the
     // packages in front of them, not looking for an explanation.
     confirm: {

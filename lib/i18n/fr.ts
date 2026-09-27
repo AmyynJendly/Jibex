@@ -127,6 +127,12 @@ const fr: TranslationResource = {
     update: 'Maj',
     reorderedToast: 'Ordre enregistré',
     nearestFirst: 'Plus proche d\'abord',
+    nearestFirstFallback: {
+      denied: 'La localisation est désactivée pour Jibex : voici l’ordre du dispatch. Autorisez-la pour trier au plus proche.',
+      unavailable: 'Position introuvable : voici l’ordre du dispatch.',
+    },
+    distanceApprox: '≈ {{km}} km',
+    distanceExact: '{{km}} km',
     nearestFirstHint: 'Glissez un arrêt pour définir votre propre ordre',
     confirm: {
       title_one: '{{count}} colis à confirmer',

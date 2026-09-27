@@ -40,6 +40,7 @@ import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight
 import {
   invalidateDeliveryData,
   useActiveParcels,
+  useDriverPosition,
   useHistoryParcels,
   useNearestFirst,
   useRunsheets,
@@ -158,6 +159,15 @@ function ParcelCard({
           numberOfLines={1}>
           {job.address}
         </Text>
+        {/* Only while "Nearest first" sorted the list. Measured to the
+            governorate's centre unless the parcel had real coordinates. */}
+        {job.distanceKm !== undefined && (
+          <Text style={[monoStyle(11, 'medium'), { color: colors.textSecondary }]} numberOfLines={1}>
+            {job.distanceApprox
+              ? t('runsheets.distanceApprox', { km: Math.round(job.distanceKm) })
+              : t('runsheets.distanceExact', { km: formatDecimal(job.distanceKm) })}
+          </Text>
+        )}
         {!inert && (
           <View style={[styles.openWell, { backgroundColor: colors.bg }]}>
             <Icon name="chevron-forward" size={15} color={colors.textSecondary} />
@@ -262,6 +272,8 @@ export default function RunsheetsScreen() {
   const history = historyQuery.data ?? null;
   const runsheets = runsheetsQuery.data ?? [];
   const nearestFirst = nearestFirstQuery.data ?? true;
+  // Why "Nearest first" couldn't sort, if it couldn't (no permission, no fix).
+  const positionProblem = useDriverPosition(nearestFirst).data?.problem;
   // Opened from a notification, the screen lands on the side that alert is
   // about — a refusal belongs in history, not on the current run.
   const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
@@ -545,6 +557,14 @@ export default function RunsheetsScreen() {
               />
             </View>
           )}
+          {workable.length > 1 && nearestFirst && positionProblem && (
+            <View style={styles.nearestFirstNote}>
+              <Icon name="information-circle-outline" size={14} color={colors.textTertiary} />
+              <Text style={[styles.nearestFirstNoteText, { color: colors.textSecondary }]}>
+                {t(`runsheets.nearestFirstFallback.${positionProblem}`)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {screen.isError && !active ? (
@@ -707,6 +727,19 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.mlg,
     borderRadius: Radii.lg,
+  },
+  nearestFirstNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.xs,
+    marginTop: -Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  nearestFirstNoteText: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    lineHeight: 16,
   },
   nearestFirstText: {
     flexDirection: 'row',

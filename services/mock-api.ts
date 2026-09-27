@@ -1,7 +1,8 @@
 import { addDays, toCompactDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
-import { nearestNeighborOrder } from '../lib/route';
+import { nearestFirstByArea, nearestNeighborOrder } from '../lib/route';
+import { driverPosition } from '../lib/driverPosition';
 import { reasonNeedsNote } from '../lib/failureReasons';
 import { clearSession, saveSession } from '../lib/session';
 import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids';
@@ -110,6 +111,20 @@ export async function getNearestFirst(): Promise<boolean> {
 export async function setNearestFirst(enabled: boolean): Promise<void> {
   await delay(undefined);
   await device.setNearestFirst(enabled);
+}
+
+/**
+ * Same rule as the real server: "Nearest first" sorts by distance from the
+ * driver (to each stop's own coordinates — mock parcels have them — else its
+ * governorate), and falls back to the incoming order with no position.
+ * Off, the driver's saved drag order.
+ */
+async function orderOpen(jobs: Job[]): Promise<Job[]> {
+  if (device.isNearestFirst()) {
+    const { coords } = await driverPosition();
+    return coords ? nearestFirstByArea(jobs, coords) : jobs;
+  }
+  return device.applyStopOrder(jobs, runsheetOf);
 }
 
 /** A driver dragging their own order is a deliberate override — it turns nearest-first off rather than fighting it. */
@@ -849,9 +864,7 @@ export async function getActiveParcels(): Promise<Job[]> {
   // ordering for a slot among them.
   const workable = jobs.filter((j) => !isJobBlockedByUnconfirmedRunsheet(j.id));
   const locked = jobs.filter((j) => isJobBlockedByUnconfirmedRunsheet(j.id));
-  const ordered = device.isNearestFirst()
-    ? nearestNeighborOrder(workable, DEPOT)
-    : device.applyStopOrder(workable, runsheetOf);
+  const ordered = await orderOpen(workable);
   return [...ordered, ...locked].map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
@@ -1115,10 +1128,8 @@ export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
   const done = jobs.filter((j) => j.status === 'DELIVERED' || j.status === 'FAILED');
 
   await delay(undefined);
-  const ordered = device.isNearestFirst()
-    ? nearestNeighborOrder(outstanding, DEPOT)
-    : device.applyStopOrder(outstanding, runsheetOf);
-  return ([...ordered.map((j) => j.id), ...done.map((j) => j.id)]);
+  const ordered = await orderOpen(outstanding);
+  return [...ordered.map((j) => j.id), ...done.map((j) => j.id)];
 }
 
 /** The nearest not-yet-delivered stop to wherever the driver just finished — recomputed live, not a fixed index. */

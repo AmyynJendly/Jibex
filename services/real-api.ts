@@ -39,13 +39,13 @@
 import { API_BASE_URL, API_TIMEOUT_MS, API_WRITES } from '../constants/backend';
 import { reasonNeedsNote } from '../lib/failureReasons';
 import { failureNotes, failureProofLine } from '../lib/failureProof';
-import { governorateIn } from '../lib/governorates';
+import { governorateIn, governorateOfCity } from '../lib/governorates';
 import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
 import { localeTag } from '../lib/date';
-import { FALLBACK_ORIGIN } from '../lib/geo';
 import { i18next } from '../lib/i18n';
-import { nearestNeighborOrder } from '../lib/route';
+import { nearestFirstByArea } from '../lib/route';
+import { driverPosition } from '../lib/driverPosition';
 import { clearSession, expireSession, getSession, saveSession, type Session } from '../lib/session';
 import { getToken } from '../lib/token';
 import type {
@@ -360,6 +360,7 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
     cashToCollect: price ?? 0,
     cashCollected: status === 'DELIVERED' ? price : undefined,
     location: point(parcel.recipientLat, parcel.recipientLng),
+    governorate: governorateOfCity(parcel.recipientCity),
     failureReason: status === 'FAILED' ? failureReason : undefined,
     failureNote: text(item?.notes) ?? text(parcel.failureNotes),
     // Kept on the phone when the failure was recorded here; the server has no field for it.
@@ -515,6 +516,8 @@ interface ApiNamed {
   city?: string | null;
   phone?: string | null;
   email?: string | null;
+  /** The agency manager's number — the fallback when the agency has no phone of its own. */
+  managerPhone?: string | null;
 }
 
 export interface ApiTransfer {
@@ -1110,16 +1113,21 @@ const copy = (job: Job): Job => ({ ...job, packageInfo: { ...job.packageInfo } }
 const isOpen = (job: Job) => job.status !== 'DELIVERED' && job.status !== 'FAILED';
 
 /**
- * The order the driver works open stops in: nearest-first when it's on and
- * the stops have coordinates, otherwise the driver's own drag order laid over
- * dispatch's sequence (stops they haven't placed keep dispatch's order).
+ * The order the driver works open stops in.
+ *
+ *  - "Nearest first" on: by distance from the driver's position to each
+ *    stop's governorate (the server sends no coordinates); same governorate
+ *    keeps dispatch's order, unknown ones last. With no position (location
+ *    refused, or no fix), dispatch's order — the screen says why.
+ *  - Off: the driver's own drag order laid over dispatch's sequence (stops
+ *    they haven't placed keep dispatch's order).
  */
-function orderOpen(jobs: Job[], runsheetOf: Map<string, string>): Job[] {
-  const byRunsheet = (id: string) => runsheetOf.get(id);
-  if (device.isNearestFirst() && jobs.some((job) => job.location)) {
-    return nearestNeighborOrder(jobs, FALLBACK_ORIGIN);
+async function orderOpen(jobs: Job[], runsheetOf: Map<string, string>): Promise<Job[]> {
+  if (device.isNearestFirst()) {
+    const { coords } = await driverPosition();
+    return coords ? nearestFirstByArea(jobs, coords) : jobs;
   }
-  return device.applyStopOrder(jobs, byRunsheet);
+  return device.applyStopOrder(jobs, (id) => runsheetOf.get(id));
 }
 
 /** `GET /api/runsheets/driver/{driverId}/active`, drafts and cancelled runs left out. */
@@ -1155,7 +1163,7 @@ export async function getActiveParcels(): Promise<Job[]> {
   const open = jobs.filter(isOpen);
   const workable = open.filter((job) => !locked.has(runsheetOf.get(job.id) ?? ''));
   const blocked = open.filter((job) => locked.has(runsheetOf.get(job.id) ?? ''));
-  return [...orderOpen(workable, runsheetOf), ...blocked].map(copy);
+  return [...(await orderOpen(workable, runsheetOf)), ...blocked].map(copy);
 }
 
 // ── Finished runsheets ────────────────────────────────────────────────────
@@ -1270,8 +1278,9 @@ export async function getDriverStats(): Promise<DriverStats> {
  * The driver's agency contact, from data already loaded: the agency on the
  * driver's current runsheets, then on their closed ones, then the agency
  * their transfers leave from (their own; the receiving agency is someone
- * else's). The first agency with a phone or an email wins; whatever it
- * lacks falls back to the placeholders. The find is saved on the phone, so
+ * else's). The first agency with a phone, a manager's phone or an email
+ * wins. Its phone is the agency's own, else its manager's; whatever is
+ * still missing falls back to the placeholders. The find is saved on the phone, so
  * the login screen can offer it before anyone signs in — signed out, that
  * saved copy is all this returns, and nothing is requested.
  */
@@ -1281,7 +1290,7 @@ export async function getDispatchContact(): Promise<DispatchContact> {
   if (!session || session.mode !== 'real') return device.storedDispatchContact() ?? {};
 
   const withContact = (agencies: (ApiNamed | null | undefined)[]) =>
-    agencies.find((agency) => text(agency?.phone) || text(agency?.email));
+    agencies.find((agency) => text(agency?.phone) || text(agency?.managerPhone) || text(agency?.email));
   // Each source on its own: one that fails to load is skipped, not fatal.
   const current = await loadDriverData().then((data) => data.raw, () => null);
   let agency = withContact((current ?? []).map((runsheet) => runsheet.agency));
@@ -1296,7 +1305,12 @@ export async function getDispatchContact(): Promise<DispatchContact> {
   if (!agency && current === null && past === null && transfers === null) return device.storedDispatchContact() ?? {};
 
   const contact: DispatchContact = agency
-    ? { phone: text(agency.phone), email: text(agency.email), agencyName: text(agency.name) }
+    ? {
+        // The agency's own line; its manager's when it has none.
+        phone: text(agency.phone) ?? text(agency.managerPhone),
+        email: text(agency.email),
+        agencyName: text(agency.name),
+      }
     : {};
   await device.saveDispatchContact(contact);
   return contact;
@@ -1322,7 +1336,7 @@ export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
   const { jobs, runsheetOf } = await loadDriverData();
   const wanted = new Set(stopIds);
   const mine = jobs.filter((job) => wanted.has(job.id));
-  const open = orderOpen(mine.filter(isOpen), runsheetOf);
+  const open = await orderOpen(mine.filter(isOpen), runsheetOf);
   return [...open, ...mine.filter((job) => !isOpen(job))].map((job) => job.id);
 }
 
