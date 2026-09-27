@@ -26,6 +26,7 @@ const KEYS = {
   hiddenNotifications: 'jibex.device.hiddenNotifications.v1',
   unreadNotifications: 'jibex.device.unreadNotifications.v1',
   failureLocations: 'jibex.device.failureLocations.v1',
+  dispatchContact: 'jibex.device.dispatchContact.v1',
 } as const;
 
 /** A call older than this is no longer evidence for any open parcel — dropped on load. */
@@ -57,6 +58,11 @@ const state = {
   unreadNotifications: [] as string[],
   /** Where the driver stood when they recorded a failed delivery. The server has no field for it. */
   failureLocations: {} as FailureLocations,
+  /**
+   * The agency's phone and email, as last found in the driver's data — kept
+   * so the login screen, before anyone signs in, can still offer them.
+   */
+  dispatchContact: null as { phone?: string; email?: string; agencyName?: string } | null,
 };
 
 /** Per parcel: the GPS fix taken when its failure was recorded, and when. */
@@ -86,6 +92,7 @@ export function hydrateDeviceStore(): Promise<void> {
         state.listOrders = parse(values[KEYS.listOrders], {});
         state.hiddenNotifications = parse(values[KEYS.hiddenNotifications], []);
         state.unreadNotifications = parse(values[KEYS.unreadNotifications], []);
+        state.dispatchContact = parse(values[KEYS.dispatchContact], null);
         const failureCutoff = Date.now() - CALL_LOG_RETENTION_MS;
         state.failureLocations = Object.fromEntries(
           Object.entries(parse<FailureLocations>(values[KEYS.failureLocations], {})).filter(
@@ -262,4 +269,15 @@ export async function saveFailureLocation(parcelId: string, fix: { lat: number; 
     [parcelId]: { lat: fix.lat, lng: fix.lng, at: new Date().toISOString() },
   };
   await persist('failureLocations', state.failureLocations);
+}
+
+// ── The agency's contact ──────────────────────────────────────────────────
+
+export function storedDispatchContact(): { phone?: string; email?: string; agencyName?: string } | null {
+  return state.dispatchContact;
+}
+
+export async function saveDispatchContact(contact: { phone?: string; email?: string; agencyName?: string }): Promise<void> {
+  state.dispatchContact = contact;
+  await persist('dispatchContact', contact);
 }

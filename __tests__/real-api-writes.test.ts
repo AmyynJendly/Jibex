@@ -347,14 +347,23 @@ describe('writes on: delivered, failed and corrections', () => {
     expect(writesSent()).toEqual([]);
   });
 
-  it('records a failure with the exact reason name, and keeps the GPS fix on the phone only', async () => {
+  it('records a failure with the exact reason name, the driver’s note first, then the call log and location', async () => {
     const { api } = await writingApp();
+    await api.logCallAttempt('TRK-B1');
+    await api.logCallAttempt('TRK-B1');
+    calls.length = 0;
     const fix = { lat: 36.8, lng: 10.18 };
     const result = await api.markDeliveryFailed('TRK-B1', 'NO_ANSWER', 'Sonné trois fois', fix);
     expect(result.success).toBe(true);
 
     expect(writeLines()).toEqual(['PUT api/runsheets/items/811/status']);
-    expect(JSON.parse(writesSent()[0].body!)).toEqual({ status: 'FAILED', failureReason: 'NO_ANSWER', notes: 'Sonné trois fois' });
+    const body = JSON.parse(writesSent()[0].body!);
+    expect(body).toMatchObject({ status: 'FAILED', failureReason: 'NO_ANSWER' });
+    // No coordinates field: the proof rides in the notes, as one readable line.
+    expect(Object.keys(body).sort()).toEqual(['failureReason', 'notes', 'status']);
+    expect(body.notes).toMatch(
+      /^Sonné trois fois\nCalled 2 times \(\d\d:\d\d, \d\d:\d\d\)\. Location: 36\.80000, 10\.18000\.$/
+    );
 
     await nextRead();
     const failed = (await api.getHistoryParcels()).find((job) => job.id === 'TRK-B1');

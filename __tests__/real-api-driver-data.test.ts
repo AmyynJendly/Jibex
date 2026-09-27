@@ -159,7 +159,8 @@ describe('real pickups', () => {
     const [open] = pickups;
     expect(open).toMatchObject({
       businessName: 'Boutique Test',
-      address: 'Zone Industrielle',
+      // pickupCity is null: the city comes from the sender's record.
+      address: 'Zone Industrielle, Tunis',
       contactName: 'Contact Un',
       packageCount: 1,
       server: { pickupId: '1', requestNumber: 'PU-3-20260926-0001', status: 'SCHEDULED', estimatedParcelsCount: 3 },
@@ -262,5 +263,36 @@ describe('real scanner: a local lookup, never the tracking endpoint', () => {
     const api = await signedIn();
     expect(await api.confirmScan('TRK-99999999')).toEqual({ success: false, error: 'scanner.errors.notRecognized' });
     expect(urls.some((url) => url.includes('/api/parcels/tracking/'))).toBe(false);
+  });
+});
+
+describe('dispatch contact from the agency data already loaded', () => {
+  it('takes the driver’s own agency (the one transfers leave from), never the receiving one', async () => {
+    const api = await signedIn();
+    // The runsheets here carry no agency contact; the transfer's sending agency has a phone.
+    expect(await api.getDispatchContact()).toEqual({ phone: '73000000', email: undefined, agencyName: 'Agence Sousse' });
+  });
+
+  it('is remembered on the phone, so the login screen can offer it signed out — with no request', async () => {
+    const api = await signedIn();
+    await api.getDispatchContact();
+    await api.logout();
+    urls.length = 0;
+    expect(await api.getDispatchContact()).toMatchObject({ phone: '73000000' });
+    expect(urls).toEqual([]);
+  });
+});
+
+describe('pickup city from the addresses', () => {
+  it('finds the governorate in the sender’s address when the server gives no city', () => {
+    const { toPickup } = require('../services/real-api') as RealApi;
+    const pickup = toPickup({ id: 9, status: 'SCHEDULED', pickupAddress: 'Zone Industrielle', pickupCity: null, sender: { address: 'Route de Gabès km 4, Sfax' } });
+    expect(pickup?.address).toBe('Zone Industrielle, Sfax');
+  });
+
+  it('doesn’t repeat a city the pickup address already names', () => {
+    const { toPickup } = require('../services/real-api') as RealApi;
+    const pickup = toPickup({ id: 9, status: 'SCHEDULED', pickupAddress: 'Rue X, Sousse', pickupCity: null, sender: { address: 'Sousse' } });
+    expect(pickup?.address).toBe('Rue X, Sousse');
   });
 });

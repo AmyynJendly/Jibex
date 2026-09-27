@@ -8,6 +8,7 @@ import { formatPickupId, formatRunsheetId, generateTrackingId } from '../lib/ids
 import type {
   BatchWriteResult,
   DeliveryFailureReason,
+  DispatchContact,
   DriverStats,
   GeoPoint,
   Job,
@@ -729,6 +730,11 @@ export async function login(username: string, password: string): Promise<LoginRe
 
 export async function logout(): Promise<void> {
   await clearSession();
+}
+
+/** Mock data has no agency contact: the app shows the placeholders. */
+export async function getDispatchContact(): Promise<DispatchContact> {
+  return delay({});
 }
 
 /** The driver's vehicle, or null when nobody has recorded one. */

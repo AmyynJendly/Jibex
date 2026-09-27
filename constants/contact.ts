@@ -1,11 +1,12 @@
 /**
- * Contact details shown to drivers.
+ * Fallback contact details, shown only when the driver's agency has none on
+ * file. The app first uses the agency's own phone and email from the data it
+ * already loads (see `getDispatchContact` and lib/dispatchContact).
  *
  * ⚠️ PLACEHOLDERS — REPLACE BEFORE RELEASE. Both values below were made up
  * while building the app. Neither is confirmed as a real Jibex number or
- * mailbox, so a driver who taps them today may reach a stranger or nothing.
- * Put the agency's real dispatch number and support address here — this is
- * the only place either appears.
+ * mailbox, so a driver who reaches them today may reach a stranger or
+ * nothing. Put a real fallback here — this is the only place either appears.
  */
 
 /** PLACEHOLDER. Called from login ("Forgot password? Call Dispatch") and shown in the login ticker. */

@@ -38,6 +38,8 @@
 
 import { API_BASE_URL, API_TIMEOUT_MS, API_WRITES } from '../constants/backend';
 import { reasonNeedsNote } from '../lib/failureReasons';
+import { failureNotes, failureProofLine } from '../lib/failureProof';
+import { governorateIn } from '../lib/governorates';
 import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
 import { localeTag } from '../lib/date';
@@ -68,6 +70,7 @@ import type {
   WriteResult,
   BatchWriteResult,
   DriverStats,
+  DispatchContact,
 } from '../types';
 import type {
   ConfirmDeliveryResult,
@@ -303,7 +306,7 @@ export interface ApiRunsheet {
   deliveredParcels?: number | null;
   failedParcels?: number | null;
   driver?: { id?: number | string | null; fullName?: string | null } | null;
-  agency?: { id?: number | string | null; name?: string | null } | null;
+  agency?: ApiNamed | null;
   items?: ApiRunsheetItem[] | null;
 }
 
@@ -494,13 +497,24 @@ export interface ApiPickup {
   notes?: string | null;
   completedAt?: string | null;
   createdAt?: string | null;
-  sender?: { id?: number | string | null; name?: string | null; senderName?: string | null; phone?: string | null } | null;
+  sender?: {
+    id?: number | string | null;
+    name?: string | null;
+    senderName?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    ville?: string | null;
+    gouvernorat?: string | null;
+  } | null;
 }
 
+/** An agency (or company) as nested in runsheets and transfers. Only these fields are read. */
 interface ApiNamed {
   id?: number | string | null;
   name?: string | null;
   city?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }
 
 export interface ApiTransfer {
@@ -554,6 +568,25 @@ function clockTime(iso: string | undefined): string {
 }
 
 /**
+ * The pickup's address with its city. The server's `pickupCity` is always
+ * empty, so the city comes from the first place that has one: the sender's
+ * own city fields, then a governorate named in the pickup address, then in
+ * the sender's address. It isn't repeated when the address already says it.
+ */
+function pickupAddressLine(apiPickup: ApiPickup): string {
+  const address = text(apiPickup.pickupAddress);
+  const sender = apiPickup.sender;
+  const city =
+    text(apiPickup.pickupCity) ??
+    text(sender?.ville) ??
+    text(sender?.gouvernorat) ??
+    governorateIn(address) ??
+    governorateIn(sender?.address);
+  const alreadySaid = !!city && !!address && governorateIn(address) === governorateIn(city) && governorateIn(city) !== undefined;
+  return [address, alreadySaid ? undefined : city].filter(Boolean).join(', ');
+}
+
+/**
  * A pickup request onto ours, or null for a cancelled one. Cash on its
  * parcels follows the same rule as runsheets (`price`).
  */
@@ -570,7 +603,7 @@ export function toPickup(apiPickup: ApiPickup, apiParcels?: ApiParcel[] | null):
   return {
     id: idString(apiPickup.id) ?? '',
     businessName: text(apiPickup.sender?.name) ?? text(apiPickup.sender?.senderName) ?? text(apiPickup.contactPerson) ?? '—',
-    address: [text(apiPickup.pickupAddress), text(apiPickup.pickupCity)].filter(Boolean).join(', '),
+    address: pickupAddressLine(apiPickup),
     // A status we don't know shows in the completed list — read-only, no actions.
     status: toPickupStatus(raw) ?? 'COMPLETED',
     requestedByDate: scheduledAt ?? '',
@@ -1233,6 +1266,42 @@ export async function getDriverStats(): Promise<DriverStats> {
  * one, otherwise the most recent closed run's. Null — and not shown — when
  * no run has one.
  */
+/**
+ * The driver's agency contact, from data already loaded: the agency on the
+ * driver's current runsheets, then on their closed ones, then the agency
+ * their transfers leave from (their own; the receiving agency is someone
+ * else's). The first agency with a phone or an email wins; whatever it
+ * lacks falls back to the placeholders. The find is saved on the phone, so
+ * the login screen can offer it before anyone signs in — signed out, that
+ * saved copy is all this returns, and nothing is requested.
+ */
+export async function getDispatchContact(): Promise<DispatchContact> {
+  await device.hydrateDeviceStore();
+  const session = await getSession();
+  if (!session || session.mode !== 'real') return device.storedDispatchContact() ?? {};
+
+  const withContact = (agencies: (ApiNamed | null | undefined)[]) =>
+    agencies.find((agency) => text(agency?.phone) || text(agency?.email));
+  // Each source on its own: one that fails to load is skipped, not fatal.
+  const current = await loadDriverData().then((data) => data.raw, () => null);
+  let agency = withContact((current ?? []).map((runsheet) => runsheet.agency));
+  const past = agency ? [] : await loadPastRunsheets().catch(() => null);
+  if (!agency) agency = withContact([...(past ?? [])].sort(newestFirst).map((runsheet) => runsheet.agency));
+  const transfers = agency
+    ? []
+    : await request<ApiTransfer[] | null>(`api/transfers/driver/${encodeURIComponent(session.driverId)}`).catch(() => null);
+  if (!agency) agency = withContact((transfers ?? []).map((transfer) => transfer.fromAgency));
+
+  // Nothing could be read at all (offline): keep the last good find.
+  if (!agency && current === null && past === null && transfers === null) return device.storedDispatchContact() ?? {};
+
+  const contact: DispatchContact = agency
+    ? { phone: text(agency.phone), email: text(agency.email), agencyName: text(agency.name) }
+    : {};
+  await device.saveDispatchContact(contact);
+  return contact;
+}
+
 export async function getVehicle(): Promise<Vehicle | null> {
   const { raw } = await loadDriverData();
   const fromCurrent = raw.map((runsheet) => text(runsheet.vehiclePlate)).find(Boolean);
@@ -1579,9 +1648,13 @@ export async function markDeliveryFailed(
   if (reasonNeedsNote(reason) && !note?.trim()) return { success: false, error: 'cantDeliver.noteRequired' };
   if (!API_WRITES) return WRITES_OFF;
 
+  // The server has no field for the call log or the GPS fix, so they ride
+  // in `notes` as one short line, after the driver's own note.
+  await device.hydrateDeviceStore();
+  const proof = failureProofLine(i18next.t, { calls: device.callsFor(id), location });
   const { result, job } = await updateItemStatus(
     id,
-    { status: 'FAILED', failureReason: fromFailureReason(reason), notes: note?.trim() || undefined },
+    { status: 'FAILED', failureReason: fromFailureReason(reason), notes: failureNotes(note, proof) },
     'statusUpdate.runNotStarted'
   );
   if (!result.success || !job) return result;

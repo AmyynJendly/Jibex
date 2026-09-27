@@ -13,13 +13,15 @@ import { LanguageToggle } from '../../components/LanguageToggle';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { TickerMarquee } from '../../components/TickerMarquee';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, morphIn, useColors } from '../../constants';
-import { DISPATCH_PHONE } from '../../constants/contact';
+import { useDispatchContact } from '../../lib/dispatchContact';
 import { telUrl } from '../../lib/phone';
 import { login } from '../../services/api';
 
 export default function LoginScreen() {
   const colors = useColors();
   const { t } = useTranslation();
+  // Before sign-in: the agency number last seen on this phone, else the placeholder.
+  const { phone: dispatchPhone } = useDispatchContact();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -133,7 +135,7 @@ export default function LoginScreen() {
             <AnimatedPressable
               scaleTo={0.97}
               style={styles.forgotPinRow}
-              onPress={() => Linking.openURL(telUrl(DISPATCH_PHONE))}>
+              onPress={() => Linking.openURL(telUrl(dispatchPhone))}>
               <Icon name="call-outline" size={14} color={colors.textSecondary} />
               <Text style={[styles.forgotPin, { color: colors.textSecondary }]}>
                 {t('auth.login.forgotPassword')}
@@ -143,7 +145,7 @@ export default function LoginScreen() {
 
           {/* No self-signup: agencies provision driver accounts. */}
           <TickerMarquee
-            items={t('auth.login.ticker', { returnObjects: true, phone: DISPATCH_PHONE }) as string[]}
+            items={t('auth.login.ticker', { returnObjects: true, phone: dispatchPhone }) as string[]}
             style={styles.ticker}
           />
         </ScrollView>

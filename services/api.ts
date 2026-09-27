@@ -63,6 +63,7 @@ export const getNextStopId = useReal ? real.getNextStopId : mock.getNextStopId;
 // The driver's numbers and vehicle, worked out from real runsheets.
 export const getDriverStats = useReal ? real.getDriverStats : mock.getDriverStats;
 export const getVehicle = useReal ? real.getVehicle : mock.getVehicle;
+export const getDispatchContact = useReal ? real.getDispatchContact : mock.getDispatchContact;
 
 // Pickups, transfers, returns and notifications. Notifications are fetched
 // by the user account id; everything else by the driver id.

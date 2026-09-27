@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FaqList } from '../components/FaqList';
 import { Fonts, Radii, Spacing, Typography, getCardShadow, useColors } from '../constants';
-import { SUPPORT_EMAIL } from '../constants/contact';
+import { useDispatchContact } from '../lib/dispatchContact';
 
 interface Faq {
   question: string;
@@ -20,18 +20,20 @@ export default function HelpCenterScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const faqs = t('helpCenter.faqs', { returnObjects: true }) as Faq[];
+  // The agency's own email when it has one on file; the placeholder otherwise.
+  const { email } = useDispatchContact();
 
   const contactCard = (
     <AnimatedPressable
       scaleTo={0.98}
-      onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+      onPress={() => Linking.openURL(`mailto:${email}`)}
       style={[styles.contactRow, { backgroundColor: colors.accent }]}>
       <View style={styles.contactIcon}>
         <Icon name="chatbubbles-outline" size={20} color="#fff" />
       </View>
       <View style={styles.contactText}>
         <Text style={styles.contactTitle}>{t('helpCenter.contactSupport')}</Text>
-        <Text style={styles.contactSubtitle}>{SUPPORT_EMAIL}</Text>
+        <Text style={styles.contactSubtitle}>{email}</Text>
       </View>
       <Icon name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
     </AnimatedPressable>

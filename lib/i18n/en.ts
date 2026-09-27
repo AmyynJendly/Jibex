@@ -241,6 +241,14 @@ const en = {
     noteRequired: 'Write a short note to explain “Other”.',
   },
 
+  // One line added to a failed delivery's notes, for the agency.
+  failureProof: {
+    called_one: 'Called once ({{times}}).',
+    called_other: 'Called {{count}} times ({{times}}).',
+    notCalled: 'Not called.',
+    location: 'Location: {{latitude}}, {{longitude}}.',
+  },
+
   cashCollected: {
     title: 'Stop {{index}} Wrapped Up',
     subtitle: 'Code verified · {{time}} · {{place}}',

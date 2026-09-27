@@ -238,6 +238,13 @@ const fr: TranslationResource = {
     noteRequired: 'Écrivez une courte note pour expliquer « Autre ».',
   },
 
+  failureProof: {
+    called_one: 'Appelé une fois ({{times}}).',
+    called_other: 'Appelé {{count}} fois ({{times}}).',
+    notCalled: 'Pas d’appel.',
+    location: 'Position : {{latitude}}, {{longitude}}.',
+  },
+
   cashCollected: {
     title: 'Arrêt {{index}} bouclé',
     subtitle: 'Code vérifié · {{time}} · {{place}}',

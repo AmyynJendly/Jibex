@@ -60,6 +60,11 @@ function staticMapUrl({ lat, lng }: { lat: number; lng: number }) {
 /** Phones get Apple's navigation bar; the web keeps the drawn header. */
 const nativeBar = Platform.OS !== 'web';
 
+/** A weight worth showing: not the server's placeholder 1 kg, and not missing (0). */
+function hasRealWeight(kg: number): boolean {
+  return kg > 0 && kg !== 1;
+}
+
 export default function JobDetailScreen() {
   const colors = useColors();
   const { t, i18n } = useTranslation();
@@ -353,8 +358,12 @@ export default function JobDetailScreen() {
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
               <Icon name="cube-outline" size={14} color={colors.textSecondary} />
               <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
-                {t('jobDetail.parcelCount', { count: job.packageInfo.count })} ·{' '}
-                {formatDecimal(job.packageInfo.weightKg)} KG
+                {t('jobDetail.parcelCount', { count: job.packageInfo.count })}
+                {/* Every real parcel says 1 kg — the server's default, not a
+                    weighing — and 0 means none was given. Neither is shown. */}
+                {hasRealWeight(job.packageInfo.weightKg)
+                  ? ` · ${formatDecimal(job.packageInfo.weightKg)} KG`
+                  : ''}
               </Text>
             </View>
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
