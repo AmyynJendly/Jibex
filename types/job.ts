@@ -116,9 +116,9 @@ export interface ParcelServerInfo {
   /** The server's failure reason when it's one we don't know yet. */
   unknownFailureReason?: string;
   /**
-   * The two cash figures. `cashToCollect` is taken from `amountToCollect`;
-   * in the data seen so far `price` = `amountToCollect` + `deliveryFee`.
-   * Which one the customer pays at the door is waiting on the backend team.
+   * The cash figures. The customer pays `price` at the door — that's
+   * `cashToCollect`. `amountToCollect` (price minus the delivery fee) and
+   * `deliveryFee` are kept as data only, never shown as the amount to collect.
    */
   price?: number;
   amountToCollect?: number;

@@ -322,10 +322,11 @@ function point(lat: number | null | undefined, lng: number | null | undefined): 
  * it's what's printed on the box and what the stop screen's route carries;
  * the server's numeric ids ride along in `server` for the write-back phase.
  *
- * Cash: `amountToCollect` becomes what the driver collects. The server also
- * sends `price` (in every parcel seen so far, `amountToCollect` +
- * `deliveryFee`), which is what the Android app shows. Both are kept, and
- * logged in development, until the backend team says which is right.
+ * Cash: the driver collects `price` at the door — confirmed by the backend
+ * team, and what the Android app shows. `amountToCollect` (price minus the
+ * delivery fee) and `deliveryFee` stay in `server` as data, never shown as
+ * the amount to collect. A parcel with no price falls back to
+ * `amountToCollect`, then to nothing to collect.
  */
 export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: string): Job {
   const id = text(parcel.trackingNumber) ?? `P-${idString(parcel.id) ?? idString(item?.id) ?? '?'}`;
@@ -338,6 +339,7 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
   const rawReason = text(item?.failureReason) ?? text(parcel.failureReason);
   const failureReason = toFailureReason(rawReason);
   const amountToCollect = num(parcel.amountToCollect);
+  const price = num(parcel.price) ?? amountToCollect;
   const calls = device.callsFor(id);
 
   return {
@@ -352,8 +354,8 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
       note: text(item?.notes) ?? text(parcel.deliveryNotes),
     },
     status,
-    cashToCollect: amountToCollect ?? 0,
-    cashCollected: status === 'DELIVERED' ? amountToCollect : undefined,
+    cashToCollect: price ?? 0,
+    cashCollected: status === 'DELIVERED' ? price : undefined,
     location: point(parcel.recipientLat, parcel.recipientLng),
     failureReason: status === 'FAILED' ? failureReason : undefined,
     failureNote: text(item?.notes) ?? text(parcel.failureNotes),
@@ -553,7 +555,7 @@ function clockTime(iso: string | undefined): string {
 
 /**
  * A pickup request onto ours, or null for a cancelled one. Cash on its
- * parcels follows the same rule as runsheets (`amountToCollect`).
+ * parcels follows the same rule as runsheets (`price`).
  */
 export function toPickup(apiPickup: ApiPickup, apiParcels?: ApiParcel[] | null): Pickup | null {
   const raw = text(apiPickup.status);
@@ -562,7 +564,7 @@ export function toPickup(apiPickup: ApiPickup, apiParcels?: ApiParcel[] | null):
     trackingNumber: text(parcel.trackingNumber) ?? `P-${idString(parcel.id) ?? '?'}`,
     contactName: text(parcel.recipientName) ?? '—',
     address: [text(parcel.recipientAddress), text(parcel.recipientCity)].filter(Boolean).join(', '),
-    codAmount: num(parcel.amountToCollect) ?? 0,
+    codAmount: num(parcel.price) ?? num(parcel.amountToCollect) ?? 0,
   }));
   const scheduledAt = text(apiPickup.scheduledAt) ?? text(apiPickup.requestedDate) ?? text(apiPickup.createdAt);
   return {
@@ -1024,21 +1026,6 @@ async function requireSession(): Promise<Session> {
   return session;
 }
 
-/** Logs both cash figures once per parcel per launch, in development only. */
-const cashLogged = new Set<string>();
-function logCash(jobs: Job[]) {
-  if (!__DEV__) return;
-  for (const job of jobs) {
-    if (cashLogged.has(job.id)) continue;
-    cashLogged.add(job.id);
-    const info = job.server;
-    console.log(
-      `[cash] ${job.id}: amountToCollect=${info?.amountToCollect ?? '-'} price=${info?.price ?? '-'} ` +
-        `deliveryFee=${info?.deliveryFee ?? '-'} → collecting ${job.cashToCollect}`
-    );
-  }
-}
-
 async function fetchDriverData(): Promise<DriverData> {
   // The DRIVER record's id — not the user account's, which the
   // notification endpoints take. They can differ; see lib/session.
@@ -1072,7 +1059,6 @@ async function fetchDriverData(): Promise<DriverData> {
       jobs.push(job);
     }
   }
-  logCash(jobs);
   return { runsheets, raw, jobs, runsheetOf };
 }
 
@@ -1122,7 +1108,6 @@ export async function getRunsheetJobs(id: string): Promise<Job[]> {
   const apiRunsheet = await request<ApiRunsheet>(`api/runsheets/${encodeURIComponent(id)}`);
   await device.hydrateDeviceStore();
   const jobs = runsheetJobs(apiRunsheet);
-  logCash(jobs);
   return jobs;
 }
 
@@ -1183,7 +1168,6 @@ async function pastRunsheetJobs(excludeRunsheetIds: Set<string>): Promise<Job[]>
     .filter((runsheet) => !excludeRunsheetIds.has(idString(runsheet.id) ?? ''))
     .sort(newestFirst);
   const jobs = past.flatMap((runsheet) => runsheetJobs(runsheet));
-  logCash(jobs);
   return jobs.filter((job) => !isOpen(job));
 }
 
@@ -1215,13 +1199,11 @@ function isCorrectable(job: Job): boolean {
  *
  *  - Deliveries and delivery rate: every delivered / failed parcel on every
  *    runsheet (open and closed). Rate = delivered ÷ (delivered + failed).
- *  - Cash on hand: the `amountToCollect` of every delivered parcel on a run
+ *  - Cash on hand: the `price` collected on every delivered parcel on a run
  *    the agency hasn't closed yet — closing a run is when the agency takes
- *    the cash in. PENDING CONFIRMATION: which cash field the customer
- *    actually pays (`amountToCollect` or `price`) is still an open question
- *    for the backend team; see `toJob`.
- *  - Weekly cash and the "on pace" finish time: not given. The first waits
- *    on the same cash question; the second has nothing honest to go on.
+ *    the cash in.
+ *  - Weekly cash and the "on pace" finish time: not given. Neither has an
+ *    honest source on the server yet.
  */
 export async function getDriverStats(): Promise<DriverStats> {
   const { runsheets, jobs } = await loadDriverData();
@@ -1233,8 +1215,7 @@ export async function getDriverStats(): Promise<DriverStats> {
   const everFailed = failed.length + past.filter((job) => job.status === 'FAILED').length;
   const attempted = everDelivered + everFailed;
 
-  // PENDING CONFIRMATION of the cash field (amountToCollect vs price).
-  const cashOnHand = delivered.reduce((sum, job) => sum + (job.server?.amountToCollect ?? 0), 0);
+  const cashOnHand = delivered.reduce((sum, job) => sum + (job.cashCollected ?? job.cashToCollect), 0);
 
   return {
     delivered: delivered.length,
@@ -1304,7 +1285,6 @@ export async function getJobDetail(id: string): Promise<Job> {
   try {
     const parcel = await request<ApiParcel>(`api/parcels/tracking/${encodeURIComponent(id.trim())}`);
     const job = toJob(parcel);
-    logCash([job]);
     return job;
   } catch (error) {
     if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {

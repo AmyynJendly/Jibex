@@ -181,11 +181,24 @@ describe('real runsheets', () => {
     });
   });
 
-  it('takes amountToCollect as the cash, keeping price and the fee alongside', async () => {
+  it('collects the price at the door, keeping amountToCollect and the fee as data only', async () => {
     const api = await signedIn();
     const [first] = await api.getActiveParcels();
-    expect(first.cashToCollect).toBe(940);
+    expect(first.cashToCollect).toBe(950);
     expect(first.server).toMatchObject({ price: 950, amountToCollect: 940, deliveryFee: 10, itemId: '501', runsheetId: '60' });
+  });
+
+  it('shows 12,000 TND to collect on the real parcel with price 12, fee 10, amountToCollect 2', async () => {
+    const { toJob } = require('../services/real-api') as RealApi;
+    const { formatCurrency } = require('../lib/currency') as typeof import('../lib/currency');
+    // TRK-4B1B6A44 exactly as jibex.cloud sends it (people anonymized).
+    const job = toJob(parcel('TRK-4B1B6A44', { price: 12, deliveryFee: 10, amountToCollect: 2, status: 'LIVRE_PAYE' }), {
+      id: 1,
+      status: 'DELIVERED',
+      parcel: null,
+    });
+    expect(formatCurrency(job.cashToCollect)).toBe('12,000 TND');
+    expect(job.cashCollected).toBe(12);
   });
 
   it('works through dispatch’s order, delivered and failed parcels dropping out', async () => {
@@ -234,8 +247,8 @@ describe('real runsheets', () => {
     // Delivered: 503 (open run), 401 and 301 (closed runs). Failed: 504, 402.
     expect(stats.lifetimeDeliveries).toBe(3);
     expect(stats.deliveryRate).toBeCloseTo(60);
-    // Cash on hand: delivered parcels on runs not yet closed — only 503.
-    expect(stats.cashCollectedTotal).toBe(110);
+    // Cash on hand: the price of delivered parcels on runs not yet closed — only 503.
+    expect(stats.cashCollectedTotal).toBe(120);
     expect(stats.weeklyCashCollected).toBeUndefined();
     expect(stats.onPaceFinishTime).toBeUndefined();
   });

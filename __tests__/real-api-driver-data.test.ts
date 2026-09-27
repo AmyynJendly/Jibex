@@ -164,7 +164,7 @@ describe('real pickups', () => {
       packageCount: 1,
       server: { pickupId: '1', requestNumber: 'PU-3-20260926-0001', status: 'SCHEDULED', estimatedParcelsCount: 3 },
     });
-    expect(open.parcels).toEqual([{ trackingNumber: 'TRK-00000071', contactName: 'Client A', address: 'Rue A, Tunis', codAmount: 110 }]);
+    expect(open.parcels).toEqual([{ trackingNumber: 'TRK-00000071', contactName: 'Client A', address: 'Rue A, Tunis', codAmount: 120 }]);
     expect(pickups[1].timeWindow).toBe('09:00–10:00');
   });
 

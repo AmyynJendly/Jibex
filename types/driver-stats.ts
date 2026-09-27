@@ -6,8 +6,7 @@ export interface DriverStats {
    * Cash on hand: what the driver has collected and not yet handed in.
    *
    * On the real server this is worked out on the phone from delivered
-   * parcels, using `amountToCollect` — PENDING CONFIRMATION from the backend
-   * team that this is the right cash field (see `services/real-api.ts`).
+   * parcels, using each parcel's `price` (see `services/real-api.ts`).
    */
   cashCollectedTotal: number;
   completionPercent: number;
