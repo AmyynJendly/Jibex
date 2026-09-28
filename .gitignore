@@ -40,3 +40,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Not part of this app: the backend / Android app clone kept alongside it
+# for reference, and screenshots and logs from browser checks.
+/SynapseDriverApp/
+/.playwright-mcp/

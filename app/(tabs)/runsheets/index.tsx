@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlatList, Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -16,6 +16,7 @@ import { TrackingId } from '../../../components/TrackingId';
 import { LoadError } from '../../../components/LoadError';
 import { MetaChip } from '../../../components/MetaChip';
 import { PrimaryButton } from '../../../components/PrimaryButton';
+import { ScrollToTopButton, useScrollToTop } from '../../../components/ScrollToTopButton';
 import { SegmentedControl } from '../../../components/SegmentedControl';
 import { SkeletonRow } from '../../../components/Skeleton';
 import { StatusUpdateSheet } from '../../../components/StatusUpdateSheet';
@@ -278,7 +279,15 @@ export default function RunsheetsScreen() {
   // about — a refusal belongs in history, not on the current run.
   const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
   const highlightedId = useFocusHighlight();
-  const listRef = useRef<FlashListRef<Job>>(null);
+  // A plain FlatList: every card is sized to its own content. FlashList
+  // re-used cells across the filters and kept a taller card's height,
+  // leaving large gaps between cards.
+  const listRef = useRef<FlatList<Job>>(null);
+  const currentRef = useRef<ScrollView>(null);
+  const toTop = useScrollToTop();
+  const insets = useSafeAreaInsets();
+  // Clears the floating tab bar.
+  const toTopBottom = insets.bottom + 72;
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sheetJob, setSheetJob] = useState<Job | null>(null);
   // The active list itself follows the finger during a drag, so the
@@ -345,6 +354,10 @@ export default function RunsheetsScreen() {
   useEffect(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [filter]);
+
+  // Current and History are separate lists, each starting at the top.
+  const resetToTop = toTop.reset;
+  useEffect(() => resetToTop(), [toggle, resetToTop]);
   const pending = toggle === 'current' ? !active : !history;
 
   const titleAndToggle = (
@@ -376,14 +389,21 @@ export default function RunsheetsScreen() {
 
     return (
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-        <FlashList
+        <FlatList
           ref={listRef}
           data={filteredHistory}
           keyExtractor={(job) => job.id}
           contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.content}
+          contentContainerStyle={styles.listContent}
+          onScroll={toTop.onScroll}
+          scrollEventThrottle={32}
+          // A highlighted parcel far down the list: jump near it, then settle on it.
+          onScrollToIndexFailed={({ index, averageItemLength }) => {
+            listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
+            setTimeout(() => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.35 }), 120);
+          }}
           ListHeaderComponent={
-            <View style={styles.headerBlock}>
+            <View style={styles.historyHeader}>
               {titleAndToggle}
               {/* Same Apple switcher as Current / History. */}
               <SegmentedControl
@@ -429,6 +449,11 @@ export default function RunsheetsScreen() {
           )}
         />
 
+        <ScrollToTopButton
+          visible={toTop.visible}
+          bottom={toTopBottom}
+          onPress={() => listRef.current?.scrollToOffset({ offset: toTop.topOffset, animated: true })}
+        />
         <StatusUpdateSheet job={sheetJob} onClose={() => setSheetJob(null)} onDone={handleSheetDone} />
       </View>
     );
@@ -449,8 +474,11 @@ export default function RunsheetsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ScrollView
+        ref={currentRef}
         contentInsetAdjustmentBehavior="automatic"
         scrollEnabled={!dragging}
+        onScroll={toTop.onScroll}
+        scrollEventThrottle={32}
         contentContainerStyle={styles.content}>
         <View style={styles.headerBlock}>
           {titleAndToggle}
@@ -623,6 +651,11 @@ export default function RunsheetsScreen() {
         )}
       </ScrollView>
 
+      <ScrollToTopButton
+        visible={toTop.visible && !dragging}
+        bottom={toTopBottom}
+        onPress={() => currentRef.current?.scrollTo({ y: toTop.topOffset, animated: true })}
+      />
       <StatusUpdateSheet job={sheetJob} onClose={() => setSheetJob(null)} onDone={handleSheetDone} />
     </View>
   );
@@ -630,9 +663,14 @@ export default function RunsheetsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  // The header's last item sits one card-gap above the first card, the same
+  // space as between two cards.
   headerBlock: {
     gap: Spacing.mlg,
-    paddingBottom: Spacing.mlg,
+  },
+  historyHeader: {
+    gap: Spacing.mlg,
+    paddingBottom: Spacing.md,
   },
   row: {
     paddingBottom: Spacing.md,
@@ -640,8 +678,14 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.md,
-    paddingBottom: 40,
-    gap: Spacing.mlg,
+    paddingBottom: 110,
+    gap: Spacing.md,
+  },
+  // No `gap` here: each row carries its own spacing.
+  listContent: {
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.md,
+    paddingBottom: 110,
   },
   skeletonGroup: { gap: Spacing.md },
   historyNote: {

@@ -11,23 +11,9 @@ export function toDateKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Inverse of `toDateKey` — parses as a local date, not UTC (unlike `new Date('YYYY-MM-DD')`, which can land on the wrong day near midnight in negative UTC offsets). */
-export function fromDateKey(key: string): Date {
-  const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
 /** Compact local date (`YYYYMMDD`) — used in real backend ID formats (e.g. "RS-20260715-0001"). */
 export function toCompactDateKey(date: Date): string {
   return toDateKey(date).replace(/-/g, '');
-}
-
-export function isSameMonth(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
-}
-
-export function addMonths(date: Date, count: number): Date {
-  return new Date(date.getFullYear(), date.getMonth() + count, 1);
 }
 
 export function addDays(date: Date, count: number): Date {

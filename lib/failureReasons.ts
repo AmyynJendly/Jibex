@@ -74,7 +74,3 @@ export const COMMON_REASONS = SELECTABLE_REASONS.filter((reason) => reason.commo
 export function reasonNeedsNote(reason: DeliveryFailureReason | null | undefined): boolean {
   return reason === 'OTHER';
 }
-
-export function failureReasonInfo(value: string): FailureReasonInfo | undefined {
-  return FAILURE_REASONS.find((reason) => reason.value === value);
-}

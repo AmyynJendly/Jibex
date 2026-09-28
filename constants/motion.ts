@@ -3,7 +3,6 @@ import {
   Easing,
   FadeInDown,
   FadeInUp,
-  FadeOutDown,
   FadeOutUp,
   Keyframe,
 } from 'react-native-reanimated';
@@ -100,8 +99,4 @@ export function morphInDown(delay = 0, distance = 10) {
 /** Exits, quicker than the entrances — the user has already moved on. */
 export function exitUp(duration = 170) {
   return FadeOutUp.duration(duration);
-}
-
-export function exitDown(duration = 170) {
-  return FadeOutDown.duration(duration);
 }

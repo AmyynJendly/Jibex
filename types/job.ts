@@ -72,8 +72,6 @@ export interface Job {
    */
   distanceKm?: number;
   distanceApprox?: boolean;
-  /** ISO time the customer needs this by, if any — drives Home's time-sensitive callout. */
-  deliverBy?: string;
   /** Set when a delivery attempt fails via the Can't Deliver flow. */
   failureReason?: DeliveryFailureReason;
   failureNote?: string;

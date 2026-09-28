@@ -1,4 +1,4 @@
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AnimatedPressable } from './AnimatedPressable';
 import { GlassSurface } from './GlassSurface';
@@ -44,22 +44,6 @@ export function GlassIconButton({ onPress, accessibilityLabel, ...circle }: Glas
       style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}>
       <GlassCircle {...circle} />
     </AnimatedPressable>
-  );
-}
-
-/**
- * The same glass circle with no press handling of its own — for when
- * something native owns the tap, like the trigger of a system menu. It lets
- * touches through rather than competing for them.
- */
-export function GlassIcon(circle: GlassIconProps) {
-  const size = circle.size ?? 44;
-  return (
-    <View
-      pointerEvents="none"
-      style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}>
-      <GlassCircle {...circle} />
-    </View>
   );
 }
 

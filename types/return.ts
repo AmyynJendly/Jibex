@@ -20,8 +20,6 @@ export interface Return {
   /** Depot/hub where the driver collects them. */
   location: string;
   scheduledAt: string;
-  /** Local device photo URIs documenting damage — populated via `attachReturnPhoto`. */
-  photoUris?: string[];
   /**
    * Real server: a return goes back in two steps. TO_LOAD — still at the
    * agency; the driver confirms loading all of them at once. TO_HAND_BACK —

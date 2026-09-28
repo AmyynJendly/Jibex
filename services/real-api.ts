@@ -1024,6 +1024,9 @@ export async function getUser(): Promise<User> {
 
 export async function logout(): Promise<void> {
   forgetDriverData();
+  // Recent searches name customers: they don't stay for the next driver.
+  await device.hydrateDeviceStore();
+  await device.clearRecentSearches();
   await clearSession();
 }
 
@@ -1134,22 +1137,6 @@ async function orderOpen(jobs: Job[], runsheetOf: Map<string, string>): Promise<
 export async function getRunsheets(): Promise<Runsheet[]> {
   const { runsheets } = await loadDriverData();
   return runsheets.map((runsheet) => ({ ...runsheet, stopIds: [...runsheet.stopIds] }));
-}
-
-/** `GET /api/runsheets/{id}`. */
-export async function getRunsheet(id: string): Promise<Runsheet> {
-  const apiRunsheet = await request<ApiRunsheet>(`api/runsheets/${encodeURIComponent(id)}`);
-  const runsheet = toRunsheet(apiRunsheet);
-  if (!runsheet) throw new ApiError(404, `Runsheet ${id} not found`);
-  return runsheet;
-}
-
-/** A runsheet's own parcels, in dispatch's stop order. */
-export async function getRunsheetJobs(id: string): Promise<Job[]> {
-  const apiRunsheet = await request<ApiRunsheet>(`api/runsheets/${encodeURIComponent(id)}`);
-  await device.hydrateDeviceStore();
-  const jobs = runsheetJobs(apiRunsheet);
-  return jobs;
 }
 
 /**

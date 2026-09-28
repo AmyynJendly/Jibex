@@ -1,5 +1,5 @@
 import { router, Stack } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,7 @@ import { HistoryDateFilter } from '../components/HistoryDateFilter';
 import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
+import { ScrollToTopButton, useScrollToTop } from '../components/ScrollToTopButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -51,6 +52,12 @@ export default function ReturnsScreen() {
   const highlightedId = useFocusHighlight();
   const [confirming, setConfirming] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  // The large title floats over this list, so its real top is above offset 0.
+  const toTop = useScrollToTop({ floatingHeader: true });
+  // Current and History are separate lists, each starting at the top.
+  const resetToTop = toTop.reset;
+  useEffect(() => resetToTop(), [toggle, resetToTop]);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   function formatTime(iso: string) {
@@ -241,68 +248,81 @@ export default function ReturnsScreen() {
       style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('returns.headerTitle') }} />
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        scrollEnabled={!dragging}
-        contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <View>
-            <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-              {t('returns.eyebrow')}
-            </Text>
+      {/* The list and its back-to-top arrow share one area, so the arrow
+          always sits just above the footer (or the bottom edge). */}
+      <View style={styles.listArea}>
+        <ScrollView
+          ref={scrollRef}
+          contentInsetAdjustmentBehavior="automatic"
+          scrollEnabled={!dragging}
+          onScroll={toTop.onScroll}
+          scrollEventThrottle={32}
+          scrollToOverflowEnabled={toTop.scrollToOverflowEnabled}
+          contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <View>
+              <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
+                {t('returns.eyebrow')}
+              </Text>
+            </View>
+            <View style={styles.headerCount}>
+              <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
+              <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
+                {t('returns.parcelsLabel')}
+              </Text>
+            </View>
           </View>
-          <View style={styles.headerCount}>
-            <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
-            <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
-              {t('returns.parcelsLabel')}
-            </Text>
-          </View>
-        </View>
 
-        <SegmentedControl
-          segments={[
-            { value: 'current', label: t('returns.toggleCurrent') },
-            { value: 'history', label: t('returns.toggleHistory') },
-          ]}
-          value={toggle}
-          onChange={setToggle}
+          <SegmentedControl
+            segments={[
+              { value: 'current', label: t('returns.toggleCurrent') },
+              { value: 'history', label: t('returns.toggleHistory') },
+            ]}
+            value={toggle}
+            onChange={setToggle}
+          />
+          {isHistory && <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />}
+
+          {!isHistory && pending.length > 0 && (
+            <View style={[styles.inverseNote, { backgroundColor: colors.warningSoft }]}>
+              <Icon name="information-circle-outline" size={16} color={colors.warning} />
+              <Text style={[styles.inverseNoteText, { color: colors.text }]}>
+                {t('returns.inverseNote')}
+              </Text>
+            </View>
+          )}
+
+          {screen.isError && !returns ? (
+            <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+          ) : !returns ? (
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : displayed.length === 0 ? (
+            <EmptyState
+              icon="arrow-undo-outline"
+              title={isHistory ? t('returns.emptyHistory') : t('returns.empty')}
+            />
+          ) : isHistory ? (
+            processed.map((item) => renderCard(item))
+          ) : (
+            <DraggableList
+              data={pending}
+              idOf={(item) => item.id}
+              onReorder={handleReorder}
+              onDragStateChange={setDragging}
+              renderItem={(item, _index, drag) => renderCard(item, drag)}
+            />
+          )}
+        </ScrollView>
+        <ScrollToTopButton
+          visible={toTop.visible && !dragging}
+          bottom={Spacing.lg}
+          onPress={() => scrollRef.current?.scrollTo({ y: toTop.topOffset, animated: true })}
         />
-        {isHistory && <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />}
-
-        {!isHistory && pending.length > 0 && (
-          <View style={[styles.inverseNote, { backgroundColor: colors.warningSoft }]}>
-            <Icon name="information-circle-outline" size={16} color={colors.warning} />
-            <Text style={[styles.inverseNoteText, { color: colors.text }]}>
-              {t('returns.inverseNote')}
-            </Text>
-          </View>
-        )}
-
-        {screen.isError && !returns ? (
-          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
-        ) : !returns ? (
-          <>
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
-          </>
-        ) : displayed.length === 0 ? (
-          <EmptyState
-            icon="arrow-undo-outline"
-            title={isHistory ? t('returns.emptyHistory') : t('returns.empty')}
-          />
-        ) : isHistory ? (
-          processed.map((item) => renderCard(item))
-        ) : (
-          <DraggableList
-            data={pending}
-            idOf={(item) => item.id}
-            onReorder={handleReorder}
-            onDragStateChange={setDragging}
-            renderItem={(item, _index, drag) => renderCard(item, drag)}
-          />
-        )}
-      </ScrollView>
+      </View>
 
       {!isHistory && pending.length > 0 && (!staged || toLoad.length > 0) && (
         <View
@@ -348,6 +368,9 @@ export default function ReturnsScreen() {
 
 const styles = StyleSheet.create({
   screen: {
+    flex: 1,
+  },
+  listArea: {
     flex: 1,
   },
   header: {

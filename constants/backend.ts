@@ -27,9 +27,6 @@ export const API_MODE: ApiMode = process.env.EXPO_PUBLIC_API_MODE === 'real' ? '
  */
 export const API_WRITES: boolean = process.env.EXPO_PUBLIC_API_WRITES === 'on';
 
-/** Real mode with writes switched off — the one case where actions are refused on the phone. */
-export const SERVER_WRITES_OFF: boolean = API_MODE === 'real' && !API_WRITES;
-
 /** The live server. `EXPO_PUBLIC_API_BASE_URL` overrides it (a staging server, say). */
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://jibex.cloud/';
 

@@ -27,6 +27,7 @@ const KEYS = {
   unreadNotifications: 'jibex.device.unreadNotifications.v1',
   failureLocations: 'jibex.device.failureLocations.v1',
   dispatchContact: 'jibex.device.dispatchContact.v1',
+  recentSearches: 'jibex.device.recentSearches.v1',
 } as const;
 
 /** A call older than this is no longer evidence for any open parcel — dropped on load. */
@@ -63,7 +64,17 @@ const state = {
    * so the login screen, before anyone signs in, can still offer them.
    */
   dispatchContact: null as { phone?: string; email?: string; agencyName?: string } | null,
+  /** Parcels the driver opened from Search, newest first. */
+  recentSearches: [] as RecentSearch[],
 };
+
+/** A parcel opened from Search: enough to list it and find it again. */
+export interface RecentSearch {
+  trackingNumber: string;
+  name?: string;
+  /** When it was opened, ISO. */
+  at: string;
+}
 
 /** Per parcel: the GPS fix taken when its failure was recorded, and when. */
 type FailureLocations = Record<string, { lat: number; lng: number; at: string }>;
@@ -93,6 +104,7 @@ export function hydrateDeviceStore(): Promise<void> {
         state.hiddenNotifications = parse(values[KEYS.hiddenNotifications], []);
         state.unreadNotifications = parse(values[KEYS.unreadNotifications], []);
         state.dispatchContact = parse(values[KEYS.dispatchContact], null);
+        state.recentSearches = parse(values[KEYS.recentSearches], []);
         const failureCutoff = Date.now() - CALL_LOG_RETENTION_MS;
         state.failureLocations = Object.fromEntries(
           Object.entries(parse<FailureLocations>(values[KEYS.failureLocations], {})).filter(
@@ -280,4 +292,32 @@ export function storedDispatchContact(): { phone?: string; email?: string; agenc
 export async function saveDispatchContact(contact: { phone?: string; email?: string; agencyName?: string }): Promise<void> {
   state.dispatchContact = contact;
   await persist('dispatchContact', contact);
+}
+
+// ── Recent searches ───────────────────────────────────────────────────────
+// Parcels the driver opened from Search, so coming back to Search shows
+// them again. Kept on the phone, newest first; cleared on sign-out, since
+// they name customers.
+
+const MAX_RECENT_SEARCHES = 10;
+
+export function recentSearches(): readonly RecentSearch[] {
+  return state.recentSearches;
+}
+
+/** Puts a parcel at the top of the list (once — opening it again just moves it up). */
+export async function addRecentSearch(entry: { trackingNumber: string; name?: string }): Promise<void> {
+  const others = state.recentSearches.filter((item) => item.trackingNumber !== entry.trackingNumber);
+  state.recentSearches = [{ ...entry, at: new Date().toISOString() }, ...others].slice(0, MAX_RECENT_SEARCHES);
+  await persist('recentSearches', state.recentSearches);
+}
+
+export async function removeRecentSearch(trackingNumber: string): Promise<void> {
+  state.recentSearches = state.recentSearches.filter((item) => item.trackingNumber !== trackingNumber);
+  await persist('recentSearches', state.recentSearches);
+}
+
+export async function clearRecentSearches(): Promise<void> {
+  state.recentSearches = [];
+  await persist('recentSearches', []);
 }

@@ -46,7 +46,6 @@ async function realApp({ writes }: { writes: boolean }): Promise<Api> {
       ...jest.requireActual('../constants/backend'),
       API_MODE: 'real',
       API_WRITES: writes,
-      SERVER_WRITES_OFF: !writes,
     }));
     api = require('../services/api');
   });
@@ -258,7 +257,6 @@ async function writingApp(): Promise<{ api: Api; server: ReturnType<typeof stand
       ...jest.requireActual('../constants/backend'),
       API_MODE: 'real',
       API_WRITES: true,
-      SERVER_WRITES_OFF: false,
     }));
     api = require('../services/api');
   });

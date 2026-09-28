@@ -13,7 +13,7 @@
  * to the mock in real mode — a fake success on real data is exactly what
  * this layer exists to prevent.
  */
-import { API_MODE, SERVER_WRITES_OFF } from '../constants/backend';
+import { API_MODE } from '../constants/backend';
 import * as mock from './mock-api';
 import * as real from './real-api';
 
@@ -41,9 +41,6 @@ export const registerPushToken = mock.registerPushToken;
 
 const useReal = API_MODE === 'real';
 
-/** True when real mode has writes switched off — screens check it before any optimistic animation. */
-export const serverWritesOff = SERVER_WRITES_OFF;
-
 // ── Connected to the real server ──────────────────────────────────────────
 export const login = useReal ? real.login : mock.login;
 export const getUser = useReal ? real.getUser : mock.getUser;
@@ -51,8 +48,6 @@ export const logout = useReal ? real.logout : mock.logout;
 
 // Runsheets and parcels. History includes runsheets the agency has closed.
 export const getRunsheets = useReal ? real.getRunsheets : mock.getRunsheets;
-export const getRunsheet = useReal ? real.getRunsheet : mock.getRunsheet;
-export const getRunsheetJobs = useReal ? real.getRunsheetJobs : mock.getRunsheetJobs;
 export const getActiveParcels = useReal ? real.getActiveParcels : mock.getActiveParcels;
 export const getHistoryParcels = useReal ? real.getHistoryParcels : mock.getHistoryParcels;
 export const getJobsByIds = useReal ? real.getJobsByIds : mock.getJobsByIds;

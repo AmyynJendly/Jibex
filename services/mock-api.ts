@@ -184,7 +184,6 @@ const mockJobs: Job[] = [
     cashToCollect: 42.0,
     location: { lat: 35.8465, lng: 10.6015 },
     callAttempts: 0,
-    deliverBy: todayAt(14, 0),
   },
   {
     id: 'TRK-A12BC034',
@@ -218,7 +217,6 @@ const mockJobs: Job[] = [
     cashToCollect: 15.0,
     location: { lat: 34.735, lng: 10.765 },
     callAttempts: 0,
-    deliverBy: todayAt(15, 0),
   },
   {
     id: 'TRK-9E0A2B6D',
@@ -744,6 +742,9 @@ export async function login(username: string, password: string): Promise<LoginRe
 }
 
 export async function logout(): Promise<void> {
+  // Recent searches name customers: they don't stay for the next driver.
+  await device.hydrateDeviceStore();
+  await device.clearRecentSearches();
   await clearSession();
 }
 
@@ -767,28 +768,6 @@ export async function getDriverStats(): Promise<DriverStats> {
 
 export async function getRunsheets(): Promise<Runsheet[]> {
   return delay(mockRunsheets.map(toRunsheet));
-}
-
-export async function getRunsheet(id: string): Promise<Runsheet> {
-  await delay(undefined);
-  const seed = mockRunsheets.find((r) => r.id === id);
-  if (!seed) {
-    throw new Error(`Runsheet ${id} not found`);
-  }
-  return toRunsheet(seed);
-}
-
-/** A runsheet's own parcels, in stop order — same shape `getJobDetail` returns for one. */
-export async function getRunsheetJobs(id: string): Promise<Job[]> {
-  await delay(undefined);
-  const seed = mockRunsheets.find((r) => r.id === id);
-  if (!seed) {
-    throw new Error(`Runsheet ${id} not found`);
-  }
-  return seed.stopIds
-    .map((jobId) => mockJobs.find((j) => j.id === jobId))
-    .filter((j): j is Job => !!j)
-    .map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
 /**

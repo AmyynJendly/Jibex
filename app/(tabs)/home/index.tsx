@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   RefreshControl,
@@ -77,6 +77,9 @@ function getGreetingKey() {
 }
 
 const integerFormatter = (n: number) => String(Math.round(n));
+
+/** Longest a pull-to-refresh spinner stays up, even if a refetch hangs. */
+const REFRESH_MAX_MS = 8_000;
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -177,11 +180,35 @@ export default function HomeScreen() {
     };
   }, [liveCoords]);
 
+  /**
+   * Pull to refresh. It always ends: a refetch that fails or hangs can't
+   * leave the spinner up, since it gives up waiting after a few seconds.
+   */
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await invalidateDeliveryData();
-    setRefreshing(false);
+    try {
+      await Promise.race([
+        invalidateDeliveryData(),
+        new Promise((resolve) => setTimeout(resolve, REFRESH_MAX_MS)),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
+
+  /**
+   * iOS's refresh spinner could come back stuck, spinning over the wallet,
+   * after the driver moved between tabs and screens: the native control
+   * kept an animation the screen had already finished. Leaving Home ends
+   * any refresh, and coming back gives the list a fresh spinner.
+   */
+  const [refreshControlKey, setRefreshControlKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshControlKey((key) => key + 1);
+      return () => setRefreshing(false);
+    }, [])
+  );
 
   // A failure with nothing cached is the only case where the driver gets a
   // wall instead of the screen; otherwise the last good data stays up.
@@ -294,7 +321,12 @@ export default function HomeScreen() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+          <RefreshControl
+            key={refreshControlKey}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent}
+          />
         }>
         <View style={styles.topRow}>
           {/* Read-only: cash is reconciled with the agency at the depot, not

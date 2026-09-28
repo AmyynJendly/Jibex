@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router';
-import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { useEffect, useRef, useState } from 'react';
+import { FlatList, Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -16,6 +15,7 @@ import { EmptyState } from '../components/EmptyState';
 import { HistoryDateFilter } from '../components/HistoryDateFilter';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
+import { ScrollToTopButton, useScrollToTop } from '../components/ScrollToTopButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -221,6 +221,12 @@ export default function PickupsScreen() {
   const [completing, setCompleting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const scheduledRef = useRef<ScrollView>(null);
+  const completedRef = useRef<FlatList<Pickup>>(null);
+  const toTop = useScrollToTop();
+  // Scheduled and Completed are separate lists, each starting at the top.
+  const resetToTop = toTop.reset;
+  useEffect(() => resetToTop(), [segment, resetToTop]);
 
   const scheduled = pickups?.filter((p) => p.status === 'SCHEDULED') ?? [];
   // History, by when it was collected (or was due, when the server has no time for it).
@@ -344,13 +350,70 @@ export default function PickupsScreen() {
       style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('pickups.headerTitle') }} />
 
-      {segment === 'COMPLETED' ? (
-        <FlashList
-          data={displayed}
-          keyExtractor={(pickup) => pickup.id}
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.content}
-          ListHeaderComponent={
+      {/* The list and its back-to-top arrow share one area, so the arrow
+          always sits just above the footer (or the bottom edge). */}
+      <View style={styles.listArea}>
+        {segment === 'COMPLETED' ? (
+          // A plain FlatList: every card is sized to its own content (FlashList
+          // re-used cells and left gaps between cards).
+          <FlatList
+            ref={completedRef}
+            data={displayed}
+            keyExtractor={(pickup) => pickup.id}
+            contentInsetAdjustmentBehavior="automatic"
+            contentContainerStyle={styles.listContent}
+            onScroll={toTop.onScroll}
+            scrollEventThrottle={32}
+            ListHeaderComponent={
+              <View style={styles.listHeader}>
+                {summary}
+                <SegmentedControl
+                  segments={[
+                    { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
+                    { value: 'COMPLETED', label: t('pickups.segments.completed') },
+                  ]}
+                  value={segment}
+                  onChange={setSegment}
+                />
+                <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />
+              </View>
+            }
+            ListEmptyComponent={
+              screen.isError && !pickups ? (
+                <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+              ) : !pickups ? (
+                <View style={styles.skeletonGroup}>
+                  <SkeletonBlock height={140} radius={Radii.card} />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                </View>
+              ) : (
+                <EmptyState icon="checkmark-done-outline" title={t('pickups.empty.completed')} />
+              )
+            }
+            renderItem={({ item: pickup }) => (
+              <View style={styles.row}>
+                <PickupCard
+                  pickup={pickup}
+                  colors={colors}
+                  scheme={scheme}
+                  readOnly
+                  expanded={expandedIds.has(pickup.id)}
+                  highlighted={pickup.id === highlightedId}
+                  onToggle={() => toggleIn(setExpandedIds, pickup.id)}
+                  t={t}
+                />
+              </View>
+            )}
+          />
+        ) : (
+          <ScrollView
+            ref={scheduledRef}
+            contentInsetAdjustmentBehavior="automatic"
+            scrollEnabled={!dragging}
+            onScroll={toTop.onScroll}
+            scrollEventThrottle={32}
+            contentContainerStyle={styles.content}>
             <View style={styles.headerBlock}>
               {summary}
               <SegmentedControl
@@ -361,11 +424,9 @@ export default function PickupsScreen() {
                 value={segment}
                 onChange={setSegment}
               />
-              <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />
             </View>
-          }
-          ListEmptyComponent={
-            screen.isError && !pickups ? (
+
+            {screen.isError && !pickups ? (
               <LoadError onRetry={screen.retry} retrying={screen.retrying} />
             ) : !pickups ? (
               <View style={styles.skeletonGroup}>
@@ -373,79 +434,45 @@ export default function PickupsScreen() {
                 <SkeletonRow />
                 <SkeletonRow />
               </View>
-            ) : (
-              <EmptyState icon="checkmark-done-outline" title={t('pickups.empty.completed')} />
-            )
-          }
-          renderItem={({ item: pickup }) => (
-            <View style={styles.row}>
-              <PickupCard
-                pickup={pickup}
-                colors={colors}
-                scheme={scheme}
-                readOnly
-                expanded={expandedIds.has(pickup.id)}
-                highlighted={pickup.id === highlightedId}
-                onToggle={() => toggleIn(setExpandedIds, pickup.id)}
-                t={t}
+            ) : scheduled.length === 0 ? (
+              <EmptyState
+                illustration={<PackageCube size={34} />}
+                title={t('pickups.empty.scheduled')}
               />
-            </View>
-          )}
+            ) : (
+              <DraggableList
+                data={scheduled}
+                idOf={(pickup) => pickup.id}
+                onReorder={handleReorder}
+                onDragStateChange={setDragging}
+                renderItem={(pickup, _index, drag) => (
+                  <PickupCard
+                    pickup={pickup}
+                    colors={colors}
+                    scheme={scheme}
+                    expanded={expandedIds.has(pickup.id)}
+                    selected={selectedIds.has(pickup.id)}
+                    highlighted={pickup.id === highlightedId}
+                    drag={drag}
+                    onToggle={() => toggleIn(setExpandedIds, pickup.id)}
+                    onSelect={() => toggleIn(setSelectedIds, pickup.id)}
+                    t={t}
+                  />
+                )}
+              />
+            )}
+          </ScrollView>
+        )}
+        <ScrollToTopButton
+          visible={toTop.visible && !dragging}
+          bottom={Spacing.lg}
+          onPress={() =>
+            segment === 'COMPLETED'
+              ? completedRef.current?.scrollToOffset({ offset: toTop.topOffset, animated: true })
+              : scheduledRef.current?.scrollTo({ y: toTop.topOffset, animated: true })
+          }
         />
-      ) : (
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          scrollEnabled={!dragging}
-          contentContainerStyle={styles.content}>
-          <View style={styles.headerBlock}>
-            {summary}
-            <SegmentedControl
-              segments={[
-                { value: 'SCHEDULED', label: t('pickups.segments.scheduled') },
-                { value: 'COMPLETED', label: t('pickups.segments.completed') },
-              ]}
-              value={segment}
-              onChange={setSegment}
-            />
-          </View>
-
-          {screen.isError && !pickups ? (
-            <LoadError onRetry={screen.retry} retrying={screen.retrying} />
-          ) : !pickups ? (
-            <View style={styles.skeletonGroup}>
-              <SkeletonBlock height={140} radius={Radii.card} />
-              <SkeletonRow />
-              <SkeletonRow />
-            </View>
-          ) : scheduled.length === 0 ? (
-            <EmptyState
-              illustration={<PackageCube size={34} />}
-              title={t('pickups.empty.scheduled')}
-            />
-          ) : (
-            <DraggableList
-              data={scheduled}
-              idOf={(pickup) => pickup.id}
-              onReorder={handleReorder}
-              onDragStateChange={setDragging}
-              renderItem={(pickup, _index, drag) => (
-                <PickupCard
-                  pickup={pickup}
-                  colors={colors}
-                  scheme={scheme}
-                  expanded={expandedIds.has(pickup.id)}
-                  selected={selectedIds.has(pickup.id)}
-                  highlighted={pickup.id === highlightedId}
-                  drag={drag}
-                  onToggle={() => toggleIn(setExpandedIds, pickup.id)}
-                  onSelect={() => toggleIn(setSelectedIds, pickup.id)}
-                  t={t}
-                />
-              )}
-            />
-          )}
-        </ScrollView>
-      )}
+      </View>
 
       {segment === 'SCHEDULED' && scheduled.length > 0 && (
         <View
@@ -493,16 +520,30 @@ const styles = StyleSheet.create({
   headerCount: {
     alignItems: 'flex-end',
   },
+  listArea: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
     paddingBottom: 30,
     gap: Spacing.mlg,
   },
+  // No `gap` here: each row carries its own spacing.
+  listContent: {
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.lg,
+    paddingBottom: 30,
+  },
   skeletonGroup: {
     gap: Spacing.mlg,
   },
+  // One card-gap between the header's last item and the first card, the
+  // same space as between two cards.
   headerBlock: {
+    gap: Spacing.md,
+  },
+  listHeader: {
     gap: Spacing.md,
     paddingBottom: Spacing.mlg,
   },

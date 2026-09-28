@@ -21,7 +21,7 @@ import {
   sectionLabelStyle,
   useColors,
 } from '../../../constants';
-import { CURRENCY_DECIMALS, formatDecimal } from '../../../lib/currency';
+import { CURRENCY_DECIMALS, formatDecimal, formatPercent } from '../../../lib/currency';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../../lib/i18n';
 import { useLanguage } from '../../../lib/i18n/LanguageProvider';
 import { logout } from '../../../services/api';
@@ -114,7 +114,7 @@ export default function ProfileScreen() {
         <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: colors.success }]}>
-            {formatDecimal(stats.deliveryRate)}%
+            {formatPercent(stats.deliveryRate)}
           </Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
             {t('profile.stats.deliveryRate')}

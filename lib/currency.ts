@@ -1,13 +1,14 @@
 /**
  * Decimal formatting for everything the driver sees.
  *
- * Every decimal number carries three digits after the comma — money,
- * distances, weights and percentages alike. That's the client's rule
- * ("50,000"), and it matches how the backend stores money (millimes).
- * Whole counts (parcels, stops, minutes) aren't decimals and stay whole.
+ * Decimal numbers carry three digits after the comma — money, distances
+ * and weights — the client's rule ("50,000"), which matches how the backend
+ * stores money (millimes). Percentages are the one exception, at two
+ * ("98,40%"). Whole counts (parcels, stops, minutes) stay whole.
  */
 export const CURRENCY_DECIMALS = 3;
 export const MEASURE_DECIMALS = 3;
+export const PERCENT_DECIMALS = 2;
 
 /** e.g. 4.6 -> "4,600". Use for distances, weights, percentages. */
 export function formatDecimal(value: number, places: number = MEASURE_DECIMALS): string {
@@ -21,4 +22,9 @@ export function formatDecimal(value: number, places: number = MEASURE_DECIMALS):
  */
 export function formatCurrency(amount: number): string {
   return `${formatDecimal(amount, CURRENCY_DECIMALS)} TND`;
+}
+
+/** e.g. 98.4 -> "98,40%". Every percentage in the app goes through here. */
+export function formatPercent(value: number): string {
+  return `${formatDecimal(value, PERCENT_DECIMALS)}%`;
 }

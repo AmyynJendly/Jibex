@@ -1,5 +1,5 @@
 import { router, Stack } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ import { TrackingId } from '../components/TrackingId';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { ScrollToTopButton, useScrollToTop } from '../components/ScrollToTopButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -50,6 +51,12 @@ export default function TransfersScreen() {
   const highlightedId = useFocusHighlight();
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  // The large title floats over this list, so its real top is above offset 0.
+  const toTop = useScrollToTop({ floatingHeader: true });
+  // Current and History are separate lists, each starting at the top.
+  const resetToTop = toTop.reset;
+  useEffect(() => resetToTop(), [toggle, resetToTop]);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   function formatTime(iso: string) {
@@ -194,59 +201,72 @@ export default function TransfersScreen() {
       style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('transfers.headerTitle') }} />
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        scrollEnabled={!dragging}
-        contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <View>
-            <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-              {t('transfers.eyebrow')}
-            </Text>
+      {/* The list and its back-to-top arrow share one area, so the arrow
+          always sits just above the footer (or the bottom edge). */}
+      <View style={styles.listArea}>
+        <ScrollView
+          ref={scrollRef}
+          contentInsetAdjustmentBehavior="automatic"
+          scrollEnabled={!dragging}
+          onScroll={toTop.onScroll}
+          scrollEventThrottle={32}
+          scrollToOverflowEnabled={toTop.scrollToOverflowEnabled}
+          contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <View>
+              <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
+                {t('transfers.eyebrow')}
+              </Text>
+            </View>
+            <View style={styles.headerCount}>
+              <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{parcelsMoving}</Text>
+              <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
+                {t('transfers.movingLabel')}
+              </Text>
+            </View>
           </View>
-          <View style={styles.headerCount}>
-            <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{parcelsMoving}</Text>
-            <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
-              {t('transfers.movingLabel')}
-            </Text>
-          </View>
-        </View>
 
-        <SegmentedControl
-          segments={[
-            { value: 'current', label: t('transfers.toggleCurrent') },
-            { value: 'history', label: t('transfers.toggleHistory') },
-          ]}
-          value={toggle}
-          onChange={setToggle}
+          <SegmentedControl
+            segments={[
+              { value: 'current', label: t('transfers.toggleCurrent') },
+              { value: 'history', label: t('transfers.toggleHistory') },
+            ]}
+            value={toggle}
+            onChange={setToggle}
+          />
+          {isHistory && <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />}
+
+          {screen.isError && !transfers ? (
+            <LoadError onRetry={screen.retry} retrying={screen.retrying} />
+          ) : !transfers ? (
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : displayed.length === 0 ? (
+            <EmptyState
+              icon="swap-horizontal-outline"
+              title={isHistory ? t('transfers.emptyHistory') : t('transfers.empty')}
+            />
+          ) : isHistory ? (
+            history.map((transfer) => renderCard(transfer))
+          ) : (
+            <DraggableList
+              data={current}
+              idOf={(transfer) => transfer.id}
+              onReorder={handleReorder}
+              onDragStateChange={setDragging}
+              renderItem={(transfer, _index, drag) => renderCard(transfer, drag)}
+            />
+          )}
+        </ScrollView>
+        <ScrollToTopButton
+          visible={toTop.visible && !dragging}
+          bottom={Spacing.lg}
+          onPress={() => scrollRef.current?.scrollTo({ y: toTop.topOffset, animated: true })}
         />
-        {isHistory && <HistoryDateFilter value={dateFilter} onChange={setDateFilter} />}
-
-        {screen.isError && !transfers ? (
-          <LoadError onRetry={screen.retry} retrying={screen.retrying} />
-        ) : !transfers ? (
-          <>
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
-          </>
-        ) : displayed.length === 0 ? (
-          <EmptyState
-            icon="swap-horizontal-outline"
-            title={isHistory ? t('transfers.emptyHistory') : t('transfers.empty')}
-          />
-        ) : isHistory ? (
-          history.map((transfer) => renderCard(transfer))
-        ) : (
-          <DraggableList
-            data={current}
-            idOf={(transfer) => transfer.id}
-            onReorder={handleReorder}
-            onDragStateChange={setDragging}
-            renderItem={(transfer, _index, drag) => renderCard(transfer, drag)}
-          />
-        )}
-      </ScrollView>
+      </View>
 
       <HandoffQrSheet
         transfer={current.find((tr) => tr.id === qrTransferId) ?? null}
@@ -258,6 +278,9 @@ export default function TransfersScreen() {
 
 const styles = StyleSheet.create({
   screen: {
+    flex: 1,
+  },
+  listArea: {
     flex: 1,
   },
   header: {
