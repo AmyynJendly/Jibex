@@ -74,6 +74,8 @@ Explain things simply, in short sentences.
 - `scripts/` — read-only probes of the live server.
 - `docs/client-notes.txt` — the client's feature requests.
 - `docs/web-app-findings.md` — what the agency and sender web app showed (accounts, data, gaps).
+- `docs/web-app-tour.md` — page-by-page tour of the web app and its bugs.
+- `web-tour/` — gitignored: tour screenshots (private data) and the read-only tour scripts.
 - `SynapseDriverApp/` — gitignored reference clone of the backend and Android app. Read only.
 
 ## Commands

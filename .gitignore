@@ -45,3 +45,5 @@ yarn-error.*
 # for reference, and screenshots and logs from browser checks.
 /SynapseDriverApp/
 /.playwright-mcp/
+# Web app tour screenshots: they show real customers' private data.
+/web-tour/
