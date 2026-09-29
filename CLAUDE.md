@@ -73,6 +73,7 @@ Explain things simply, in short sentences.
 - `types/` — shared types. `__tests__/` — Jest tests.
 - `scripts/` — read-only probes of the live server.
 - `docs/client-notes.txt` — the client's feature requests.
+- `docs/web-app-findings.md` — what the agency and sender web app showed (accounts, data, gaps).
 - `SynapseDriverApp/` — gitignored reference clone of the backend and Android app. Read only.
 
 ## Commands
