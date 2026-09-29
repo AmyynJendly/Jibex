@@ -47,3 +47,5 @@ yarn-error.*
 /.playwright-mcp/
 # Web app tour screenshots: they show real customers' private data.
 /web-tour/
+/explore-2/*
+!/explore-2/REPORT.md
