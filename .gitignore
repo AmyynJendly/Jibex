@@ -49,3 +49,5 @@ yarn-error.*
 /web-tour/
 /explore-2/*
 !/explore-2/REPORT.md
+/test-run/*
+!/test-run/REPORT.md
