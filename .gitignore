@@ -51,3 +51,5 @@ yarn-error.*
 !/explore-2/REPORT.md
 /test-run/*
 !/test-run/REPORT.md
+/test-run-2/*
+!/test-run-2/REPORT.md
