@@ -188,7 +188,7 @@ describe('real runsheets', () => {
     expect(first.server).toMatchObject({ price: 950, amountToCollect: 940, deliveryFee: 10, itemId: '501', runsheetId: '60' });
   });
 
-  it('shows 12,000 TND to collect on the real parcel with price 12, fee 10, amountToCollect 2', async () => {
+  it('shows 12.000 TND to collect on the real parcel with price 12, fee 10, amountToCollect 2', async () => {
     const { toJob } = require('../services/real-api') as RealApi;
     const { formatCurrency } = require('../lib/currency') as typeof import('../lib/currency');
     // TRK-4B1B6A44 exactly as jibex.cloud sends it (people anonymized).
@@ -197,7 +197,7 @@ describe('real runsheets', () => {
       status: 'DELIVERED',
       parcel: null,
     });
-    expect(formatCurrency(job.cashToCollect)).toBe('12,000 TND');
+    expect(formatCurrency(job.cashToCollect)).toBe('12.000 TND');
     expect(job.cashCollected).toBe(12);
   });
 
