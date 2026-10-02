@@ -53,3 +53,5 @@ yarn-error.*
 !/test-run/REPORT.md
 /test-run-2/*
 !/test-run-2/REPORT.md
+/test-run-3/*
+!/test-run-3/REPORT.md
