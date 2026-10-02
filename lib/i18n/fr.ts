@@ -391,10 +391,28 @@ const fr: TranslationResource = {
     eyebrow: "D'agence à agence",
     status: { completed: 'Terminé', awaitingHandoff: 'En attente de remise', readyForPickup: 'Prêt à charger' },
     confirmPickup: 'Confirmer le chargement',
-    confirmPickupTitle: 'Confirmer le chargement de ce transfert ?',
-    confirmPickupMessage_one: '{{count}} colis de {{from}} vers {{to}}.',
-    confirmPickupMessage_other: '{{count}} colis de {{from}} vers {{to}}.',
-    confirmPickupToast: 'Transfert chargé',
+    confirmPickupTitle: 'Confirmer la prise en charge ?',
+    confirmPickupMessage_one:
+      'Je confirme avoir chargé le colis de ce transfert vers {{to}}. Le transfert passera en transit et ne pourra plus être modifié.',
+    confirmPickupMessage_other:
+      'Je confirme avoir chargé les {{count}} colis de ce transfert vers {{to}}. Le transfert passera en transit et ne pourra plus être modifié.',
+    confirmPickupToast: 'Prise en charge confirmée — transfert en transit',
+    // Scanning every parcel of the batch before taking it.
+    check: {
+      progress: '{{done}}/{{total}} colis',
+      scan: 'Scanner les colis',
+      hint: 'Scannez chaque colis du transfert avant de confirmer la prise en charge.',
+      ready: 'Tous les colis sont scannés. Vous pouvez confirmer la prise en charge.',
+      noList: 'La liste des colis n’est pas disponible : comptez-les avant de confirmer.',
+      confirm: 'Confirmer la prise en charge',
+      withoutScan: 'Confirmer sans scan',
+      withoutScanTitle: 'Confirmer sans scanner tous les colis ?',
+      withoutScanMessage:
+        '{{done}}/{{total}} colis scannés. À utiliser seulement si une étiquette est abîmée : vous devenez responsable de tout le transfert.',
+      noListMessage_one: 'Confirmez-vous avoir chargé le colis de ce transfert ? Vous en devenez responsable.',
+      noListMessage_other:
+        'Confirmez-vous avoir chargé les {{count}} colis de ce transfert ? Vous en devenez responsable.',
+    },
     movingLabel: 'En transit',
     from: 'Agence expéditrice',
     to: 'Agence destinataire',

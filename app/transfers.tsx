@@ -1,12 +1,10 @@
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { Icon } from '../components/Icon';
 import { AgencyFlow } from '../components/AgencyFlow';
-import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
@@ -14,6 +12,7 @@ import { HandoffQrSheet } from '../components/HandoffQrSheet';
 import { EmptyState } from '../components/EmptyState';
 import { HistoryDateFilter } from '../components/HistoryDateFilter';
 import { TrackingId } from '../components/TrackingId';
+import { TransferPickupCheck } from '../components/TransferPickupCheck';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -24,11 +23,11 @@ import { useToast } from '../components/Toast';
 import {
   Radii,
   Spacing,
-  Typography,
   monoLabelStyle,
   monoStyle,
   useColors,
 } from '../constants';
+import { checklistKey, clearChecklist } from '../lib/checklist';
 import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { invalidateTransfers, useScreenState, useTransfers } from '../lib/query';
@@ -54,6 +53,8 @@ export default function TransfersScreen() {
   const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
   const highlightedId = useFocusHighlight();
   const [qrTransferId, setQrTransferId] = useState<string | null>(null);
+  // The transfer whose pickup confirmation is on its way to the server.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   // The large title floats over this list, so its real top is above offset 0.
@@ -75,26 +76,51 @@ export default function TransfersScreen() {
     showToast(t('transfers.reorderedToast'));
   }
 
-  /** The driver has loaded the batch: it leaves "ready" and goes in transit — once the server agrees. */
-  async function handleConfirmPickup(transfer: Transfer) {
-    const accepted = await confirm({
-      title: t('transfers.confirmPickupTitle'),
-      message: t('transfers.confirmPickupMessage', {
-        count: transfer.parcelCount,
-        from: transfer.originAgency,
-        to: transfer.destinationAgency,
-      }),
-      confirmLabel: t('transfers.confirmPickup'),
-      cancelLabel: t('common.cancel'),
-    });
-    if (!accepted) return;
+  /**
+   * "Confirmer la prise en charge": the batch leaves "ready" and goes in
+   * transit — once the server agrees. Same call as before
+   * (confirm-pickup); what changed is that the button is only reachable
+   * with every parcel scanned, or through "Confirmer sans scan" below.
+   */
+  async function confirmPickup(transfer: Transfer) {
+    if (confirmingId) return;
+    setConfirmingId(transfer.id);
     const result = await safely(() => confirmTransferPickup(transfer));
+    setConfirmingId(null);
     if (!result.success) {
+      // Nothing changes on screen, the scans stay, and the reason is shown.
       showToast(writeErrorText(t, result));
       return;
     }
+    clearChecklist(checklistKey.transfer(transfer.id));
     await invalidateTransfers();
     showToast(t('transfers.confirmPickupToast'));
+  }
+
+  /** Every parcel is scanned. One last "are you sure": the transfer can't be changed afterwards. */
+  async function handleConfirmPickup(transfer: Transfer) {
+    const accepted = await confirm({
+      title: t('transfers.confirmPickupTitle'),
+      message: t('transfers.confirmPickupMessage', { count: transfer.parcelCount, to: transfer.destinationAgency }),
+      confirmLabel: t('transfers.check.confirm'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (accepted) await confirmPickup(transfer);
+  }
+
+  /** Not everything was scanned (a damaged label, or no parcel list): the driver has to say so on purpose. */
+  async function handleConfirmWithoutScan(transfer: Transfer, progress: { done: number; total: number }) {
+    const accepted = await confirm({
+      title: t('transfers.check.withoutScanTitle'),
+      message:
+        progress.total > 0
+          ? t('transfers.check.withoutScanMessage', { done: progress.done, total: progress.total })
+          : t('transfers.check.noListMessage', { count: transfer.parcelCount }),
+      confirmLabel: t('transfers.check.withoutScan'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (accepted) await confirmPickup(transfer);
   }
 
   const current = transfers?.filter((tr) => tr.status === 'IN_PROGRESS') ?? [];
@@ -162,38 +188,24 @@ export default function TransfersScreen() {
           <MetaChip icon="time-outline" label={formatTime(transfer.scheduledAt)} />
         </View>
 
-        {!isHistory && (
+        {!isHistory && !transfer.awaitingPickupConfirmation && (
           <View style={[styles.actions, { borderTopColor: colors.separator }]}>
             <PrimaryButton
               label={t('transfers.showQr')}
               height={46}
               onPress={() => setQrTransferId(transfer.id)}
             />
-            {/* Waiting on this driver (real server): confirm the pickup.
-                Otherwise the scan, same place, same look. */}
-            {transfer.awaitingPickupConfirmation ? (
-              <AnimatedPressable
-                scaleTo={0.97}
-                accessibilityRole="button"
-                style={[styles.scanButton, { borderColor: colors.separator }]}
-                onPress={() => handleConfirmPickup(transfer)}>
-                <Icon name="checkmark-circle-outline" size={16} color={colors.textSecondary} />
-                <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
-                  {t('transfers.confirmPickup')}
-                </Text>
-              </AnimatedPressable>
-            ) : (
-              <AnimatedPressable
-                scaleTo={0.97}
-                style={[styles.scanButton, { borderColor: colors.separator }]}
-                onPress={() => router.push('/scanner')}>
-                <Icon name="scan-outline" size={16} color={colors.textSecondary} />
-                <Text style={[Typography.footnote, { color: colors.textSecondary }]}>
-                  {t('transfers.scanToConfirm')}
-                </Text>
-              </AnimatedPressable>
-            )}
           </View>
+        )}
+
+        {/* Waiting on this driver: scan every parcel, then confirm. */}
+        {!isHistory && transfer.awaitingPickupConfirmation && (
+          <TransferPickupCheck
+            transfer={transfer}
+            confirming={confirmingId === transfer.id}
+            onConfirm={() => handleConfirmPickup(transfer)}
+            onConfirmWithoutScan={(progress) => handleConfirmWithoutScan(transfer, progress)}
+          />
         )}
       </Card>
     );
@@ -328,14 +340,5 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-    height: 42,
-    borderRadius: Radii.full,
-    borderWidth: StyleSheet.hairlineWidth,
   },
 });

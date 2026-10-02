@@ -15,6 +15,11 @@ export interface Transfer {
   /** Agency receiving it. */
   destinationAgency: string;
   parcelCount: number;
+  /**
+   * The tracking numbers in the batch, when the server lists them — what the
+   * driver scans before confirming the pickup (see lib/checklist).
+   */
+  parcelTrackingNumbers?: string[];
   /** Depot/hub where the handover happens. */
   location: string;
   scheduledAt: string;

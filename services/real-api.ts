@@ -647,6 +647,7 @@ export function toTransfer(apiTransfer: ApiTransfer): Transfer | null {
     originAgency: text(from?.name) ?? '—',
     destinationAgency: text(apiTransfer.toAgency?.name) ?? '—',
     parcelCount: parcels.length,
+    parcelTrackingNumbers: parcels,
     // The handover happens where the batch leaves from.
     location: text(from?.city) ?? text(from?.name) ?? '',
     scheduledAt:

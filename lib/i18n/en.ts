@@ -399,10 +399,28 @@ const en = {
     eyebrow: 'Agency to Agency',
     status: { completed: 'Completed', awaitingHandoff: 'Awaiting Handover', readyForPickup: 'Ready to Load' },
     confirmPickup: 'Confirm Pickup',
-    confirmPickupTitle: 'Confirm you loaded this transfer?',
-    confirmPickupMessage_one: '{{count}} package from {{from}} to {{to}}.',
-    confirmPickupMessage_other: '{{count}} packages from {{from}} to {{to}}.',
-    confirmPickupToast: 'Transfer picked up',
+    confirmPickupTitle: 'Confirm the pickup?',
+    confirmPickupMessage_one:
+      'I confirm I loaded the parcel of this transfer to {{to}}. The transfer goes in transit and can’t be changed afterwards.',
+    confirmPickupMessage_other:
+      'I confirm I loaded the {{count}} parcels of this transfer to {{to}}. The transfer goes in transit and can’t be changed afterwards.',
+    confirmPickupToast: 'Pickup confirmed — transfer in transit',
+    // Scanning every parcel of the batch before taking it.
+    check: {
+      progress: '{{done}}/{{total}} parcels',
+      scan: 'Scan the parcels',
+      hint: 'Scan every parcel of the transfer before confirming the pickup.',
+      ready: 'Every parcel is scanned. You can confirm the pickup.',
+      noList: 'The parcel list isn’t available: count them before confirming.',
+      confirm: 'Confirm the pickup',
+      withoutScan: 'Confirm without scanning',
+      withoutScanTitle: 'Confirm without scanning every parcel?',
+      withoutScanMessage:
+        '{{done}}/{{total}} parcels scanned. Only for a damaged label: you become responsible for the whole transfer.',
+      noListMessage_one: 'Do you confirm you loaded the parcel of this transfer? You become responsible for it.',
+      noListMessage_other:
+        'Do you confirm you loaded the {{count}} parcels of this transfer? You become responsible for them.',
+    },
     movingLabel: 'Moving',
     from: 'Sending Agency',
     to: 'Receiving Agency',

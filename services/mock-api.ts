@@ -474,6 +474,19 @@ const mockPickups: Pickup[] = [
 
 const mockTransfers: Transfer[] = [
   {
+    // Validated by the agency and waiting for this driver: each parcel is
+    // scanned before "Confirmer la prise en charge".
+    id: 'TR-9204',
+    status: 'IN_PROGRESS',
+    awaitingPickupConfirmation: true,
+    originAgency: 'Agence Sousse',
+    destinationAgency: 'Agence Sfax',
+    parcelCount: 5,
+    parcelTrackingNumbers: ['TRK-51B62DC7', 'TRK-699F0F1D', 'TRK-C9166BCA', 'TRK-6107B96B', 'TRK-561D8F37'],
+    location: 'Dépôt Sahloul',
+    scheduledAt: todayAt(15, 10),
+  },
+  {
     id: 'TR-9201',
     status: 'IN_PROGRESS',
     originAgency: 'Agence Sousse',
@@ -988,7 +1001,10 @@ export async function confirmTransferPickup(transfer: Transfer): Promise<WriteRe
   await delay(undefined);
   const found = mockTransfers.find((t) => t.id === transfer.id);
   if (!found || found.status !== 'IN_PROGRESS') return { success: false, error: 'common.genericError' };
-  found.status = 'COMPLETED';
+  // Like the real server: the batch goes in transit. It stays with the
+  // driver (still "in progress") until the destination agency receives it.
+  if (!found.awaitingPickupConfirmation) return { success: false, error: 'common.genericError' };
+  found.awaitingPickupConfirmation = false;
   return { success: true };
 }
 
