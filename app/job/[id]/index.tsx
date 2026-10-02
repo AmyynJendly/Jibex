@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
+import { ExchangeCheck } from '../../../components/ExchangeCheck';
 import { GlassIconButton } from '../../../components/GlassIconButton';
 import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
@@ -32,6 +33,7 @@ import {
 import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { localeTag } from '../../../lib/date';
+import { deliveryBlocker } from '../../../lib/deliveryGate';
 import { callCustomer, openInMaps } from '../../../lib/stopActions';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
@@ -73,6 +75,8 @@ export default function JobDetailScreen() {
   const { showToast } = useToast();
   const requireOnline = useOnlineGuard();
   const [delivering, setDelivering] = useState(false);
+  // Exchange parcels only: the driver ticked "J'ai récupéré l'article".
+  const [exchangeCollected, setExchangeCollected] = useState(false);
   const { id } = useLocalSearchParams<{ id: string }>();
   // Shown inside a long-press preview: the actions sit in the menu below it
   // there, so the Delivered / Failed buttons would only be clutter.
@@ -159,6 +163,11 @@ export default function JobDetailScreen() {
    */
   async function handleDelivered() {
     if (!job || delivering) return;
+    // An exchange isn't delivered until the article to return is in hand.
+    if (deliveryBlocker({ callAttempts: job.callAttempts, exchange: job.exchange, exchangeCollected }) === 'exchange.required') {
+      showToast(t('exchange.required'));
+      return;
+    }
     if (!requireOnline()) return;
 
     setDelivering(true);
@@ -407,6 +416,10 @@ export default function JobDetailScreen() {
             </View>
           )}
         </View>
+
+        {job.exchange && !isPreview && (
+          <ExchangeCheck checked={exchangeCollected} onToggle={() => setExchangeCollected((v) => !v)} />
+        )}
 
         {job.cashToCollect > 0 && (
           <View

@@ -186,6 +186,14 @@ const en = {
     lastHint: 'Last attempt: if it fails again, the parcel goes back to the agency for a decision.',
   },
 
+  // An exchange parcel: deliver the new article, take the old one back.
+  exchange: {
+    badge: 'EXCHANGE',
+    instruction: 'Collect the article to return to the sender',
+    checkbox: 'I collected the article',
+    required: 'Tick “I collected the article” before marking this parcel delivered.',
+  },
+
   statusUpdate: {
     title: 'Update Status',
     delivered: 'Package Delivered',

@@ -7,9 +7,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Icon } from './Icon';
 import { AnimatedPressable } from './AnimatedPressable';
+import { ExchangeCheck } from './ExchangeCheck';
 import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
+import { deliveryBlocker } from '../lib/deliveryGate';
 import { enumLabel } from '../lib/enumLabel';
 import { commonReasonsFor, opensSavCase } from '../lib/failureReasons';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
@@ -59,11 +61,17 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   const { showToast } = useToast();
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Exchange parcels only: the driver ticked "J'ai récupéré l'article".
+  const [exchangeCollected, setExchangeCollected] = useState(false);
   // A native sheet keeps sliding down after it's told to close. Holding on
   // to the last parcel keeps its content on screen for that slide instead
   // of the sheet emptying out on the way down.
   const [lastJob, setLastJob] = useState(requestedJob);
-  if (requestedJob && requestedJob !== lastJob) setLastJob(requestedJob);
+  if (requestedJob && requestedJob !== lastJob) {
+    setLastJob(requestedJob);
+    // A different parcel: its exchange tick starts empty.
+    if (requestedJob.id !== lastJob?.id) setExchangeCollected(false);
+  }
   const job = requestedJob ?? lastJob;
 
   const insets = useSafeAreaInsets();
@@ -84,7 +92,13 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   const quickReasons: DeliveryFailureReason[] = commonReasonsFor(job?.deliveryAttempts).map((r) => r.value);
 
   const isResolved = job?.status === 'DELIVERED' || job?.status === 'FAILED';
-  const canDeliver = (job?.callAttempts ?? 0) > 0;
+  const blocker = deliveryBlocker({
+    callAttempts: job?.callAttempts ?? 0,
+    exchange: job?.exchange,
+    exchangeCollected,
+  });
+  const called = (job?.callAttempts ?? 0) > 0;
+  const canDeliver = blocker === null;
 
   function handleClose() {
     setReason(null);
@@ -97,8 +111,8 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
    */
   async function handleDelivered() {
     if (!job || submitting) return;
-    if (!canDeliver) {
-      showToast(t('statusUpdate.callRequired'));
+    if (blocker) {
+      showToast(t(blocker));
       return;
     }
     setSubmitting(true);
@@ -194,6 +208,12 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
               </>
             ) : (
               <>
+                {job.exchange && (
+                  <ExchangeCheck
+                    checked={exchangeCollected}
+                    onToggle={() => setExchangeCollected((v) => !v)}
+                  />
+                )}
                 <AnimatedPressable
                   scaleTo={0.97}
                   style={[
@@ -204,7 +224,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                   <Icon name="checkmark-circle" size={20} color="#fff" />
                   <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
                 </AnimatedPressable>
-                {!canDeliver && (
+                {!called && (
                   <View style={styles.callHintRow}>
                     <Icon name="call-outline" size={14} color={colors.warning} />
                     <Text style={[styles.callHintText, { color: colors.warning }]}>

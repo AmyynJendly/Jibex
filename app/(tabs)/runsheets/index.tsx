@@ -123,8 +123,10 @@ function ParcelCard({
   const inert = locked || readOnly;
   const notableStatus = notableParcelStatus(job.server?.parcelStatus);
   const attempt = attemptInfo(job.deliveryAttempts);
-  // History rows are a record of what happened, not a parcel still to deliver.
-  const showBadges = !readOnly && attempt.number > 1;
+  // History rows are a record of what happened, not a parcel still to
+  // deliver: they keep the exchange mark, not the attempt count.
+  const showAttempt = !readOnly && attempt.number > 1;
+  const showBadges = showAttempt || !!job.exchange;
 
   const body = (
     <>
@@ -187,7 +189,8 @@ function ParcelCard({
           before opening it. A first attempt is the normal case and says nothing. */}
       {showBadges && (
         <View style={styles.badgeRow}>
-          {attempt.number > 1 && (
+          {job.exchange && <MetaChip icon="swap-horizontal-outline" tone="warning" label={t('exchange.badge')} />}
+          {showAttempt && (
             <MetaChip
               icon={attempt.last ? 'warning' : 'sync-outline'}
               tone={attempt.last ? 'warning' : 'neutral'}

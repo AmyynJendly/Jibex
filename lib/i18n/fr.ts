@@ -181,6 +181,14 @@ const fr: TranslationResource = {
     lastHint: 'Dernière tentative : après un nouvel échec, le colis repart à l’agence pour décision.',
   },
 
+  // An exchange parcel: deliver the new article, take the old one back.
+  exchange: {
+    badge: 'ÉCHANGE',
+    instruction: 'Récupérer l’article à retourner à l’expéditeur',
+    checkbox: 'J’ai récupéré l’article',
+    required: 'Cochez « J’ai récupéré l’article » avant de marquer ce colis livré.',
+  },
+
   statusUpdate: {
     title: 'Mettre à jour le statut',
     delivered: 'Colis livré',

@@ -99,6 +99,11 @@ export interface Job {
    */
   deliveryAttempts?: number;
   /**
+   * An exchange: the driver hands over this parcel and takes an article back
+   * for the sender. See `lib/deliveryGate`.
+   */
+  exchange?: boolean;
+  /**
    * Set on history parcels: whether a mistake on this one can still be put
    * right. True while its runsheet is open — on the real server, until the
    * agency closes the run (only an IN_PROGRESS run takes updates). Parcels

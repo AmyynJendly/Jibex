@@ -266,6 +266,7 @@ export interface ApiParcel {
   pieces?: number | null;
   type?: string | null;
   fragile?: boolean | null;
+  exchange?: boolean | null;
   lastScanLocation?: string | null;
   lastScanTime?: string | null;
   pickedUpAt?: string | null;
@@ -370,6 +371,7 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
     callAttempts: calls.length,
     lastCallAt: calls.at(-1),
     deliveryAttempts: num(parcel.deliveryAttempts),
+    exchange: parcel.exchange === true ? true : undefined,
     server: {
       parcelId: idString(parcel.id) ?? '',
       itemId: idString(item?.id),

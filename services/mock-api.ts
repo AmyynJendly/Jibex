@@ -232,6 +232,8 @@ const mockJobs: Job[] = [
     cashToCollect: 22.0,
     location: { lat: 35.77, lng: 10.82 },
     callAttempts: 0,
+    // An exchange: the driver takes an article back for the sender.
+    exchange: true,
   },
   {
     id: 'TRK-B6F31C08',
