@@ -11,7 +11,7 @@ import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { enumLabel } from '../lib/enumLabel';
-import { COMMON_REASONS } from '../lib/failureReasons';
+import { commonReasonsFor, opensSavCase } from '../lib/failureReasons';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
 import { safely, writeErrorText } from '../lib/writeResult';
 import {
@@ -22,12 +22,6 @@ import {
 } from '../services/api';
 import type { DeliveryFailureReason, Job } from '../types';
 
-/**
- * The sheet offers only the reasons drivers pick most, as one tap each; the
- * other thirteen (and "Other", which needs a note) are one tap further, on
- * the full Can't Deliver screen with search and groups.
- */
-const QUICK_REASONS: DeliveryFailureReason[] = COMMON_REASONS.map((r) => r.value);
 
 interface StatusUpdateSheetProps {
   /** The sheet is visible whenever this is non-null. */
@@ -83,6 +77,11 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
 
   const hosted = (content: ReactElement) =>
     isNative ? <RNHostView>{content}</RNHostView> : content;
+
+  // The sheet offers only the reasons drivers pick most, as one tap each; the
+  // others (and "Other", which needs a note) are one tap further, on the full
+  // Can't Deliver screen with search and groups.
+  const quickReasons: DeliveryFailureReason[] = commonReasonsFor(job?.deliveryAttempts).map((r) => r.value);
 
   const isResolved = job?.status === 'DELIVERED' || job?.status === 'FAILED';
   const canDeliver = (job?.callAttempts ?? 0) > 0;
@@ -218,7 +217,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                   {t('statusUpdate.failedSection')}
                 </Text>
                 <View style={styles.chipRow}>
-                  {QUICK_REASONS.map((value) => {
+                  {quickReasons.map((value) => {
                     const selected = reason === value;
                     return (
                       <AnimatedPressable
@@ -248,6 +247,16 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                     </Text>
                   </AnimatedPressable>
                 </View>
+
+                {/* The agency opens an after-sales case for some reasons. */}
+                {opensSavCase(reason) && (
+                  <View style={styles.callHintRow}>
+                    <Icon name="alert-circle-outline" size={14} color={colors.warning} />
+                    <Text style={[styles.callHintText, { color: colors.warning }]}>
+                      {t('cantDeliver.savHint')}
+                    </Text>
+                  </View>
+                )}
 
                 <PrimaryButton
                   label={t('statusUpdate.confirmFailed')}

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,16 +19,16 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import { Fonts, Radii, Spacing, Typography, sectionLabelStyle, useColors } from '../../../constants';
 import {
-  COMMON_REASONS,
   FAILURE_REASON_GROUPS,
-  SELECTABLE_REASONS,
+  commonReasonsFor,
   reasonNeedsNote,
+  reasonsFor,
   type FailureReasonInfo,
 } from '../../../lib/failureReasons';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { captureCurrentCoords } from '../../../lib/useLiveCoords';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
-import { markDeliveryFailed } from '../../../services/api';
+import { getJobDetail, markDeliveryFailed } from '../../../services/api';
 import { safely, writeErrorText } from '../../../lib/writeResult';
 import type { DeliveryFailureReason } from '../../../types';
 
@@ -42,7 +42,7 @@ function normalize(text: string): string {
 }
 
 /**
- * Why a stop couldn't be delivered — 19 reasons, picked one-handed.
+ * Why a stop couldn't be delivered — twenty-odd reasons, picked one-handed.
  *
  * The six reasons drivers pick most sit at the top; the rest follow in small
  * labelled groups (couldn't reach the customer, the customer, the address,
@@ -64,6 +64,20 @@ export default function CantDeliverScreen() {
   const [query, setQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const requiredNoteRef = useRef<TextInput>(null);
+  // How many attempts on this parcel already failed. Until it's known (or if
+  // it can't be read) the parcel is treated as a first attempt.
+  const [deliveryAttempts, setDeliveryAttempts] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    getJobDetail(id)
+      .then((job) => {
+        if (!cancelled) setDeliveryAttempts(job.deliveryAttempts ?? 0);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const needsNote = reasonNeedsNote(reason);
   const canConfirm = !!reason && (!needsNote || note.trim().length > 0);
@@ -101,20 +115,25 @@ export default function CantDeliverScreen() {
     }
   }
 
+  // Which reasons this parcel can take: one of them only exists from a
+  // second attempt on.
+  const offered = reasonsFor(deliveryAttempts);
+  const common = commonReasonsFor(deliveryAttempts);
+
   const searching = normalize(query).length > 0;
   const matches = searching
-    ? SELECTABLE_REASONS.filter((r) => normalize(labelOf(r.value)).includes(normalize(query)))
+    ? offered.filter((r) => normalize(labelOf(r.value)).includes(normalize(query)))
     : [];
 
   const sections: { key: string; title: string; reasons: readonly FailureReasonInfo[] }[] =
     searching
       ? [{ key: 'results', title: '', reasons: matches }]
       : [
-          { key: 'common', title: t('enums.failureReasonGroup.common'), reasons: COMMON_REASONS },
+          { key: 'common', title: t('enums.failureReasonGroup.common'), reasons: common },
           ...FAILURE_REASON_GROUPS.map((group) => ({
             key: group,
             title: t(`enums.failureReasonGroup.${group}`),
-            reasons: SELECTABLE_REASONS.filter((r) => r.group === group && !r.common),
+            reasons: offered.filter((r) => r.group === group && !r.common),
           })).filter((section) => section.reasons.length > 0),
         ];
 
@@ -137,9 +156,14 @@ export default function CantDeliverScreen() {
         <View style={[styles.reasonIcon, { backgroundColor: colors.dangerSoft }]}>
           <Icon name={option.icon} size={15} color={colors.danger} />
         </View>
-        <Text style={[Typography.body, styles.reasonLabel, { color: colors.text }]}>
-          {labelOf(option.value)}
-        </Text>
+        <View style={styles.reasonLabel}>
+          <Text style={[Typography.body, { color: colors.text }]}>{labelOf(option.value)}</Text>
+          {/* The agency opens an after-sales case for these: said before the
+              driver picks one, not discovered afterwards. */}
+          {option.sav && (
+            <Text style={[styles.savHint, { color: colors.warning }]}>{t('cantDeliver.savHint')}</Text>
+          )}
+        </View>
         <View
           style={[
             styles.radio,
@@ -336,6 +360,12 @@ const styles = StyleSheet.create({
   },
   reasonLabel: {
     flex: 1,
+    paddingVertical: Spacing.xs,
+  },
+  savHint: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    marginTop: 1,
   },
   radio: {
     width: 22,

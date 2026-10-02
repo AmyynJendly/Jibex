@@ -231,9 +231,10 @@ const fr: TranslationResource = {
     confirm: 'Mettre à jour le statut',
     searchPlaceholder: 'Rechercher un motif',
     noMatch: 'Aucun motif ne correspond à « {{query}} »',
-    noteRequiredLabel: 'Note (obligatoire pour « Autre »)',
+    noteRequiredLabel: 'Note (obligatoire pour « Autre raison »)',
     noteRequiredPlaceholder: "Qu'est-ce qui s'est passé ?",
-    noteRequired: 'Écrivez une courte note pour expliquer « Autre ».',
+    noteRequired: 'Écrivez une courte note pour expliquer « Autre raison ».',
+    savHint: 'Ce motif ouvre un dossier SAV',
   },
 
   failureProof: {
@@ -532,14 +533,15 @@ const fr: TranslationResource = {
       LOST: 'Perdu',
     },
     failureReason: {
-      ABSENT: 'Client absent',
+      // The agency web app's own words, so the driver and the agency say the same thing.
+      ABSENT: 'Destinataire absent',
       REFUSED: 'Colis refusé',
       WRONG_ADDRESS: 'Adresse incorrecte',
       INCOMPLETE_ADDRESS: 'Adresse incomplète',
-      PHONE_OFF: 'Téléphone injoignable',
+      PHONE_OFF: 'Téléphone éteint',
       NO_ANSWER: 'Ne répond pas',
-      OTHER: 'Autre',
-      CANCELLED_BY_CLIENT: 'Annulé par le client',
+      OTHER: 'Autre raison',
+      CANCELLED_BY_CLIENT: 'Annulé par client',
       NOT_INTERESTED_2ND_ATTEMPT: 'Client non intéressé',
       WRONG_NUMBER_2ND_ATTEMPT: 'Numéro incorrect',
       DUPLICATE_ORDER: 'Commande double',

@@ -8,11 +8,22 @@ import type { DeliveryFailureReason } from '../types';
  * exactly as written — the server parses them by name, and once a name has
  * been used it is never renamed or removed, or older parcels would stop
  * parsing. What the driver reads is the translated label under
- * `enums.failureReason.<NAME>`.
+ * `enums.failureReason.<NAME>`, in the agency web app's own words.
  *
- * `selectable: false` marks reasons the business has retired from the
- * driver's picker (merged into CANCELLED_BY_CLIENT) — still valid, and still
- * labelled, on parcels that were recorded with them before.
+ * Which ones the driver is offered:
+ *  - `selectable: false` would hide a reason from the picker while keeping
+ *    its label for parcels already recorded with it. None is hidden today.
+ *  - `fromAttempt: 2` offers a reason only on a second attempt or later
+ *    (the parcel already failed once): "Client non intéressé" is the
+ *    backend's NOT_INTERESTED_2ND_ATTEMPT.
+ *
+ * NOTE — the Android app hides REFUSED and NOT_INTERESTED_2ND_ATTEMPT (its
+ * source says the business merged them into CANCELLED_BY_CLIENT on
+ * 13/08/2026). This app shows them, as asked after the live tests; to hide
+ * them again, set `selectable: false` on those two lines.
+ *
+ * `sav: true` marks the reasons the web app treats as an anomaly: choosing
+ * one opens an after-sales (SAV) case at the agency. The driver is told.
  */
 
 export type FailureReasonGroup = 'reach' | 'customer' | 'address' | 'order' | 'other';
@@ -25,35 +36,39 @@ export interface FailureReasonInfo {
   selectable: boolean;
   /** One of the handful drivers pick most — shown first, and in the quick sheet. */
   common: boolean;
+  /** Opens an after-sales (SAV) case at the agency. */
+  sav: boolean;
+  /** Offered only from this attempt on (2 = the parcel already failed once). */
+  fromAttempt?: number;
 }
 
 export const FAILURE_REASONS: readonly FailureReasonInfo[] = [
   // Couldn't reach the customer
-  { value: 'NO_ANSWER', group: 'reach', icon: 'volume-mute-outline', selectable: true, common: true },
-  { value: 'PHONE_OFF', group: 'reach', icon: 'phone-portrait-outline', selectable: true, common: true },
-  { value: 'LINE_BUSY', group: 'reach', icon: 'call-outline', selectable: true, common: false },
-  { value: 'CALL_REFUSED', group: 'reach', icon: 'close-circle-outline', selectable: true, common: false },
-  { value: 'WRONG_NUMBER_2ND_ATTEMPT', group: 'reach', icon: 'keypad-outline', selectable: true, common: false },
+  { value: 'NO_ANSWER', group: 'reach', icon: 'volume-mute-outline', selectable: true, common: true, sav: false },
+  { value: 'PHONE_OFF', group: 'reach', icon: 'phone-portrait-outline', selectable: true, common: true, sav: false },
+  { value: 'LINE_BUSY', group: 'reach', icon: 'call-outline', selectable: true, common: false, sav: false },
+  { value: 'CALL_REFUSED', group: 'reach', icon: 'close-circle-outline', selectable: true, common: false, sav: false },
+  { value: 'WRONG_NUMBER_2ND_ATTEMPT', group: 'reach', icon: 'keypad-outline', selectable: true, common: false, sav: false },
   // The customer
-  { value: 'ABSENT', group: 'customer', icon: 'home-outline', selectable: true, common: true },
-  { value: 'NOT_AVAILABLE_RESCHEDULED', group: 'customer', icon: 'calendar-outline', selectable: true, common: true },
-  { value: 'CANCELLED_BY_CLIENT', group: 'customer', icon: 'ban-outline', selectable: true, common: true },
-  { value: 'PARCEL_POSTPONED', group: 'customer', icon: 'time-outline', selectable: true, common: false },
-  { value: 'UNRELIABLE_CLIENT', group: 'customer', icon: 'alert-circle-outline', selectable: true, common: false },
-  { value: 'REFUSED', group: 'customer', icon: 'close-circle-outline', selectable: false, common: false },
-  { value: 'NOT_INTERESTED_2ND_ATTEMPT', group: 'customer', icon: 'thumbs-down-outline', selectable: false, common: false },
+  { value: 'ABSENT', group: 'customer', icon: 'home-outline', selectable: true, common: true, sav: false },
+  { value: 'NOT_AVAILABLE_RESCHEDULED', group: 'customer', icon: 'calendar-outline', selectable: true, common: true, sav: false },
+  { value: 'CANCELLED_BY_CLIENT', group: 'customer', icon: 'ban-outline', selectable: true, common: true, sav: true },
+  { value: 'REFUSED', group: 'customer', icon: 'close-circle-outline', selectable: true, common: false, sav: true },
+  { value: 'PARCEL_POSTPONED', group: 'customer', icon: 'time-outline', selectable: true, common: false, sav: false },
+  { value: 'UNRELIABLE_CLIENT', group: 'customer', icon: 'alert-circle-outline', selectable: true, common: false, sav: true },
+  { value: 'NOT_INTERESTED_2ND_ATTEMPT', group: 'customer', icon: 'thumbs-down-outline', selectable: true, common: false, sav: true, fromAttempt: 2 },
   // The address
-  { value: 'WRONG_ADDRESS', group: 'address', icon: 'location-outline', selectable: true, common: true },
-  { value: 'INCOMPLETE_ADDRESS', group: 'address', icon: 'map-outline', selectable: true, common: false },
+  { value: 'WRONG_ADDRESS', group: 'address', icon: 'location-outline', selectable: true, common: true, sav: false },
+  { value: 'INCOMPLETE_ADDRESS', group: 'address', icon: 'map-outline', selectable: true, common: false, sav: false },
   // The order
-  { value: 'INCORRECT_AMOUNT', group: 'order', icon: 'cash-outline', selectable: true, common: false },
-  { value: 'WRONG_PAYMENT_MODE', group: 'order', icon: 'card-outline', selectable: true, common: false },
-  { value: 'NON_COMPLIANT_ORDER', group: 'order', icon: 'cube-outline', selectable: true, common: false },
-  { value: 'DUPLICATE_ORDER', group: 'order', icon: 'copy-outline', selectable: true, common: false },
-  { value: 'RETURN_CONFIRMED_BY_SENDER', group: 'order', icon: 'arrow-undo-outline', selectable: true, common: false },
+  { value: 'INCORRECT_AMOUNT', group: 'order', icon: 'cash-outline', selectable: true, common: false, sav: false },
+  { value: 'WRONG_PAYMENT_MODE', group: 'order', icon: 'card-outline', selectable: true, common: false, sav: true },
+  { value: 'NON_COMPLIANT_ORDER', group: 'order', icon: 'cube-outline', selectable: true, common: false, sav: true },
+  { value: 'DUPLICATE_ORDER', group: 'order', icon: 'copy-outline', selectable: true, common: false, sav: true },
+  { value: 'RETURN_CONFIRMED_BY_SENDER', group: 'order', icon: 'arrow-undo-outline', selectable: true, common: false, sav: true },
   // Something else
-  { value: 'FORCE_MAJEURE', group: 'other', icon: 'thunderstorm-outline', selectable: true, common: false },
-  { value: 'OTHER', group: 'other', icon: 'ellipsis-horizontal-circle-outline', selectable: true, common: false },
+  { value: 'FORCE_MAJEURE', group: 'other', icon: 'thunderstorm-outline', selectable: true, common: false, sav: true },
+  { value: 'OTHER', group: 'other', icon: 'ellipsis-horizontal-circle-outline', selectable: true, common: false, sav: false },
 ];
 
 export const FAILURE_REASON_GROUPS: readonly FailureReasonGroup[] = [
@@ -64,11 +79,25 @@ export const FAILURE_REASON_GROUPS: readonly FailureReasonGroup[] = [
   'other',
 ];
 
-/** The reasons a driver can pick from. */
-export const SELECTABLE_REASONS = FAILURE_REASONS.filter((reason) => reason.selectable);
+/**
+ * The reasons a driver can pick for this parcel. `deliveryAttempts` is the
+ * server's count of attempts that already failed (0 on a first attempt), so
+ * the attempt in hand is one more.
+ */
+export function reasonsFor(deliveryAttempts: number | null | undefined): FailureReasonInfo[] {
+  const attempt = (typeof deliveryAttempts === 'number' && deliveryAttempts > 0 ? Math.floor(deliveryAttempts) : 0) + 1;
+  return FAILURE_REASONS.filter((reason) => reason.selectable && attempt >= (reason.fromAttempt ?? 1));
+}
 
 /** The most-picked reasons, for the top of the picker and the quick sheet. */
-export const COMMON_REASONS = SELECTABLE_REASONS.filter((reason) => reason.common);
+export function commonReasonsFor(deliveryAttempts: number | null | undefined): FailureReasonInfo[] {
+  return reasonsFor(deliveryAttempts).filter((reason) => reason.common);
+}
+
+/** Choosing this reason opens an after-sales (SAV) case at the agency. */
+export function opensSavCase(reason: DeliveryFailureReason | null | undefined): boolean {
+  return !!reason && FAILURE_REASONS.some((info) => info.value === reason && info.sav);
+}
 
 /** OTHER says nothing on its own, so it can't be confirmed without a note. */
 export function reasonNeedsNote(reason: DeliveryFailureReason | null | undefined): boolean {
