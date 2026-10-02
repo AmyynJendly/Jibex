@@ -299,7 +299,6 @@ const en = {
     confirmedToast: 'Confirmed — {{label}}',
     foundToast: 'Found — {{label}}',
     alreadyScanned: 'Already scanned',
-    transferConfirmedToast: 'Transfer completed — {{label}}',
     batchTitle: 'Scan Returns',
     batchProgress: '{{done}} of {{total}} scanned',
     batchCompleteTitle: 'All returns scanned',
@@ -397,8 +396,7 @@ const en = {
   transfers: {
     headerTitle: 'Transfers',
     eyebrow: 'Agency to Agency',
-    status: { completed: 'Completed', awaitingHandoff: 'Awaiting Handover', readyForPickup: 'Ready to Load' },
-    confirmPickup: 'Confirm Pickup',
+    status: { completed: 'Completed', inTransit: 'In transit', readyForPickup: 'Ready to Load' },
     confirmPickupTitle: 'Confirm the pickup?',
     confirmPickupMessage_one:
       'I confirm I loaded the parcel of this transfer to {{to}}. The transfer goes in transit and can’t be changed afterwards.',
@@ -424,10 +422,11 @@ const en = {
     movingLabel: 'Moving',
     from: 'Sending Agency',
     to: 'Receiving Agency',
-    showQr: 'Show Handover QR',
-    hideQr: 'Hide QR',
-    scanToConfirm: 'Scan to Confirm Handover',
-    qrInfoNote: 'Both agencies scan the same QR at the depot to transfer custody of the batch.',
+    // After the driver confirmed: nothing left for them to do.
+    onTheWay: {
+      title: 'On the way to {{agency}} — your part is done.',
+      body: 'The transfer will be closed when the {{agency}} agency scans the parcels.',
+    },
     empty: 'No transfers in progress',
     toggleCurrent: 'Current',
     toggleHistory: 'History',

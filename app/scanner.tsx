@@ -164,11 +164,7 @@ export default function ScannerScreen() {
       await Promise.all([invalidateTransfers(), invalidateReturns(), invalidateDeliveryData()]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // A lookup that changed nothing says "found", never "confirmed".
-      const toastKey = result.checkedOnly
-        ? 'scanner.foundToast'
-        : result.kind === 'transfer'
-          ? 'scanner.transferConfirmedToast'
-          : 'scanner.confirmedToast';
+      const toastKey = result.checkedOnly ? 'scanner.foundToast' : 'scanner.confirmedToast';
       showToast(t(toastKey, { label: result.label }));
       setScannedCount(session.size);
       if (result.kind === 'return' && result.id) {

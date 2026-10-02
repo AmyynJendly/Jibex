@@ -15,6 +15,7 @@ jest.mock('expo-secure-store', () => ({
 
 import { checkProgress, checkScan, checkedOf, checklistKey } from '../lib/checklist';
 import fr from '../lib/i18n/fr';
+import { agencyShortName, transferStage } from '../lib/transferState';
 import { toTransfer } from '../services/real-api';
 
 type MockApi = typeof import('../services/mock-api');
@@ -95,6 +96,29 @@ describe('transfer pickup check', () => {
 
     // Confirming twice is refused: the pickup was already taken.
     expect((await api.confirmTransferPickup(after)).success).toBe(false);
+  });
+
+  it('has three stages: to load, on the way (nothing left to do), closed', () => {
+    expect(transferStage(toTransfer(READY)!)).toBe('toLoad');
+    expect(transferStage(toTransfer({ ...READY, status: 'IN_TRANSIT' })!)).toBe('onTheWay');
+    expect(transferStage(toTransfer({ ...READY, status: 'COMPLETED' })!)).toBe('closed');
+  });
+
+  it('tells the driver their part is over and who closes the transfer', () => {
+    expect(fr.transfers.onTheWay.title).toBe('En route vers {{agency}} — votre partie est terminée.');
+    expect(fr.transfers.onTheWay.body).toBe('Le transfert sera clôturé quand l’agence {{agency}} scannera les colis.');
+    expect(fr.transfers.status.inTransit).toBe('En transit');
+    // "l’agence Agence Sfax" would read wrong.
+    expect(agencyShortName('Agence Sfax')).toBe('Sfax');
+    expect(agencyShortName('jihedb')).toBe('jihedb');
+    expect(agencyShortName('Agence')).toBe('Agence');
+  });
+
+  it('has no handover QR left: scanning cannot close a transfer on mock data', async () => {
+    const api = freshMock();
+    const moving = (await api.getTransfers()).find((tr) => transferStage(tr) === 'onTheWay')!;
+    expect((await api.confirmScan(`JIBEX-TRANSFER:${moving.id}`)).success).toBe(false);
+    expect((await api.getTransfers()).find((tr) => tr.id === moving.id)!.status).toBe('IN_PROGRESS');
   });
 
   it('says it in the agency’s French', () => {

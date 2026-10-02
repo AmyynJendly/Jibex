@@ -1830,9 +1830,6 @@ export async function markAllNotificationsRead(): Promise<WriteResult> {
   return { success: true };
 }
 
-/** A transfer's handover QR carries its number after this prefix (see HandoffQrSheet). */
-const TRANSFER_CODE_PREFIX = 'JIBEX-TRANSFER:';
-
 /**
  * The scanner, on real data: a lookup in the driver's own parcels — the same
  * local search as the Search screen, exact tracking numbers only, no server
@@ -1840,8 +1837,7 @@ const TRANSFER_CODE_PREFIX = 'JIBEX-TRANSFER:';
  * that fails to load is skipped rather than failing the whole scan.
  */
 export async function confirmScan(code: string): Promise<ScanResult> {
-  const raw = code.trim().toUpperCase();
-  const wanted = raw.startsWith(TRANSFER_CODE_PREFIX) ? raw.slice(TRANSFER_CODE_PREFIX.length) : raw;
+  const wanted = code.trim().toUpperCase();
   if (!wanted) return { success: false, error: 'scanner.errors.notRecognized' };
 
   const [driverData, history, pickups, transfers, returns] = await Promise.allSettled([

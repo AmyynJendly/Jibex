@@ -291,7 +291,6 @@ const fr: TranslationResource = {
     confirmedToast: 'Confirmé — {{label}}',
     foundToast: 'Trouvé — {{label}}',
     alreadyScanned: 'Déjà scanné',
-    transferConfirmedToast: 'Transfert terminé — {{label}}',
     batchTitle: 'Scanner les retours',
     batchProgress: '{{done}} sur {{total}} scannés',
     batchCompleteTitle: 'Tous les retours ont été scannés',
@@ -389,8 +388,7 @@ const fr: TranslationResource = {
   transfers: {
     headerTitle: 'Transferts',
     eyebrow: "D'agence à agence",
-    status: { completed: 'Terminé', awaitingHandoff: 'En attente de remise', readyForPickup: 'Prêt à charger' },
-    confirmPickup: 'Confirmer le chargement',
+    status: { completed: 'Terminé', inTransit: 'En transit', readyForPickup: 'Prêt à charger' },
     confirmPickupTitle: 'Confirmer la prise en charge ?',
     confirmPickupMessage_one:
       'Je confirme avoir chargé le colis de ce transfert vers {{to}}. Le transfert passera en transit et ne pourra plus être modifié.',
@@ -416,11 +414,11 @@ const fr: TranslationResource = {
     movingLabel: 'En transit',
     from: 'Agence expéditrice',
     to: 'Agence destinataire',
-    showQr: 'Afficher le QR de remise',
-    hideQr: 'Masquer le QR',
-    scanToConfirm: 'Scanner pour confirmer la remise',
-    qrInfoNote:
-      'Les deux agences scannent le même QR au dépôt pour transférer la garde du lot.',
+    // After the driver confirmed: nothing left for them to do.
+    onTheWay: {
+      title: 'En route vers {{agency}} — votre partie est terminée.',
+      body: 'Le transfert sera clôturé quand l’agence {{agency}} scannera les colis.',
+    },
     empty: 'Aucun transfert en cours',
     toggleCurrent: 'En cours',
     toggleHistory: 'Historique',

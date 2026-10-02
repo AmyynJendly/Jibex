@@ -8,19 +8,19 @@ import { AgencyFlow } from '../components/AgencyFlow';
 import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
-import { HandoffQrSheet } from '../components/HandoffQrSheet';
 import { EmptyState } from '../components/EmptyState';
 import { HistoryDateFilter } from '../components/HistoryDateFilter';
+import { Icon } from '../components/Icon';
 import { TrackingId } from '../components/TrackingId';
 import { TransferPickupCheck } from '../components/TransferPickupCheck';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
-import { PrimaryButton } from '../components/PrimaryButton';
 import { ScrollToTopButton, useScrollToTop } from '../components/ScrollToTopButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import {
+  Fonts,
   Radii,
   Spacing,
   monoLabelStyle,
@@ -31,6 +31,7 @@ import { checklistKey, clearChecklist } from '../lib/checklist';
 import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { invalidateTransfers, useScreenState, useTransfers } from '../lib/query';
+import { agencyShortName, transferStage } from '../lib/transferState';
 import { safely, writeErrorText } from '../lib/writeResult';
 import { useAutoRefresh } from '../lib/useAutoRefresh';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
@@ -52,7 +53,6 @@ export default function TransfersScreen() {
   const transfers = transfersQuery.data ?? null;
   const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
   const highlightedId = useFocusHighlight();
-  const [qrTransferId, setQrTransferId] = useState<string | null>(null);
   // The transfer whose pickup confirmation is on its way to the server.
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -134,13 +134,14 @@ export default function TransfersScreen() {
           dateFilter
         )
     ) ?? [];
-  // History is read-only: no QR, no actions of any kind.
+  // History is read-only: no actions of any kind.
   const isHistory = toggle === 'history';
   const displayed = isHistory ? history : current;
   const parcelsMoving = current.reduce((sum, tr) => sum + tr.parcelCount, 0);
 
   function renderCard(transfer: Transfer, drag?: DragBinding) {
-    const completed = transfer.status === 'COMPLETED';
+    const stage = transferStage(transfer);
+    const completed = stage === 'closed';
     const accent = completed ? colors.success : colors.accent;
 
     return (
@@ -165,9 +166,9 @@ export default function TransfersScreen() {
             numberOfLines={1}>
             {completed
               ? t('transfers.status.completed')
-              : transfer.awaitingPickupConfirmation
+              : stage === 'toLoad'
                 ? t('transfers.status.readyForPickup')
-                : t('transfers.status.awaitingHandoff')}
+                : t('transfers.status.inTransit')}
           </Text>
         </View>
 
@@ -188,18 +189,24 @@ export default function TransfersScreen() {
           <MetaChip icon="time-outline" label={formatTime(transfer.scheduledAt)} />
         </View>
 
-        {!isHistory && !transfer.awaitingPickupConfirmation && (
-          <View style={[styles.actions, { borderTopColor: colors.separator }]}>
-            <PrimaryButton
-              label={t('transfers.showQr')}
-              height={46}
-              onPress={() => setQrTransferId(transfer.id)}
-            />
+        {/* Confirmed: the driver's part is over. Nothing to press — the
+            destination agency closes the transfer by scanning the parcels. */}
+        {!isHistory && stage === 'onTheWay' && (
+          <View style={[styles.endState, { borderTopColor: colors.separator }]}>
+            <Icon name="navigate-outline" size={17} color={colors.accent} />
+            <View style={styles.endStateText}>
+              <Text style={[styles.endStateTitle, { color: colors.text }]}>
+                {t('transfers.onTheWay.title', { agency: agencyShortName(transfer.destinationAgency) })}
+              </Text>
+              <Text style={[styles.endStateBody, { color: colors.textSecondary }]}>
+                {t('transfers.onTheWay.body', { agency: agencyShortName(transfer.destinationAgency) })}
+              </Text>
+            </View>
           </View>
         )}
 
         {/* Waiting on this driver: scan every parcel, then confirm. */}
-        {!isHistory && transfer.awaitingPickupConfirmation && (
+        {!isHistory && stage === 'toLoad' && (
           <TransferPickupCheck
             transfer={transfer}
             confirming={confirmingId === transfer.id}
@@ -284,10 +291,6 @@ export default function TransfersScreen() {
         />
       </View>
 
-      <HandoffQrSheet
-        transfer={current.find((tr) => tr.id === qrTransferId) ?? null}
-        onClose={() => setQrTransferId(null)}
-      />
     </SafeAreaView>
   );
 }
@@ -336,9 +339,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.xs,
   },
-  actions: {
+  endState: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: Spacing.sm,
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  endStateText: {
+    flex: 1,
+    gap: Spacing.xxs,
+  },
+  endStateTitle: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  endStateBody: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    lineHeight: 17,
   },
 });
