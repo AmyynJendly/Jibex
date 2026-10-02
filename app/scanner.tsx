@@ -21,6 +21,7 @@ import { useToast } from '../components/Toast';
 import { Fonts, Radii, Spacing, Typography, monoStyle } from '../constants';
 import { invalidateDeliveryData, invalidateReturns, invalidateTransfers } from '../lib/query';
 import { errorKeyOf } from '../lib/errors';
+import { createScanSession } from '../lib/scanSession';
 import { confirmScan, type ScanResult } from '../services/api';
 
 /**
@@ -94,7 +95,12 @@ export default function ScannerScreen() {
     transform: [{ translateY: sweep.value }],
   }));
 
+  // One session per visit: each code counts once, and a label left under
+  // the camera is read once, not once a second (see lib/scanSession).
+  const [session] = useState(createScanSession);
+
   async function handleCode(code: string) {
+    // One lookup at a time.
     if (scanLockedRef.current) return;
     scanLockedRef.current = true;
     setSubmitting(true);
@@ -104,8 +110,10 @@ export default function ScannerScreen() {
       (error): ScanResult => ({ success: false, error: errorKeyOf(error) })
     );
     setSubmitting(false);
+    scanLockedRef.current = false;
 
     if (result.success) {
+      session.count(code);
       // A scan can close out a transfer, a return batch or a parcel — the
       // screens holding any of those are elsewhere in the stack.
       await Promise.all([invalidateTransfers(), invalidateReturns(), invalidateDeliveryData()]);
@@ -117,31 +125,41 @@ export default function ScannerScreen() {
           ? 'scanner.transferConfirmedToast'
           : 'scanner.confirmedToast';
       showToast(t(toastKey, { label: result.label }));
-      setScannedCount((c) => c + 1);
+      setScannedCount(session.size);
       if (result.kind === 'return' && result.id) {
         setRemainingBatchIds((prev) => prev.filter((id) => id !== result.id));
       }
-      setTimeout(() => {
-        scanLockedRef.current = false;
-      }, 900);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showToast(t(result.error ?? 'scanner.errors.notRecognized'));
-      setTimeout(() => {
-        scanLockedRef.current = false;
-      }, 1200);
     }
   }
 
+  /** A code already counted in this session: said once, quietly — no vibration. */
+  function sayAlreadyScanned() {
+    showToast(t('scanner.alreadyScanned'));
+  }
+
   function handleBarcodeScanned(scanningResult: BarcodeScanningResult) {
+    const verdict = session.read(scanningResult.data);
+    if (verdict === 'ignored') return;
+    if (verdict === 'duplicate') {
+      sayAlreadyScanned();
+      return;
+    }
     handleCode(scanningResult.data);
   }
 
   function handleManualSubmit() {
-    if (!manualCode.trim()) return;
-    handleCode(manualCode.trim());
+    const code = manualCode.trim();
+    if (!code) return;
     setManualCode('');
     setManualEntry(false);
+    if (session.enter(code) === 'duplicate') {
+      sayAlreadyScanned();
+      return;
+    }
+    handleCode(code);
   }
 
   return (

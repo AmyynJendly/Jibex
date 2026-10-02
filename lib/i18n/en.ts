@@ -298,6 +298,7 @@ const en = {
     scannedCount_other: '{{count}} packages scanned at this stop',
     confirmedToast: 'Confirmed — {{label}}',
     foundToast: 'Found — {{label}}',
+    alreadyScanned: 'Already scanned',
     transferConfirmedToast: 'Transfer completed — {{label}}',
     batchTitle: 'Scan Returns',
     batchProgress: '{{done}} of {{total}} scanned',

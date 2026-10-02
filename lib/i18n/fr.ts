@@ -290,6 +290,7 @@ const fr: TranslationResource = {
     scannedCount_other: '{{count}} colis scannés à cet arrêt',
     confirmedToast: 'Confirmé — {{label}}',
     foundToast: 'Trouvé — {{label}}',
+    alreadyScanned: 'Déjà scanné',
     transferConfirmedToast: 'Transfert terminé — {{label}}',
     batchTitle: 'Scanner les retours',
     batchProgress: '{{done}} sur {{total}} scannés',
