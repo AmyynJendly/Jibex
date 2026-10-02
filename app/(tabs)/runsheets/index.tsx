@@ -36,6 +36,7 @@ import {
 import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { telUrl } from '../../../lib/phone';
+import { parcelRowKeys } from '../../../lib/rowKey';
 import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
@@ -331,6 +332,9 @@ export default function RunsheetsScreen() {
   const filteredHistory = (history ?? []).filter((j) =>
     filter === 'all' ? true : j.status === filter
   );
+  // One parcel can be on several runs (one per failed attempt), so a row is
+  // keyed by runsheet + parcel, not by tracking number alone.
+  const historyKeys = parcelRowKeys(filteredHistory);
   const anyCorrectable = (history ?? []).some((j) => j.correctable);
   const codTotal = (active ?? []).reduce((sum, j) => sum + j.cashToCollect, 0);
   const currentCount = workable.length + lockedParcels.length;
@@ -392,7 +396,7 @@ export default function RunsheetsScreen() {
         <FlatList
           ref={listRef}
           data={filteredHistory}
-          keyExtractor={(job) => job.id}
+          keyExtractor={(_job, index) => historyKeys[index]}
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.listContent}
           onScroll={toTop.onScroll}
