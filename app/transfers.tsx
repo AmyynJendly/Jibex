@@ -33,6 +33,7 @@ import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { invalidateTransfers, useScreenState, useTransfers } from '../lib/query';
 import { safely, writeErrorText } from '../lib/writeResult';
+import { useAutoRefresh } from '../lib/useAutoRefresh';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { confirmTransferPickup, setTransferOrder } from '../services/api';
 import type { Transfer } from '../types';
@@ -44,6 +45,9 @@ export default function TransfersScreen() {
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
+  // A transfer appears once the agency validates it: reload when this screen
+  // comes into view, and every minute while it stays there.
+  useAutoRefresh(invalidateTransfers);
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
   const transfers = transfersQuery.data ?? null;

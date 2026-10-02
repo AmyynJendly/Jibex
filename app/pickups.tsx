@@ -33,6 +33,7 @@ import { formatCurrency } from '../lib/currency';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
+import { useAutoRefresh } from '../lib/useAutoRefresh';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { openDirections } from '../lib/stopActions';
@@ -211,6 +212,9 @@ export default function PickupsScreen() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const requireOnline = useOnlineGuard();
+  // A pickup is assigned from the agency's side: reload when this screen
+  // comes into view, and every minute while it stays there.
+  useAutoRefresh(invalidatePickups);
   const pickupsQuery = usePickups();
   const screen = useScreenState([pickupsQuery]);
   const pickups = pickupsQuery.data ?? null;

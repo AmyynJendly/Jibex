@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -40,6 +40,8 @@ import { errorKeyOf } from '../../../lib/errors';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
 import { parcelRowKeys } from '../../../lib/rowKey';
 import { callCustomer } from '../../../lib/stopActions';
+import { useAutoRefresh } from '../../../lib/useAutoRefresh';
+import { usePullToRefresh } from '../../../lib/usePullToRefresh';
 import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
@@ -311,6 +313,18 @@ export default function RunsheetsScreen() {
   // Opened from a notification, the screen lands on the side that alert is
   // about — a refusal belongs in history, not on the current run.
   const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
+  // The agency changes the day from its side (a new run, a parcel added) and
+  // nothing is pushed to the phone: reload when Current comes into view, and
+  // every minute while it stays there.
+  // Never in the middle of a drag: a reload would re-lay the list under the
+  // driver's finger.
+  const draggingRef = useRef(false);
+  const refreshUnlessDragging = useCallback(
+    () => (draggingRef.current ? undefined : invalidateDeliveryData()),
+    []
+  );
+  useAutoRefresh(refreshUnlessDragging, toggle === 'current');
+  const refresh = usePullToRefresh(invalidateDeliveryData);
   const highlightedId = useFocusHighlight();
   // A plain FlatList: every card is sized to its own content. FlashList
   // re-used cells across the filters and kept a taller card's height,
@@ -438,6 +452,9 @@ export default function RunsheetsScreen() {
           ref={listRef}
           data={filteredHistory}
           keyExtractor={(_job, index) => historyKeys[index]}
+          refreshControl={
+            <RefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} tintColor={colors.accent} />
+          }
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.listContent}
           onScroll={toTop.onScroll}
@@ -520,6 +537,9 @@ export default function RunsheetsScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ScrollView
         ref={currentRef}
+        refreshControl={
+          <RefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} tintColor={colors.accent} />
+        }
         contentInsetAdjustmentBehavior="automatic"
         scrollEnabled={!dragging}
         onScroll={toTop.onScroll}
@@ -656,7 +676,10 @@ export default function RunsheetsScreen() {
               data={workable}
               idOf={(job) => job.id}
               onReorder={handleReorder}
-              onDragStateChange={setDragging}
+              onDragStateChange={(isDragging) => {
+                draggingRef.current = isDragging;
+                setDragging(isDragging);
+              }}
               renderItem={(job, index, drag) => (
                 <ParcelCard
                   job={job}
