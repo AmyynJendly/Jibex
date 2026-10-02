@@ -20,7 +20,8 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useToast } from '../components/Toast';
 import { Fonts, Radii, Spacing, Typography, monoStyle } from '../constants';
 import { invalidateDeliveryData, invalidateReturns, invalidateTransfers } from '../lib/query';
-import { confirmScan } from '../services/api';
+import { errorKeyOf } from '../lib/errors';
+import { confirmScan, type ScanResult } from '../services/api';
 
 /**
  * Scanner is always dark, regardless of system theme — it's a camera
@@ -98,7 +99,10 @@ export default function ScannerScreen() {
     scanLockedRef.current = true;
     setSubmitting(true);
 
-    const result = await confirmScan(code);
+    // A lookup that can't reach the server is an error to show, not a crash.
+    const result = await confirmScan(code).catch(
+      (error): ScanResult => ({ success: false, error: errorKeyOf(error) })
+    );
     setSubmitting(false);
 
     if (result.success) {

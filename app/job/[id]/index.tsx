@@ -16,6 +16,7 @@ import { Icon } from '../../../components/Icon';
 import { AnimatedPressable } from '../../../components/AnimatedPressable';
 import { ExchangeCheck } from '../../../components/ExchangeCheck';
 import { GlassIconButton } from '../../../components/GlassIconButton';
+import { LoadError } from '../../../components/LoadError';
 import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
@@ -37,17 +38,12 @@ import { deliveryBlocker } from '../../../lib/deliveryGate';
 import { callCustomer, openInMaps } from '../../../lib/stopActions';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
+import { useLoadedJob } from '../../../lib/useLoadedJob';
 import { useNow } from '../../../lib/useNow';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { safely, writeErrorText } from '../../../lib/writeResult';
-import {
-  confirmDelivery,
-  getDriverStats,
-  getJobDetail,
-  getRunsheets,
-} from '../../../services/api';
-import type { Job } from '../../../types';
+import { confirmDelivery, getDriverStats, getRunsheets } from '../../../services/api';
 
 /**
  * No-key static map image — shows the job's real location instead of a
@@ -81,7 +77,7 @@ export default function JobDetailScreen() {
   // Shown inside a long-press preview: the actions sit in the menu below it
   // there, so the Delivered / Failed buttons would only be clutter.
   const isPreview = useIsPreview();
-  const [job, setJob] = useState<Job | null>(null);
+  const { job, setJob, failed: loadFailed, retrying, retry } = useLoadedJob(id);
   const [position, setPosition] = useState<{ index: number; total: number } | null>(null);
   const liveCoords = useLiveCoords();
   const now = useNow();
@@ -100,20 +96,28 @@ export default function JobDetailScreen() {
   }));
 
   useEffect(() => {
-    getJobDetail(id).then(setJob);
-    getRunsheets().then((runsheets) => {
-      const allStopIds = runsheets.flatMap((r) => r.stopIds);
-      const index = allStopIds.indexOf(id);
-      if (index !== -1) {
-        setPosition({ index: index + 1, total: allStopIds.length });
-      }
-    });
+    // Only the "stop 3 / 7" title needs this: without it the screen still works.
+    getRunsheets()
+      .then((runsheets) => {
+        const allStopIds = runsheets.flatMap((r) => r.stopIds);
+        const index = allStopIds.indexOf(id);
+        if (index !== -1) {
+          setPosition({ index: index + 1, total: allStopIds.length });
+        }
+      })
+      .catch(() => {});
   }, [id]);
 
   if (!job) {
     return (
       <View style={[styles.loadingScreen, { backgroundColor: colors.bg }]}>
-        <Text style={[Typography.body, { color: colors.textSecondary }]}>{t('common.loading')}</Text>
+        {loadFailed ? (
+          <View style={styles.loadError}>
+            <LoadError onRetry={retry} retrying={retrying} />
+          </View>
+        ) : (
+          <Text style={[Typography.body, { color: colors.textSecondary }]}>{t('common.loading')}</Text>
+        )}
       </View>
     );
   }
@@ -478,6 +482,7 @@ export default function JobDetailScreen() {
 
 const styles = StyleSheet.create({
   loadingScreen: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadError: { alignSelf: 'stretch', paddingHorizontal: Spacing.xxl },
   screen: { flex: 1 },
   header: {
     flexDirection: 'row',

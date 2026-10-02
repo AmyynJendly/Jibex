@@ -22,8 +22,8 @@ const fr: TranslationResource = {
     close: 'Fermer',
     offlineAction: "Vous êtes hors ligne — reconnectez-vous avant d'enregistrer.",
     loadError: {
-      title: 'Chargement impossible',
-      body: 'Vérifiez votre connexion et réessayez.',
+      title: 'Connexion impossible',
+      body: 'Vérifiez votre connexion, puis réessayez.',
       retry: 'Réessayer',
     },
     cancel: 'Annuler',
@@ -33,7 +33,7 @@ const fr: TranslationResource = {
     genericError: "Une erreur s'est produite. Veuillez réessayer.",
     backToTop: 'Revenir en haut',
     writesOff: 'Pas encore connecté au serveur',
-    networkError: 'Serveur injoignable. Vérifiez votre connexion et réessayez.',
+    networkError: 'Connexion impossible — réessayez.',
     serverRefused: 'Le serveur a refusé : {{reason}}',
     notAvailableYet: 'Pas encore disponible',
     nav: {

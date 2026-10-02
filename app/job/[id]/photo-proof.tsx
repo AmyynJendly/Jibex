@@ -15,8 +15,9 @@ import { Fonts, Radii, Spacing, morphIn, useColors } from '../../../constants';
 import { useHapticsEnabled } from '../../../lib/haptics';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
-import { confirmDeliveryWithPhoto, getDriverStats, getJobDetail } from '../../../services/api';
-import type { Job } from '../../../types';
+import { useLoadedJob } from '../../../lib/useLoadedJob';
+import { safely } from '../../../lib/writeResult';
+import { confirmDeliveryWithPhoto, getDriverStats } from '../../../services/api';
 
 /** 44pt minimum target for the small text actions on this screen. */
 const HIT_SLOP = { top: 12, bottom: 12, left: 16, right: 16 };
@@ -36,7 +37,7 @@ export default function PhotoProofScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [job, setJob] = useState<Job | null>(null);
+  const { job, retry: retryLoad } = useLoadedJob(id);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [cameraBlocked, setCameraBlocked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -71,9 +72,6 @@ export default function PhotoProofScreen() {
     }
   }
 
-  useEffect(() => {
-    getJobDetail(id).then(setJob);
-  }, [id]);
 
   useEffect(() => {
     if (opened.current || Platform.OS === 'web') return;
@@ -94,14 +92,21 @@ export default function PhotoProofScreen() {
   }
 
   async function handleConfirm() {
-    if (!job || !photoUri || submitting) return;
+    if (!photoUri || submitting) return;
+    // The parcel never loaded (no connection when the screen opened): say so
+    // and try again, rather than a button that does nothing.
+    if (!job) {
+      showToast(t('common.networkError'));
+      retryLoad();
+      return;
+    }
     if (!requireOnline()) return;
     setSubmitting(true);
 
     const previousTotal = await getDriverStats()
       .then((stats) => stats.cashCollectedTotal)
       .catch(() => 0);
-    const result = await confirmDeliveryWithPhoto(id, photoUri, job.cashToCollect);
+    const result = await safely(() => confirmDeliveryWithPhoto(id, photoUri, job.cashToCollect));
     setSubmitting(false);
 
     // Previously this screen ignored a rejected delivery entirely, so the

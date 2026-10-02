@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -36,9 +36,10 @@ import {
 import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
+import { errorKeyOf } from '../../../lib/errors';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
-import { telUrl } from '../../../lib/phone';
 import { parcelRowKeys } from '../../../lib/rowKey';
+import { callCustomer } from '../../../lib/stopActions';
 import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
@@ -50,7 +51,7 @@ import {
   useRunsheets,
   useScreenState,
 } from '../../../lib/query';
-import { logCallAttempt, setNearestFirst, setStopOrder } from '../../../services/api';
+import { setNearestFirst, setStopOrder } from '../../../services/api';
 import type { Job, JobStatus } from '../../../types';
 
 type Toggle = 'current' | 'history';
@@ -337,22 +338,31 @@ export default function RunsheetsScreen() {
     // Deliberately no reload: the list already shows the new order, and the
     // refetch settling behind it will agree — it's the same order we just
     // told the server to keep.
-    await setStopOrder(orderedIds);
+    try {
+      await setStopOrder(orderedIds);
+    } catch (error) {
+      showToast(t(errorKeyOf(error)));
+      return;
+    }
     await invalidateDeliveryData();
     showToast(t('runsheets.reorderedToast'));
   }
 
   async function handleToggleNearestFirst(next: boolean) {
-    await setNearestFirst(next);
+    try {
+      await setNearestFirst(next);
+    } catch (error) {
+      showToast(t(errorKeyOf(error)));
+      return;
+    }
     await invalidateDeliveryData();
   }
 
   async function handleCall(job: Job) {
-    // Log first so the attempt is recorded even if the dialer never opens
-    // (no telephony on web, or the driver backs out of the call sheet).
-    await logCallAttempt(job.id);
-    await invalidateDeliveryData();
-    Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
+    // Logged first so the attempt is recorded even if the dialer never opens
+    // (no telephony on web, or the driver backs out of the call sheet) — and
+    // the call still goes through with no connection.
+    await callCustomer(job);
   }
 
   async function handleSheetDone() {

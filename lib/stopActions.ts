@@ -9,10 +9,20 @@ import { invalidateDeliveryData } from './query';
  * Calls the customer. The attempt is logged before dialling so it counts even
  * if the dialler never opens — a delivery is gated on it. Returns the parcel
  * with its updated call count.
+ *
+ * The call always goes through, connection or not: the attempt is saved on
+ * the phone first, and re-reading the parcel afterwards is the only part
+ * that needs the network. If that fails, the count is worked out here
+ * instead of the whole call failing with an uncaught error.
  */
 export async function callCustomer(job: Job): Promise<Job> {
-  const updated = await logCallAttempt(job.id);
-  await invalidateDeliveryData();
+  let updated: Job;
+  try {
+    updated = await logCallAttempt(job.id);
+  } catch {
+    updated = { ...job, callAttempts: job.callAttempts + 1, lastCallAt: new Date().toISOString() };
+  }
+  invalidateDeliveryData().catch(() => {});
   Linking.openURL(telUrl(job.customerPhone)).catch(() => {});
   return updated;
 }

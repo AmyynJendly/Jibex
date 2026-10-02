@@ -19,8 +19,8 @@ const en = {
     close: 'Close',
     offlineAction: "You're offline — reconnect before recording this.",
     loadError: {
-      title: "Couldn't load",
-      body: 'Check your connection and try again.',
+      title: 'No connection',
+      body: 'Check your connection, then try again.',
       retry: 'Try Again',
     },
     cancel: 'Cancel',
@@ -31,7 +31,7 @@ const en = {
     backToTop: 'Back to top',
     // Real server, writes switched off: the action was refused on the phone.
     writesOff: 'Not connected to the server yet',
-    networkError: 'Can’t reach the server. Check your connection and try again.',
+    networkError: 'No connection — try again.',
     serverRefused: 'The server refused this: {{reason}}',
     notAvailableYet: 'Not available yet',
     nav: {

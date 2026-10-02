@@ -45,16 +45,30 @@ export default function CashCollectedScreen() {
   const [nextStopName, setNextStopName] = useState<string | null>(null);
 
   useEffect(() => {
-    getJobDetail(id).then((job) => setPlace(extractPlace(job.address)));
-    getRunsheets().then((runsheets) => {
-      const allStopIds = runsheets.flatMap((r) => r.stopIds);
-      const index = allStopIds.indexOf(id);
-      if (index !== -1) setPosition(index + 1);
-    });
-    getNextStopId(id).then((nextId) => {
-      setNextStopId(nextId);
-      if (nextId) getJobDetail(nextId).then((job) => setNextStopName(job.customerName));
-    });
+    // The delivery is already recorded when this screen opens. These lines
+    // only decorate the receipt, so a lost connection leaves them out
+    // instead of raising an uncaught error.
+    getJobDetail(id)
+      .then((job) => setPlace(extractPlace(job.address)))
+      .catch(() => {});
+    getRunsheets()
+      .then((runsheets) => {
+        const allStopIds = runsheets.flatMap((r) => r.stopIds);
+        const index = allStopIds.indexOf(id);
+        if (index !== -1) setPosition(index + 1);
+      })
+      .catch(() => {});
+    getNextStopId(id)
+      .then((nextId) => {
+        setNextStopId(nextId);
+        if (nextId) {
+          getJobDetail(nextId)
+            .then((job) => setNextStopName(job.customerName))
+            .catch(() => {});
+        }
+      })
+      // No next stop known: the button falls back to "back to the parcels".
+      .catch(() => setNextStopId(null));
   }, [id]);
 
   const amount = Number(cashAmount);
