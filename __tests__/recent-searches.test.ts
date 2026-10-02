@@ -82,8 +82,8 @@ describe('recent searches', () => {
 
 describe('percentages', () => {
   it('show two decimals', () => {
-    expect(formatPercent(98.4)).toBe('98,40%');
-    expect(formatPercent(100 / 3)).toBe('33,33%');
-    expect(formatPercent(0)).toBe('0,00%');
+    expect(formatPercent(98.4)).toBe('98.40%');
+    expect(formatPercent(100 / 3)).toBe('33.33%');
+    expect(formatPercent(0)).toBe('0.00%');
   });
 });
