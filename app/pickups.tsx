@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { FlatList, Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,11 +29,14 @@ import {
   useColors,
   type ColorPalette,
 } from '../constants';
+import { checkAll, checkProgress, checklistKey, clearChecklist, setChecked } from '../lib/checklist';
 import { formatCurrency } from '../lib/currency';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
+import { normalizeCode } from '../lib/scanSession';
 import { useAutoRefresh } from '../lib/useAutoRefresh';
+import { useChecklist } from '../lib/useChecklist';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { openDirections } from '../lib/stopActions';
@@ -48,13 +51,15 @@ interface PickupCardProps {
   expanded: boolean;
   /** Completed pickups are a record, not a worklist — no actions on them. */
   readOnly?: boolean;
-  selected?: boolean;
   /** Arrived here from a notification about this pickup. */
   highlighted?: boolean;
   /** Present only for a scheduled stop — spreads onto `DragHandle`. */
   drag?: DragBinding;
+  /** "Terminer le pickup" is being sent for this card. */
+  finishing?: boolean;
   onToggle: () => void;
-  onSelect?: () => void;
+  /** The driver has checked the parcels and closes the pickup. */
+  onFinish?: () => void;
   t: TFunction;
 }
 
@@ -62,6 +67,11 @@ interface PickupCardProps {
  * One merchant stop. Call and Navigate act on the stop itself — a driver
  * ringing ahead is ringing the shop, not one parcel inside it — so they sit
  * on the card, above the parcel list rather than inside it.
+ *
+ * A scheduled stop carries its own check: every parcel is scanned or ticked
+ * ("3/4 colis") before "Terminer le pickup" is enabled. The server takes the
+ * pickup as done on one call, with no count, so this check is the only thing
+ * that says the driver really holds each parcel (see lib/checklist).
  *
  * Everything in the header row is one press target, chevron included: a
  * driver aiming for the arrow shouldn't have to hit a 20pt glyph.
@@ -72,45 +82,35 @@ function PickupCard({
   scheme,
   expanded,
   readOnly = false,
-  selected = false,
   highlighted = false,
   drag,
+  finishing = false,
   onToggle,
-  onSelect,
+  onFinish,
   t,
 }: PickupCardProps) {
   const codTotal = pickup.parcels.reduce((sum, p) => sum + p.codAmount, 0);
   const accent = readOnly ? colors.success : colors.purple;
+
+  const checkKey = checklistKey.pickup(pickup.id);
+  const checked = useChecklist(checkKey);
+  const codes = pickup.parcels.map((parcel) => parcel.trackingNumber);
+  const progress = checkProgress(codes, checked);
+  // No parcel list from the server: nothing to tick, so the button asks for
+  // a confirmation instead (see the screen's `handleFinish`).
+  const noList = codes.length === 0;
+  const canFinish = progress.complete || noList;
 
   return (
     <Card
       accent={accent}
       padding="tight"
       borderColor={
-        selected ? colors.success : highlighted ? colors.accent : undefined
+        !readOnly && progress.complete ? colors.success : highlighted ? colors.accent : undefined
       }>
 
       <View style={styles.headRow}>
         {drag && <DragHandle drag={drag} />}
-        {/* Ticking a stop is what marks it collected — deliberately its own
-            control, so expanding to check the parcels never commits anything. */}
-        {onSelect && (
-          <AnimatedPressable
-            scaleTo={0.88}
-            hitSlop={8}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: selected }}
-            accessibilityLabel={t('pickups.selectLabel')}
-            style={[
-              styles.checkbox,
-              selected
-                ? { backgroundColor: colors.success, borderColor: colors.success }
-                : { borderColor: colors.separator },
-            ]}
-            onPress={onSelect}>
-            {selected && <Icon name="checkmark" size={17} color="#fff" />}
-          </AnimatedPressable>
-        )}
         <AnimatedPressable
           scaleTo={0.99}
           accessibilityRole="button"
@@ -182,23 +182,129 @@ function PickupCard({
         )}
       </View>
 
+      {/* The check: how many parcels are verified, and the two fast ways to
+          verify them. Ticking one by one is in the parcel list below. */}
+      {!readOnly && (
+        <View style={[styles.checkBlock, { borderTopColor: colors.separator }]}>
+          <View style={styles.checkHead}>
+            <View style={styles.checkCount}>
+              <Icon
+                name={progress.complete ? 'checkmark-circle' : 'cube-outline'}
+                size={17}
+                color={progress.complete ? colors.success : colors.textSecondary}
+              />
+              <Text
+                style={[
+                  monoStyle(15, 'medium'),
+                  { color: progress.complete ? colors.success : colors.text },
+                ]}>
+                {t('pickups.check.progress', { done: progress.done, total: progress.total })}
+              </Text>
+            </View>
+            {!noList && (
+              <View style={styles.checkActions}>
+                <AnimatedPressable
+                  scaleTo={0.95}
+                  accessibilityRole="button"
+                  style={[styles.checkAction, { backgroundColor: colors.accentSoft }]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/scanner',
+                      params: { checkKey, expected: JSON.stringify(codes), checkKind: 'pickup' },
+                    })
+                  }>
+                  <Icon name="scan-outline" size={15} color={colors.accent} />
+                  <Text style={[styles.checkActionText, { color: colors.accent }]}>
+                    {t('pickups.check.scan')}
+                  </Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  scaleTo={0.95}
+                  accessibilityRole="button"
+                  style={[styles.checkAction, { backgroundColor: colors.bg }]}
+                  onPress={() => (progress.complete ? clearChecklist(checkKey) : checkAll(checkKey, codes))}>
+                  <Text style={[styles.checkActionText, { color: colors.textSecondary }]}>
+                    {t(progress.complete ? 'pickups.check.untickAll' : 'pickups.check.tickAll')}
+                  </Text>
+                </AnimatedPressable>
+              </View>
+            )}
+          </View>
+
+          {!canFinish && (
+            <Text style={[styles.checkHint, { color: colors.textSecondary }]}>
+              {t('pickups.check.finishHint')}
+            </Text>
+          )}
+          {noList && (
+            <Text style={[styles.checkHint, { color: colors.textSecondary }]}>
+              {t('pickups.check.noList')}
+            </Text>
+          )}
+
+          <AnimatedPressable
+            scaleTo={0.97}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canFinish || finishing }}
+            disabled={!canFinish || finishing}
+            style={[
+              styles.finishButton,
+              { backgroundColor: colors.success, opacity: canFinish && !finishing ? 1 : 0.4 },
+            ]}
+            onPress={onFinish}>
+            <Icon name="checkmark-done" size={17} color="#fff" />
+            <Text style={styles.finishButtonText}>{t('pickups.check.finish')}</Text>
+          </AnimatedPressable>
+        </View>
+      )}
+
       {expanded && (
         <View style={styles.parcels}>
           <Text style={[styles.parcelsTitle, { color: colors.textTertiary }]} numberOfLines={1}>
             {t('pickups.parcelsTitle')} · {pickup.contactName}
           </Text>
-          {pickup.parcels.map((parcel) => (
-            <View
-              key={parcel.trackingNumber}
-              style={[styles.parcelRow, { borderTopColor: colors.separator }]}>
-              <Text style={[styles.parcelTracking, { color: colors.text }]} numberOfLines={1}>
-                {parcel.trackingNumber}
-              </Text>
-              <Text style={[styles.parcelCod, { color: colors.accent }]} numberOfLines={1}>
-                {formatCurrency(parcel.codAmount)}
-              </Text>
-            </View>
-          ))}
+          {pickup.parcels.map((parcel) => {
+            const isChecked = checked.has(normalizeCode(parcel.trackingNumber));
+            const row = (
+              <>
+                {!readOnly && (
+                  <View
+                    style={[
+                      styles.parcelTick,
+                      isChecked
+                        ? { backgroundColor: colors.success, borderColor: colors.success }
+                        : { borderColor: colors.separator },
+                    ]}>
+                    {isChecked && <Icon name="checkmark" size={14} color="#fff" />}
+                  </View>
+                )}
+                <Text style={[styles.parcelTracking, { color: colors.text }]} numberOfLines={1}>
+                  {parcel.trackingNumber}
+                </Text>
+                <Text style={[styles.parcelCod, { color: colors.accent }]} numberOfLines={1}>
+                  {formatCurrency(parcel.codAmount)}
+                </Text>
+              </>
+            );
+            return readOnly ? (
+              <View
+                key={parcel.trackingNumber}
+                style={[styles.parcelRow, { borderTopColor: colors.separator }]}>
+                {row}
+              </View>
+            ) : (
+              <AnimatedPressable
+                key={parcel.trackingNumber}
+                scaleTo={0.99}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isChecked }}
+                accessibilityLabel={parcel.trackingNumber}
+                style={[styles.parcelRow, { borderTopColor: colors.separator }]}
+                onPress={() => setChecked(checkKey, parcel.trackingNumber, !isChecked)}>
+                {row}
+              </AnimatedPressable>
+            );
+          })}
         </View>
       )}
     </Card>
@@ -221,8 +327,8 @@ export default function PickupsScreen() {
   const [segment, setSegment] = useTabSegment<PickupStatus>(['SCHEDULED', 'COMPLETED'], 'SCHEDULED');
   const highlightedId = useFocusHighlight();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [completing, setCompleting] = useState(false);
+  // The pickup whose "Terminer le pickup" is on its way to the server.
+  const [finishingId, setFinishingId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const scheduledRef = useRef<ScrollView>(null);
@@ -242,75 +348,44 @@ export default function PickupsScreen() {
     ) ?? [];
   const displayed = segment === 'SCHEDULED' ? scheduled : completed;
 
-  // Ticking a stop is how the driver picks which ones they've actually
-  // collected — "Done" then closes out exactly those, not the whole list.
-  const selected = scheduled.filter((p) => selectedIds.has(p.id));
-
-  async function handleDoneSelected() {
-    if (selected.length === 0 || completing) return;
-    if (!requireOnline()) return;
-
-    const confirmed = await confirm({
-      title: t('pickups.doneConfirmTitle'),
-      message: t('pickups.doneConfirmMessage', {
-        count: selected.length,
-        names: selected.map((p) => p.businessName).join(', '),
-      }),
-      confirmLabel: t('pickups.doneConfirmAction'),
-      cancelLabel: t('common.cancel'),
-    });
-    if (!confirmed) return;
-
-    await completeAndReport(selected.map((p) => p.id));
-  }
-
-  /** "Done all": every scheduled pickup at once, no ticking — after one confirmation. */
-  async function handleDoneAll() {
-    if (scheduled.length === 0 || completing) return;
-    if (!requireOnline()) return;
-
-    const confirmed = await confirm({
-      title: t('pickups.doneAllConfirmTitle', { count: scheduled.length }),
-      message: t('pickups.doneAllConfirmMessage', {
-        count: scheduled.length,
-        names: scheduled.map((p) => p.businessName).join(', '),
-      }),
-      confirmLabel: t('pickups.doneConfirmAction'),
-      cancelLabel: t('common.cancel'),
-    });
-    if (!confirmed) return;
-
-    await completeAndReport(scheduled.map((p) => p.id));
-  }
-
   /**
-   * Closes out these pickups and says exactly what happened: all of them,
-   * some of them ("3 of 4"), or none — in which case nothing on screen
-   * changes and the reason is shown.
+   * "Terminer le pickup": the driver has scanned or ticked every parcel on
+   * the card (the button is disabled until then). A pickup the server sent
+   * with no parcel list can't be checked, so it asks for a confirmation
+   * instead. Either way the same call as before is sent — nothing new.
    */
-  async function completeAndReport(ids: string[]) {
-    setCompleting(true);
-    const result = await safely(() => completePickups(ids));
-    setCompleting(false);
+  async function handleFinish(pickup: Pickup) {
+    if (finishingId) return;
+    if (!requireOnline()) return;
+
+    if (pickup.parcels.length === 0) {
+      const confirmed = await confirm({
+        title: t('pickups.check.noListConfirmTitle'),
+        message: t('pickups.check.noListConfirmMessage', { name: pickup.businessName }),
+        confirmLabel: t('pickups.check.finish'),
+        cancelLabel: t('common.cancel'),
+      });
+      if (!confirmed) return;
+    }
+
+    setFinishingId(pickup.id);
+    const result = await safely(() => completePickups([pickup.id]));
+    setFinishingId(null);
     const succeeded = 'succeeded' in result ? result.succeeded : [];
     if (succeeded.length === 0) {
+      // Nothing on screen changes, the ticks stay, and the reason is shown.
       showToast(writeErrorText(t, result));
       return;
     }
 
+    clearChecklist(checklistKey.pickup(pickup.id));
     await invalidatePickups();
-    const forget = (prev: Set<string>) => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
-      succeeded.forEach((id) => next.delete(id));
+      next.delete(pickup.id);
       return next;
-    };
-    setSelectedIds(forget);
-    setExpandedIds(forget);
-    showToast(
-      succeeded.length === ids.length
-        ? t('pickups.doneToast', { count: succeeded.length })
-        : t('pickups.donePartialToast', { done: succeeded.length, total: ids.length })
-    );
+    });
+    showToast(t('pickups.check.doneToast'));
   }
 
   async function handleReorder(orderedIds: string[]) {
@@ -455,11 +530,11 @@ export default function PickupsScreen() {
                     colors={colors}
                     scheme={scheme}
                     expanded={expandedIds.has(pickup.id)}
-                    selected={selectedIds.has(pickup.id)}
                     highlighted={pickup.id === highlightedId}
                     drag={drag}
+                    finishing={finishingId === pickup.id}
                     onToggle={() => toggleIn(setExpandedIds, pickup.id)}
-                    onSelect={() => toggleIn(setSelectedIds, pickup.id)}
+                    onFinish={() => handleFinish(pickup)}
                     t={t}
                   />
                 )}
@@ -478,36 +553,6 @@ export default function PickupsScreen() {
         />
       </View>
 
-      {segment === 'SCHEDULED' && scheduled.length > 0 && (
-        <View
-          style={[
-            styles.footer,
-            { backgroundColor: colors.bgElevated, borderTopColor: colors.separator },
-          ]}>
-          <Text style={[styles.footerNote, { color: colors.textSecondary }]}>
-            {selected.length === 0
-              ? t('pickups.doneHint')
-              : t('pickups.doneSelectedNote', { count: selected.length })}
-          </Text>
-          {/* Nothing ticked: the button closes every stop at once. Tick some,
-              and it closes just those. */}
-          <AnimatedPressable
-            scaleTo={0.95}
-            disabled={completing}
-            style={[
-              styles.doneButton,
-              { backgroundColor: colors.success, opacity: completing ? 0.4 : 1 },
-            ]}
-            onPress={selected.length > 0 ? handleDoneSelected : handleDoneAll}>
-            <Icon name="checkmark-done" size={17} color="#fff" />
-            <Text style={styles.doneButtonText}>
-              {selected.length > 0
-                ? t('pickups.doneWithCount', { count: selected.length })
-                : t('pickups.doneAllWithCount', { count: scheduled.length })}
-            </Text>
-          </AnimatedPressable>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -567,9 +612,61 @@ const styles = StyleSheet.create({
     gap: Spacing.smd,
     minHeight: 44,
   },
-  checkbox: {
-    width: 28,
-    height: 28,
+  checkBlock: {
+    gap: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: Spacing.smd,
+    paddingTop: Spacing.smd,
+  },
+  checkHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  checkCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  checkActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  checkAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 36,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radii.md,
+  },
+  checkActionText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 13,
+  },
+  checkHint: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  finishButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    height: 46,
+    borderRadius: 23,
+  },
+  finishButtonText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 15,
+    color: '#fff',
+  },
+  parcelTick: {
+    width: 24,
+    height: 24,
     borderRadius: Radii.sm,
     borderWidth: 2,
     alignItems: 'center',
@@ -651,36 +748,9 @@ const styles = StyleSheet.create({
   },
   parcelTracking: {
     ...monoStyle(13, 'medium'),
-    flexShrink: 1,
+    flex: 1,
   },
   parcelCod: {
     ...monoStyle(13, 'medium'),
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.xxl,
-    paddingVertical: Spacing.md,
-    paddingBottom: 30,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  footerNote: {
-    flex: 1,
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 12,
-  },
-  doneButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    height: 46,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: 23,
-  },
-  doneButtonText: {
-    fontFamily: Fonts.archivoBold,
-    fontSize: 15,
-    color: '#fff',
   },
 });

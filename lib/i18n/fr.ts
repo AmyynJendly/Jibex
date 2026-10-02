@@ -297,6 +297,17 @@ const fr: TranslationResource = {
     batchCompleteTitle: 'Tous les retours ont été scannés',
     batchCompleteBody: 'Chaque retour de ce lot a été traité.',
     batchDoneButton: 'Retour aux retours',
+    // Checking a pickup's or a transfer's parcels one by one.
+    check: {
+      title: 'Vérifier les colis',
+      progress: '{{done}}/{{total}} colis',
+      ok: 'Colis vérifié — {{done}}/{{total}}',
+      notInPickup: 'Ce colis n’est pas dans ce pickup',
+      notInTransfer: 'Ce colis n’est pas dans ce transfert',
+      completeTitle: 'Tous les colis sont scannés',
+      completeBody: '{{total}}/{{total}} colis vérifiés. Revenez à l’écran précédent pour confirmer.',
+      done: 'Retour',
+    },
     errors: {
       notRecognized: 'Code non reconnu. Réessayez ou saisissez-le manuellement.',
     },
@@ -356,6 +367,19 @@ const fr: TranslationResource = {
     doneToast_other: '{{count}} collectes marquées',
     donePartialToast: '{{done}} collectes sur {{total}} enregistrées — les autres n’ont pas abouti. Réessayez-les.',
     reorderedToast: 'Ordre enregistré',
+    // Checking each parcel before closing the pickup.
+    check: {
+      progress: '{{done}}/{{total}} colis',
+      scan: 'Scanner',
+      tickAll: 'Tout cocher',
+      untickAll: 'Tout décocher',
+      finish: 'Terminer le pickup',
+      finishHint: 'Scannez ou cochez chaque colis pour terminer le pickup.',
+      noList: 'Aucun colis listé pour ce pickup : vérifiez avec l’expéditeur avant de terminer.',
+      noListConfirmTitle: 'Terminer ce pickup ?',
+      noListConfirmMessage: 'La liste des colis de {{name}} n’est pas disponible. Confirmez que vous avez récupéré tous les colis.',
+      doneToast: 'Pickup terminé',
+    },
     empty: {
       scheduled: 'Aucune collecte prévue',
       completed: 'Aucune collecte terminée',

@@ -305,6 +305,17 @@ const en = {
     batchCompleteTitle: 'All returns scanned',
     batchCompleteBody: 'Every return in this batch has been processed.',
     batchDoneButton: 'Back to Returns',
+    // Checking a pickup's or a transfer's parcels one by one.
+    check: {
+      title: 'Check the parcels',
+      progress: '{{done}}/{{total}} parcels',
+      ok: 'Parcel checked — {{done}}/{{total}}',
+      notInPickup: 'This parcel is not in this pickup',
+      notInTransfer: 'This parcel is not in this transfer',
+      completeTitle: 'All parcels scanned',
+      completeBody: '{{total}}/{{total}} parcels checked. Go back to the previous screen to confirm.',
+      done: 'Back',
+    },
     errors: {
       notRecognized: 'Code not recognized. Try again or enter it manually.',
     },
@@ -364,6 +375,19 @@ const en = {
     doneToast_other: '{{count}} pickups marked collected',
     donePartialToast: '{{done}} of {{total}} pickups collected — the rest didn’t go through. Try them again.',
     reorderedToast: 'Order saved',
+    // Checking each parcel before closing the pickup.
+    check: {
+      progress: '{{done}}/{{total}} parcels',
+      scan: 'Scan',
+      tickAll: 'Tick all',
+      untickAll: 'Untick all',
+      finish: 'Finish pickup',
+      finishHint: 'Scan or tick every parcel to finish the pickup.',
+      noList: 'No parcels listed for this pickup: check with the sender before finishing.',
+      noListConfirmTitle: 'Finish this pickup?',
+      noListConfirmMessage: 'The parcel list for {{name}} isn’t available. Confirm you collected every parcel.',
+      doneToast: 'Pickup finished',
+    },
     empty: {
       scheduled: 'No scheduled pickups',
       completed: 'No completed pickups',

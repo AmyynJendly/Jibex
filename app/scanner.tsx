@@ -20,8 +20,10 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useToast } from '../components/Toast';
 import { Fonts, Radii, Spacing, Typography, monoStyle } from '../constants';
 import { invalidateDeliveryData, invalidateReturns, invalidateTransfers } from '../lib/query';
+import { checkProgress, checkScan } from '../lib/checklist';
 import { errorKeyOf } from '../lib/errors';
 import { createScanSession } from '../lib/scanSession';
+import { useChecklist } from '../lib/useChecklist';
 import { confirmScan, type ScanResult } from '../services/api';
 
 /**
@@ -46,7 +48,12 @@ const BARCODE_TYPES = ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a'] as c
 export default function ScannerScreen() {
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const { batchIds: batchIdsParam } = useLocalSearchParams<{ batchIds?: string }>();
+  const {
+    batchIds: batchIdsParam,
+    checkKey,
+    expected: expectedParam,
+    checkKind,
+  } = useLocalSearchParams<{ batchIds?: string; checkKey?: string; expected?: string; checkKind?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [torchOn, setTorchOn] = useState(false);
   const [manualEntry, setManualEntry] = useState(false);
@@ -74,6 +81,24 @@ export default function ScannerScreen() {
   const batchComplete = isBatchMode && remainingBatchIds.length === 0;
   const batchScannedCount = batchTotal - remainingBatchIds.length;
 
+  // Check mode: a pickup or a transfer passes its parcel list here, and each
+  // scan ticks one off (see lib/checklist). Nothing is sent to the server:
+  // the screen that opened the scanner reads the same list and enables its
+  // button when every parcel is checked.
+  const expected = useMemo(() => {
+    if (!expectedParam) return [];
+    try {
+      const parsed = JSON.parse(expectedParam);
+      return Array.isArray(parsed) ? (parsed as string[]) : [];
+    } catch {
+      return [];
+    }
+  }, [expectedParam]);
+  const isCheckMode = !!checkKey && expected.length > 0;
+  const checked = useChecklist(checkKey ?? '');
+  const checkState = checkProgress(expected, checked);
+  const allDone = batchComplete || (isCheckMode && checkState.complete);
+
   useEffect(() => {
     sweep.value = withRepeat(
       withTiming(SWEEP_RANGE, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
@@ -99,7 +124,27 @@ export default function ScannerScreen() {
   // the camera is read once, not once a second (see lib/scanSession).
   const [session] = useState(createScanSession);
 
+  /** Check mode: tick the parcel off its list, or say why not. */
+  function handleCheck(code: string) {
+    if (!checkKey) return;
+    const verdict = checkScan(checkKey, expected, code);
+    if (verdict === 'checked') {
+      session.count(code);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast(t('scanner.check.ok', { done: checkState.done + 1, total: checkState.total }));
+    } else if (verdict === 'already') {
+      sayAlreadyScanned();
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast(t(checkKind === 'transfer' ? 'scanner.check.notInTransfer' : 'scanner.check.notInPickup'));
+    }
+  }
+
   async function handleCode(code: string) {
+    if (isCheckMode) {
+      handleCheck(code);
+      return;
+    }
     // One lookup at a time.
     if (scanLockedRef.current) return;
     scanLockedRef.current = true;
@@ -164,7 +209,7 @@ export default function ScannerScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {permission?.granted && !batchComplete && (
+      {permission?.granted && !allDone && (
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
@@ -182,7 +227,7 @@ export default function ScannerScreen() {
           <Icon name="close" size={20} color="#fff" />
         </GlassIconButton>
         <Text style={[Typography.headline, styles.title]}>
-          {t(isBatchMode ? 'scanner.batchTitle' : 'scanner.title')}
+          {t(isCheckMode ? 'scanner.check.title' : isBatchMode ? 'scanner.batchTitle' : 'scanner.title')}
         </Text>
         <GlassIconButton
           forceDark
@@ -196,23 +241,31 @@ export default function ScannerScreen() {
         </GlassIconButton>
       </View>
 
-      {isBatchMode && !batchComplete && (
+      {(isBatchMode || isCheckMode) && !allDone && (
         <View style={styles.batchProgressRow}>
           <Text style={styles.batchProgressText}>
-            {t('scanner.batchProgress', { done: batchScannedCount, total: batchTotal })}
+            {isCheckMode
+              ? t('scanner.check.progress', { done: checkState.done, total: checkState.total })
+              : t('scanner.batchProgress', { done: batchScannedCount, total: batchTotal })}
           </Text>
         </View>
       )}
 
-      {batchComplete ? (
+      {allDone ? (
         <View style={styles.batchCompleteBlock}>
           <View style={styles.batchCompleteIcon}>
             <Icon name="checkmark" size={32} color="#1B1917" effect="bounce" />
           </View>
-          <Text style={styles.permissionTitle}>{t('scanner.batchCompleteTitle')}</Text>
-          <Text style={styles.permissionBody}>{t('scanner.batchCompleteBody')}</Text>
+          <Text style={styles.permissionTitle}>
+            {t(isCheckMode ? 'scanner.check.completeTitle' : 'scanner.batchCompleteTitle')}
+          </Text>
+          <Text style={styles.permissionBody}>
+            {isCheckMode
+              ? t('scanner.check.completeBody', { total: checkState.total })
+              : t('scanner.batchCompleteBody')}
+          </Text>
           <PrimaryButton
-            label={t('scanner.batchDoneButton')}
+            label={t(isCheckMode ? 'scanner.check.done' : 'scanner.batchDoneButton')}
             onPress={() => router.back()}
             style={styles.permissionButton}
           />
@@ -242,7 +295,7 @@ export default function ScannerScreen() {
         </View>
       )}
 
-      {!batchComplete && (
+      {!allDone && (
       <View style={styles.footer}>
         {manualEntry ? (
           <View style={styles.manualEntryRow}>
@@ -297,7 +350,7 @@ export default function ScannerScreen() {
           </AnimatedPressable>
         </View>
 
-        {!isBatchMode && scannedCount > 0 && (
+        {!isBatchMode && !isCheckMode && scannedCount > 0 && (
           <Text style={styles.scannedCount}>
             {t('scanner.scannedCount', { count: scannedCount })}
           </Text>
