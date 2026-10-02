@@ -360,7 +360,8 @@ describe('writes on: delivered, failed and corrections', () => {
     // No coordinates field: the proof rides in the notes, as one readable line.
     expect(Object.keys(body).sort()).toEqual(['failureReason', 'notes', 'status']);
     expect(body.notes).toMatch(
-      /^Sonné trois fois\nCalled 2 times \(\d\d:\d\d, \d\d:\d\d\)\. Location: 36\.80000, 10\.18000\.$/
+      // In French for the agency, whatever the app's language.
+      /^Sonné trois fois\nClient appelé 2 fois \(\d\d:\d\d, \d\d:\d\d\)\. Position : 36\.80000, 10\.18000\.$/
     );
 
     await nextRead();

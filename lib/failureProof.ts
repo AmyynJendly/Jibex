@@ -1,15 +1,20 @@
-import type { TFunction } from 'i18next';
-
 import type { GeoPoint } from '../types';
+import { i18next } from './i18n';
 
 /**
  * Proof for a failed delivery, as one short line for the agency.
  *
  * The server's status update has no field for the call log or for where
  * the driver stood, but it does take free-text `notes`. So the app adds one
- * line there — "Called 3 times (10:02, 10:15, 10:31). Location: 36.80012,
- * 10.18045." — after the driver's own note. Written in the app's language.
+ * line there — "Client appelé 3 fois (10:02, 10:15, 10:31). Position : 36.80012,
+ * 10.18045." — after the driver's own note.
+ *
+ * Always in French, whatever language the driver's app is in: the line is
+ * read by the agency, not by the driver, and the agency works in French. In
+ * the live test an English app sent "Not called. Location: …" to a French
+ * back office.
  */
+const agencyText = i18next.getFixedT('fr');
 
 /** Only the latest calls are listed; older ones are counted. */
 const MAX_TIMES = 5;
@@ -24,10 +29,16 @@ function callTime(iso: string, now: Date): string | null {
   return date.toDateString() === now.toDateString() ? time : `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${time}`;
 }
 
-export function failureProofLine(
-  t: TFunction,
-  { calls, location, now = new Date() }: { calls: readonly string[]; location?: GeoPoint | null; now?: Date }
-): string {
+export function failureProofLine({
+  calls,
+  location,
+  now = new Date(),
+}: {
+  calls: readonly string[];
+  location?: GeoPoint | null;
+  now?: Date;
+}): string {
+  const t = agencyText;
   const times = calls.map((iso) => callTime(iso, now)).filter((time): time is string => !!time);
   const shown = times.slice(-MAX_TIMES).join(', ');
   const listed = times.length > MAX_TIMES ? `…, ${shown}` : shown;

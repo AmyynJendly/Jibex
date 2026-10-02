@@ -229,9 +229,9 @@ const fr: TranslationResource = {
   },
 
   failureProof: {
-    called_one: 'Appelé une fois ({{times}}).',
-    called_other: 'Appelé {{count}} fois ({{times}}).',
-    notCalled: 'Pas d’appel.',
+    called_one: 'Client appelé une fois ({{times}}).',
+    called_other: 'Client appelé {{count}} fois ({{times}}).',
+    notCalled: 'Client non appelé.',
     location: 'Position : {{latitude}}, {{longitude}}.',
   },
 

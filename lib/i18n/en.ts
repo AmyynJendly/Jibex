@@ -233,7 +233,9 @@ const en = {
     noteRequired: 'Write a short note to explain “Other”.',
   },
 
-  // One line added to a failed delivery's notes, for the agency.
+  // One line added to a failed delivery's notes, for the agency. The app
+  // always sends the French version (see lib/failureProof); these are kept
+  // so both languages have the same keys.
   failureProof: {
     called_one: 'Called once ({{times}}).',
     called_other: 'Called {{count}} times ({{times}}).',

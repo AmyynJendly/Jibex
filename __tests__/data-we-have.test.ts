@@ -24,38 +24,43 @@ describe('the city in a free-text address', () => {
 });
 
 describe('proof in a failed delivery’s notes', () => {
-  const t = i18next.getFixedT('en');
   const now = new Date(2026, 8, 27, 11, 0);
   const at = (h: number, m: number, day = 27) => new Date(2026, 8, day, h, m).toISOString();
 
   it('lists the calls with their times, like the agency asked', () => {
-    expect(failureProofLine(t, { calls: [at(10, 2), at(10, 15), at(10, 31)], now })).toBe(
-      'Called 3 times (10:02, 10:15, 10:31).'
+    expect(failureProofLine({ calls: [at(10, 2), at(10, 15), at(10, 31)], now })).toBe(
+      'Client appelé 3 fois (10:02, 10:15, 10:31).'
     );
-    expect(failureProofLine(t, { calls: [at(9, 5)], now })).toBe('Called once (09:05).');
+    expect(failureProofLine({ calls: [at(9, 5)], now })).toBe('Client appelé une fois (09:05).');
   });
 
   it('says so when there was no call, and adds the location when there is one', () => {
-    expect(failureProofLine(t, { calls: [], location: { lat: 36.8001234, lng: 10.18 }, now })).toBe(
-      'Not called. Location: 36.80012, 10.18000.'
+    expect(failureProofLine({ calls: [], location: { lat: 36.8001234, lng: 10.18 }, now })).toBe(
+      'Client non appelé. Position : 36.80012, 10.18000.'
     );
   });
 
   it('stays short: the last five times, and a date for calls on another day', () => {
     const calls = [at(8, 0, 26), at(9, 0), at(9, 10), at(9, 20), at(9, 30), at(9, 40)];
-    expect(failureProofLine(t, { calls, now })).toBe('Called 6 times (…, 09:00, 09:10, 09:20, 09:30, 09:40).');
-    expect(failureProofLine(t, { calls: [at(18, 45, 26)], now })).toBe('Called once (26/09 18:45).');
+    expect(failureProofLine({ calls, now })).toBe('Client appelé 6 fois (…, 09:00, 09:10, 09:20, 09:30, 09:40).');
+    expect(failureProofLine({ calls: [at(18, 45, 26)], now })).toBe('Client appelé une fois (26/09 18:45).');
   });
 
-  it('is written in French when the app is', () => {
-    const fr = i18next.getFixedT('fr');
-    expect(failureProofLine(fr, { calls: [at(10, 2), at(10, 15)], location: { lat: 36.8, lng: 10.18 }, now })).toBe(
-      'Appelé 2 fois (10:02, 10:15). Position : 36.80000, 10.18000.'
-    );
+  it('is in French even when the app is in English: the agency reads it, not the driver', async () => {
+    const before = i18next.language;
+    await i18next.changeLanguage('en');
+    try {
+      expect(failureProofLine({ calls: [at(10, 2), at(10, 15)], location: { lat: 36.8, lng: 10.18 }, now })).toBe(
+        'Client appelé 2 fois (10:02, 10:15). Position : 36.80000, 10.18000.'
+      );
+      expect(failureProofLine({ calls: [], now })).toBe('Client non appelé.');
+    } finally {
+      await i18next.changeLanguage(before);
+    }
   });
 
   it('keeps the driver’s own note first', () => {
-    expect(failureNotes('  Portail fermé ', 'Not called.')).toBe('Portail fermé\nNot called.');
-    expect(failureNotes(undefined, 'Not called.')).toBe('Not called.');
+    expect(failureNotes('  Portail fermé ', 'Client non appelé.')).toBe('Portail fermé\nClient non appelé.');
+    expect(failureNotes(undefined, 'Client non appelé.')).toBe('Client non appelé.');
   });
 });
