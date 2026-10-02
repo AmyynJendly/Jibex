@@ -40,6 +40,7 @@ import { API_BASE_URL, API_TIMEOUT_MS, API_WRITES } from '../constants/backend';
 import { reasonNeedsNote } from '../lib/failureReasons';
 import { failureNotes, failureProofLine } from '../lib/failureProof';
 import { governorateIn, governorateOfCity } from '../lib/governorates';
+import { jobStatusOfParcel } from '../lib/parcelStatus';
 import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
 import { localeTag } from '../lib/date';
@@ -811,40 +812,7 @@ export function toJobStatus(status: string | null | undefined): JobStatus | null
  * everything on its way counts as in transit.
  */
 export function toJobStatusFromParcel(status: string | null | undefined): JobStatus | null {
-  switch (status) {
-    case 'DELIVERED':
-    case 'LIVRE_PAYE':
-      return 'DELIVERED';
-    case 'RTN_DEPOT':
-    case 'RETOUR_DEFINITIF':
-    case 'RETOUR_CLIENT_AGENCE':
-    case 'RETOUR_A_CHARGER':
-    case 'EN_TRANSIT_RETOUR':
-    case 'RETOUR_EXPEDITEUR':
-    case 'RETOUR_RECU':
-    case 'RETURNED':
-    case 'CANCELLED':
-    case 'LOST':
-      return 'FAILED';
-    case 'EN_COURS':
-    case 'OUT_FOR_DELIVERY':
-    case 'IN_TRANSIT':
-    case 'EN_TRANSIT_AGENCE':
-    case 'AU_DEPOT':
-    case 'AU_DEPOT_RELAIS':
-    case 'AU_DEPOT_DESTINATION':
-      return 'IN_TRANSIT';
-    case 'PENDING':
-    case 'A_ENLEVER':
-    case 'PICKUP':
-    case 'CREATED':
-    case 'PICKED_UP':
-    case 'SCANNED':
-    case 'A_VERIFIER':
-      return 'PENDING';
-    default:
-      return null;
-  }
+  return jobStatusOfParcel(status);
 }
 
 /** The other way, for `PUT /api/runsheets/items/{id}/status`. */

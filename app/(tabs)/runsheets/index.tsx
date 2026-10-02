@@ -35,6 +35,7 @@ import {
 } from '../../../constants';
 import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
+import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
 import { telUrl } from '../../../lib/phone';
 import { parcelRowKeys } from '../../../lib/rowKey';
 import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
@@ -119,6 +120,7 @@ function ParcelCard({
   const hasCod = job.cashToCollect > 0;
   const accent = stateColor(job.status, colors);
   const inert = locked || readOnly;
+  const notableStatus = notableParcelStatus(job.server?.parcelStatus);
 
   const body = (
     <>
@@ -180,6 +182,14 @@ function ParcelCard({
       {job.status === 'FAILED' && job.failureReason && (
         <Text style={[styles.failureText, { color: colors.danger }]} numberOfLines={1}>
           {enumLabel(t, 'failureReason', job.failureReason)}
+        </Text>
+      )}
+
+      {/* What happened to the parcel since: back at the depot, with the
+          after-sales desk, at a relay depot. Only when it adds something. */}
+      {notableStatus && (
+        <Text style={[styles.parcelStatusText, { color: colors.textSecondary }]} numberOfLines={1}>
+          {t('runsheets.parcelStatusLine', { status: parcelStatusLabel(t, notableStatus) })}
         </Text>
       )}
 
@@ -844,6 +854,11 @@ const styles = StyleSheet.create({
   },
   failureText: {
     fontFamily: Fonts.archivoSemiBold,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  parcelStatusText: {
+    fontFamily: Fonts.archivoMedium,
     fontSize: 12,
     marginTop: 2,
   },
