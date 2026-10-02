@@ -195,6 +195,8 @@ const mockJobs: Job[] = [
     cashToCollect: 28.5,
     location: { lat: 34.7398, lng: 10.76 },
     callAttempts: 0,
+    // Came back to the depot once already: this is its second attempt.
+    deliveryAttempts: 1,
   },
   {
     id: 'TRK-77F1E9AB',
@@ -206,6 +208,8 @@ const mockJobs: Job[] = [
     cashToCollect: 65.0,
     location: { lat: 35.7643, lng: 10.8113 },
     callAttempts: 0,
+    // Failed twice: the third and last attempt the agency allows.
+    deliveryAttempts: 2,
   },
   {
     id: 'TRK-3C4D8F21',

@@ -33,6 +33,7 @@ import {
   useColors,
   type ColorPalette,
 } from '../../../constants';
+import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
 import { enumLabel } from '../../../lib/enumLabel';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
@@ -121,6 +122,9 @@ function ParcelCard({
   const accent = stateColor(job.status, colors);
   const inert = locked || readOnly;
   const notableStatus = notableParcelStatus(job.server?.parcelStatus);
+  const attempt = attemptInfo(job.deliveryAttempts);
+  // History rows are a record of what happened, not a parcel still to deliver.
+  const showBadges = !readOnly && attempt.number > 1;
 
   const body = (
     <>
@@ -178,6 +182,20 @@ function ParcelCard({
           </View>
         )}
       </View>
+
+      {/* A second attempt or later is said on the card, so the driver knows
+          before opening it. A first attempt is the normal case and says nothing. */}
+      {showBadges && (
+        <View style={styles.badgeRow}>
+          {attempt.number > 1 && (
+            <MetaChip
+              icon={attempt.last ? 'warning' : 'sync-outline'}
+              tone={attempt.last ? 'warning' : 'neutral'}
+              label={attempt.last ? `${attemptLabel(t, attempt)} · ${t('attempts.last')}` : attemptLabel(t, attempt)}
+            />
+          )}
+        </View>
+      )}
 
       {job.status === 'FAILED' && job.failureReason && (
         <Text style={[styles.failureText, { color: colors.danger }]} numberOfLines={1}>
@@ -861,6 +879,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.archivoMedium,
     fontSize: 12,
     marginTop: 2,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
   },
   cardFooter: {
     flexDirection: 'row',

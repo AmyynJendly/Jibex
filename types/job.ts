@@ -93,6 +93,12 @@ export interface Job {
   /** ISO timestamp of the most recent call attempt, if any. */
   lastCallAt?: string;
   /**
+   * How many delivery attempts on this parcel already failed (the server's
+   * count: one more each time it comes back to the depot). 0 or absent on a
+   * first attempt. See `lib/attempts`.
+   */
+  deliveryAttempts?: number;
+  /**
    * Set on history parcels: whether a mistake on this one can still be put
    * right. True while its runsheet is open — on the real server, until the
    * agency closes the run (only an IN_PROGRESS run takes updates). Parcels

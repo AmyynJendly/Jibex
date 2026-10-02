@@ -178,6 +178,14 @@ const en = {
     },
   },
 
+  // Which delivery attempt a parcel is on (the agency allows three).
+  attempts: {
+    label: 'Attempt {{number}}/{{max}}',
+    over: 'Attempt {{number}} — beyond the {{max}} allowed',
+    last: 'Last attempt',
+    lastHint: 'Last attempt: if it fails again, the parcel goes back to the agency for a decision.',
+  },
+
   statusUpdate: {
     title: 'Update Status',
     delivered: 'Package Delivered',

@@ -29,6 +29,7 @@ import {
   monoStyle,
   useColors,
 } from '../../../constants';
+import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { localeTag } from '../../../lib/date';
 import { callCustomer, openInMaps } from '../../../lib/stopActions';
@@ -112,6 +113,8 @@ export default function JobDetailScreen() {
       </View>
     );
   }
+
+  const attempt = attemptInfo(job.deliveryAttempts);
 
   // Without the parcel's coordinates there's no honest distance or map tile;
   // the card then offers directions by address instead.
@@ -366,6 +369,17 @@ export default function JobDetailScreen() {
                   : ''}
               </Text>
             </View>
+            <View
+              style={[styles.factChip, { backgroundColor: attempt.last ? colors.warningSoft : colors.bg }]}>
+              <Icon
+                name={attempt.last ? 'warning' : 'sync-outline'}
+                size={14}
+                color={attempt.last ? colors.warning : colors.textSecondary}
+              />
+              <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
+                {attemptLabel(t, attempt)}
+              </Text>
+            </View>
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
               <Icon name="time-outline" size={14} color={colors.textSecondary} />
               <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
@@ -373,6 +387,15 @@ export default function JobDetailScreen() {
               </Text>
             </View>
           </View>
+
+          {/* The third attempt is the last the agency allows: said in full,
+              before the driver knocks. */}
+          {attempt.last && (
+            <View style={[styles.noteCallout, { backgroundColor: colors.warningSoft }]}>
+              <Icon name="warning" size={16} color={colors.warning} />
+              <Text style={[styles.note, { color: colors.text }]}>{t('attempts.lastHint')}</Text>
+            </View>
+          )}
 
           {/* Promoted out of a grey italic footnote. It is an instruction from
               the customer about how to complete the drop — the driver needs to

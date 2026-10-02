@@ -369,6 +369,7 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
     proofPhotoUri: text(parcel.deliveryPhotoUrl),
     callAttempts: calls.length,
     lastCallAt: calls.at(-1),
+    deliveryAttempts: num(parcel.deliveryAttempts),
     server: {
       parcelId: idString(parcel.id) ?? '',
       itemId: idString(item?.id),
