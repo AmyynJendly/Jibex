@@ -36,6 +36,7 @@ import {
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { localeTag, toDateKey } from '../../../lib/date';
 import { runCounts, runsInProgress } from '../../../lib/runsheetDay';
+import { todayWork } from '../../../lib/todayWork';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { useNextStop } from '../../../lib/useNextStop';
@@ -45,7 +46,7 @@ import {
   invalidateReturns,
   invalidateTransfers,
   useDriverStats,
-  useJobsByIds,
+  useClosedRunsheetsToday,
   usePickups,
   useReturns,
   useRunsheets,
@@ -128,9 +129,8 @@ export default function HomeScreen() {
   // holds — including still-blocked ones, since those parcels are genuinely
   // assigned even if not yet workable — so it moves the moment a stop in
   // Runsheets is delivered or failed.
-  const allStopIds = useMemo(() => runsheets.flatMap((r) => r.stopIds), [runsheets]);
-
-  const jobsQuery = useJobsByIds(allStopIds);
+  // Runs the agency closed today: their parcels are still today's work.
+  const closedTodayQuery = useClosedRunsheetsToday();
   const { nextStop, index: nextStopIndex } = useNextStop();
 
   const screen = useScreenState([userQuery, statsQuery, runsheetsQuery]);
@@ -140,9 +140,9 @@ export default function HomeScreen() {
     const stats = statsQuery.data;
     if (!user || !stats) return null;
 
-    const allJobs = jobsQuery.data ?? [];
-    const delivered = allJobs.filter((j) => j.status === 'DELIVERED').length;
-    const failed = allJobs.filter((j) => j.status === 'FAILED').length;
+    // Today's work: every parcel of today's runs, open or closed by the
+    // agency — so the numbers don't drop to zero when a run is closed.
+    const work = todayWork(runsheets, closedTodayQuery.data ?? [], toDateKey(new Date()));
     const pickupsCount = (pickupsQuery.data ?? []).filter((p) => p.status === 'SCHEDULED').length;
 
     return {
@@ -150,12 +150,12 @@ export default function HomeScreen() {
       stats: {
         ...stats,
         pickupsCount,
-        delivered,
-        pending: allJobs.length - delivered - failed,
-        failed,
-        // Not rounded here: the gauge prints it with two decimals
-        // (`formatPercent`).
-        completionPercent: allJobs.length === 0 ? 0 : (delivered / allJobs.length) * 100,
+        delivered: work.delivered,
+        pending: work.remaining,
+        failed: work.failed,
+        // Delivered ÷ (delivered + failed). Not rounded here: the gauge
+        // prints it with two decimals (`formatPercent`).
+        completionPercent: work.ratePercent,
       },
       zone: workableRunsheets[0]?.zone ?? runsheets[0]?.zone ?? null,
       unconfirmedRunsheets,
@@ -163,7 +163,7 @@ export default function HomeScreen() {
   }, [
     userQuery.data,
     statsQuery.data,
-    jobsQuery.data,
+    closedTodayQuery.data,
     pickupsQuery.data,
     workableRunsheets,
     runsheets,
