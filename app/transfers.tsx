@@ -31,7 +31,7 @@ import {
 import { checklistKey, clearChecklist } from '../lib/checklist';
 import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
-import { invalidateTransfers, useScreenState, useTransfers } from '../lib/query';
+import { invalidateTransfers, refreshTransfers, useScreenState, useTransfers } from '../lib/query';
 import { agencyShortName, opensDetail, transferStage } from '../lib/transferState';
 import { useWrite } from '../lib/useWrite';
 import { safely } from '../lib/writeResult';
@@ -49,7 +49,7 @@ export default function TransfersScreen() {
   const { confirm } = useConfirm();
   // A transfer appears once the agency validates it: reload when this screen
   // comes into view, and every minute while it stays there.
-  useAutoRefresh(invalidateTransfers);
+  useAutoRefresh(refreshTransfers);
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
   const transfers = transfersQuery.data ?? null;

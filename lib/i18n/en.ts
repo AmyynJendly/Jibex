@@ -402,6 +402,8 @@ const en = {
     call: 'Call',
     navigate: 'Navigate',
     parcelsTitle: 'Parcels',
+    showMore_one: 'Show the last parcel',
+    showMore_other: 'Show the {{count}} other parcels',
     collected: 'Collected',
     selectLabel: 'Mark this stop collected',
     doneWithCount: 'Done ({{count}})',

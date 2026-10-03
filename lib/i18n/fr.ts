@@ -399,6 +399,8 @@ const fr: TranslationResource = {
     call: 'Appeler',
     navigate: 'Naviguer',
     parcelsTitle: 'Colis',
+    showMore_one: 'Afficher le dernier colis',
+    showMore_other: 'Afficher les {{count}} autres colis',
     collected: 'Ramassé',
     selectLabel: 'Marquer ce ramassage comme effectué',
     doneWithCount: 'Terminer ({{count}})',

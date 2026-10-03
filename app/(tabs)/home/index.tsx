@@ -41,10 +41,10 @@ import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { useNextStop } from '../../../lib/useNextStop';
 import {
-  invalidateDeliveryData,
-  invalidatePickups,
-  invalidateReturns,
-  invalidateTransfers,
+  refreshDeliveryData,
+  refreshPickups,
+  refreshReturns,
+  refreshTransfers,
   useDriverStats,
   useClosedRunsheetsToday,
   usePickups,
@@ -199,7 +199,7 @@ export default function HomeScreen() {
     setRefreshing(true);
     try {
       await Promise.race([
-        Promise.all([invalidateDeliveryData(), invalidatePickups(), invalidateTransfers(), invalidateReturns()]),
+        Promise.all([refreshDeliveryData(), refreshPickups(), refreshTransfers(), refreshReturns()]),
         new Promise((resolve) => setTimeout(resolve, REFRESH_MAX_MS)),
       ]);
     } finally {

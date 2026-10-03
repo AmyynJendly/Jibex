@@ -44,11 +44,16 @@ const queryClient = new QueryClient({
   },
 });
 
-/** Fresh data when the driver comes back to the app, not just to a tab. */
+/**
+ * Fresh data when the driver comes back to the app, not just to a tab.
+ * Only what is on screen reloads now; every other list is marked out of date
+ * and reloads when its screen is opened — not a burst of requests for
+ * screens nobody is looking at.
+ */
 function useRefetchOnForeground() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') queryClient.invalidateQueries();
+      if (state === 'active') queryClient.invalidateQueries({ refetchType: 'active' }, JOIN);
     });
     return () => sub.remove();
   }, []);
@@ -67,6 +72,16 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     </QueryClientProvider>
   );
 }
+
+/**
+ * How a PASSIVE refresh behaves — the 60 s timer, a screen getting focus,
+ * pull-to-refresh, the app returning to the foreground: if the same list is
+ * already being fetched, join that request instead of cancelling it and
+ * starting another. The `invalidate…` helpers below, used after a write,
+ * keep the default: they restart the fetch, so the screen can't be handed an
+ * answer from before the write.
+ */
+const JOIN = { cancelRefetch: false } as const;
 
 /** One place to name a cache entry, so invalidation can't drift from fetching. */
 export const keys = {
@@ -112,16 +127,37 @@ export function invalidateDeliveryData() {
  * have received it, so the screen must show what the server really has.
  */
 export function refreshVisible() {
-  return queryClient.invalidateQueries({ type: 'active' }, { cancelRefetch: false });
+  return queryClient.invalidateQueries({ type: 'active' }, JOIN);
 }
 
 /** Reloads every list — after signing in again with a new token. */
 export function refreshEverything() {
-  return queryClient.invalidateQueries(undefined, { cancelRefetch: false });
+  return queryClient.invalidateQueries(undefined, JOIN);
 }
 
 export function invalidateNotifications() {
   return queryClient.invalidateQueries({ queryKey: keys.notifications });
+}
+
+// ── Passive refreshes: one request at a time per list ─────────────────────
+
+const DELIVERY_KEYS = ['parcels', 'jobs', 'runsheets', 'stats', 'notifications', 'routeOrder', 'nearestFirst', 'driverPosition'];
+
+/** The runs, their parcels and the numbers built from them. */
+export function refreshDeliveryData() {
+  return queryClient.invalidateQueries({ predicate: ({ queryKey }) => DELIVERY_KEYS.includes(queryKey[0] as string) }, JOIN);
+}
+
+export function refreshPickups() {
+  return queryClient.invalidateQueries({ queryKey: keys.pickups }, JOIN);
+}
+
+export function refreshTransfers() {
+  return queryClient.invalidateQueries({ queryKey: keys.transfers }, JOIN);
+}
+
+export function refreshReturns() {
+  return queryClient.invalidateQueries({ queryKey: keys.returns }, JOIN);
 }
 
 export function invalidatePickups() {

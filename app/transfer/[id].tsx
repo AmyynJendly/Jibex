@@ -11,7 +11,7 @@ import { TrackingId } from '../../components/TrackingId';
 import { Fonts, Radii, Spacing, getCardShadow, monoLabelStyle, monoStyle, useColors } from '../../constants';
 import { formatCurrency } from '../../lib/currency';
 import { parcelStatusLabel } from '../../lib/parcelStatus';
-import { invalidateTransfers, useScreenState, useTransfers } from '../../lib/query';
+import { refreshTransfers, useScreenState, useTransfers } from '../../lib/query';
 import { formatStamp, opensDetail, transferStage, transferTimeline } from '../../lib/transferState';
 import { useAutoRefresh } from '../../lib/useAutoRefresh';
 
@@ -29,7 +29,7 @@ export default function TransferDetailScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { id } = useLocalSearchParams<{ id: string }>();
   // The parcels' statuses change as the destination agency scans them in.
-  useAutoRefresh(invalidateTransfers);
+  useAutoRefresh(refreshTransfers);
   const transfersQuery = useTransfers();
   const screen = useScreenState([transfersQuery]);
   const transfer = transfersQuery.data?.find((item) => item.id === id) ?? null;

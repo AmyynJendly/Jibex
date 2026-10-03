@@ -33,9 +33,9 @@ import {
 import { checkAll, checkProgress, checklistKey, clearChecklist, setChecked } from '../lib/checklist';
 import { formatCurrency } from '../lib/currency';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
-import { pickupBatch, pickupReference, pickupWhen } from '../lib/pickupBatch';
+import { PARCELS_PAGE, parcelPage, pickupBatch, pickupReference, pickupWhen } from '../lib/pickupBatch';
 import { telUrl } from '../lib/phone';
-import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
+import { invalidatePickups, refreshPickups, usePickups, useScreenState } from '../lib/query';
 import { normalizeCode } from '../lib/scanSession';
 import { useAutoRefresh } from '../lib/useAutoRefresh';
 import { useChecklist } from '../lib/useChecklist';
@@ -104,6 +104,9 @@ function PickupCard({
   const noList = codes.length === 0;
   const canFinish = progress.complete || noList;
   const reference = pickupReference(pickup);
+  // A pickup of hundreds of parcels is drawn a page at a time.
+  const [shown, setShown] = useState(PARCELS_PAGE);
+  const page = parcelPage(pickup.parcels, shown);
 
   return (
     <Card
@@ -275,7 +278,7 @@ function PickupCard({
           <Text style={[styles.parcelsTitle, { color: colors.textTertiary }]} numberOfLines={1}>
             {t('pickups.parcelsTitle')} · {pickup.contactName}
           </Text>
-          {pickup.parcels.map((parcel) => {
+          {page.visible.map((parcel) => {
             const isChecked = checked.has(normalizeCode(parcel.trackingNumber));
             const row = (
               <>
@@ -317,6 +320,17 @@ function PickupCard({
               </AnimatedPressable>
             );
           })}
+          {page.hidden > 0 && (
+            <AnimatedPressable
+              scaleTo={0.98}
+              accessibilityRole="button"
+              style={[styles.parcelRow, styles.showMore, { borderTopColor: colors.separator }]}
+              onPress={() => setShown((count) => count + PARCELS_PAGE)}>
+              <Text style={[styles.showMoreText, { color: colors.accent }]}>
+                {t('pickups.showMore', { count: page.hidden })}
+              </Text>
+            </AnimatedPressable>
+          )}
         </View>
       )}
     </Card>
@@ -332,7 +346,7 @@ export default function PickupsScreen() {
   const requireOnline = useOnlineGuard();
   // A pickup is assigned from the agency's side: reload when this screen
   // comes into view, and every minute while it stays there.
-  useAutoRefresh(invalidatePickups);
+  useAutoRefresh(refreshPickups);
   const pickupsQuery = usePickups();
   const screen = useScreenState([pickupsQuery]);
   const pickups = pickupsQuery.data ?? null;
@@ -828,6 +842,13 @@ const styles = StyleSheet.create({
   reference: {
     ...monoStyle(12, 'medium'),
     marginTop: 2,
+  },
+  showMore: {
+    justifyContent: 'center',
+  },
+  showMoreText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 13,
   },
   parcelTracking: {
     ...monoStyle(13, 'medium'),

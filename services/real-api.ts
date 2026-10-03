@@ -121,7 +121,33 @@ async function readServerMessage(response: Response): Promise<string | undefined
   }
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/**
+ * One request at a time per resource. A read that is asked again while the
+ * same read is still on its way joins it instead of going out a second time:
+ * the 60 s timer, a tab getting focus and a pull-to-refresh can all land in
+ * the same second, and on a weak network each extra request is seconds lost.
+ *
+ * Only reads are shared, and only while in flight — an answer is never kept.
+ * A write empties the list before it starts and after it ends, so a read
+ * made after a write can never be handed an answer from before it.
+ */
+const readsInFlight = new Map<string, Promise<unknown>>();
+
+export function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  if ((options.method ?? 'GET') !== 'GET') {
+    readsInFlight.clear();
+    return send<T>(path, options).finally(() => readsInFlight.clear());
+  }
+  const running = readsInFlight.get(path) as Promise<T> | undefined;
+  if (running) return running;
+  const read = send<T>(path, options).finally(() => {
+    if (readsInFlight.get(path) === read) readsInFlight.delete(path);
+  });
+  readsInFlight.set(path, read);
+  return read;
+}
+
+async function send<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true } = options;
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';

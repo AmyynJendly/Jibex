@@ -49,6 +49,7 @@ import { usePullToRefresh } from '../../../lib/usePullToRefresh';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
   invalidateDeliveryData,
+  refreshDeliveryData,
   useActiveParcels,
   useClosedRunsheetsToday,
   useDriverPosition,
@@ -339,11 +340,11 @@ export default function RunsheetsScreen() {
   // driver's finger.
   const draggingRef = useRef(false);
   const refreshUnlessDragging = useCallback(
-    () => (draggingRef.current ? undefined : invalidateDeliveryData()),
+    () => (draggingRef.current ? undefined : refreshDeliveryData()),
     []
   );
   useAutoRefresh(refreshUnlessDragging, toggle === 'current');
-  const refresh = usePullToRefresh(invalidateDeliveryData);
+  const refresh = usePullToRefresh(refreshDeliveryData);
   const highlightedId = useFocusHighlight();
   // A plain FlatList: every card is sized to its own content. FlashList
   // re-used cells across the filters and kept a taller card's height,
