@@ -5,7 +5,8 @@ These fixes come from the four live test reports (`test-run/` to `test-run-4/`).
 - Writes stayed **off** (`EXPO_PUBLIC_API_WRITES=off`) the whole time.
 - No write was sent to the live server. Everything was tested with mock data and Jest.
 - One commit per fix.
-- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **21 suites, 257 tests, all pass**.
+- A follow-up round changed fixes 4 and 10. See "Follow-up" below.
+- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **22 suites, 264 tests, all pass**.
 - Not tested on a phone yet. See "What to check on the phone" at the end.
 
 ---
@@ -28,7 +29,7 @@ The screen lists the parcels read-only. One button, "Confirmer le chargement", o
 `POST api/transfers/{id}/confirm-pickup`. No scan and no QR code.
 
 **Result:** Android does nothing more than our app. So there was no reason to stop before fixes 4 and 14.
-But (b) contradicts fix 10. See the first open doubt.
+(b) contradicted fix 10 as first built. The follow-up put the app back in line with Android.
 
 ---
 
@@ -39,13 +40,13 @@ But (b) contradicts fix 10. See the first open doubt.
 | 1 | Auto-refresh | `f37968b` |
 | 2 | Attempt number | `4520bce` |
 | 3 | Exchange | `19889cd` |
-| 4 | Pickup check | `0a9f079` |
+| 4 | Pickup check | `0a9f079`, then `541e3a3` |
 | 5 | History keys | `b0be9af` |
 | 6 | Prices | `57bdff7`, `97ccbb9` |
 | 7 | Failure proof note in French | `9a9a9fb` |
 | 8 | Status mapping | `772cd44` |
 | 9 | Run closed by the agency | `bb9035f` |
-| 10 | Failure reasons | `9a2b351` |
+| 10 | Failure reasons | `9a2b351`, then `845edec`, `2b1ba80` |
 | 11 | Network errors | `17b0747` |
 | 12 | Runsheet confirmation | `1f78c2b` |
 | 13 | Scanner counts once | `9b09ada` |
@@ -82,9 +83,13 @@ On the delivery screen: "Récupérer l'article à retourner à l'expéditeur" an
 
 Each pickup lists its parcels. The driver scans or ticks each one. The card shows "N/M colis".
 "Terminer le pickup" is enabled only at M/M. Same API calls as before (start, complete).
+"Tout cocher" ticks a whole pickup.
 
-- Files: `lib/checklist.ts`, `lib/useChecklist.ts`, `app/pickups.tsx`, `app/scanner.tsx`, i18n
-- Test: `__tests__/checklist.test.ts`
+Follow-up: a **"Terminer tous les pickups"** button is back at the bottom of the scheduled list,
+as the client notes asked. It always asks first: "Terminer N pickups (M colis) ?" with Confirmer / Annuler.
+
+- Files: `lib/checklist.ts`, `lib/useChecklist.ts`, `lib/pickupBatch.ts`, `app/pickups.tsx`, `app/scanner.tsx`, i18n
+- Test: `__tests__/checklist.test.ts`, `__tests__/pickup-batch.test.ts`
 
 ### 5. History keys
 
@@ -130,8 +135,13 @@ With no run at all, the tab says "Aucune tournée pour le moment".
 ### 10. Failure reasons
 
 The labels are the web's exact French ones (`test-run/failure-reasons.md`).
-"Colis refusé" always shows. "Client non intéressé" shows only when `deliveryAttempts >= 1`.
-Under the 9 SAV reasons: "Ce motif ouvre un dossier SAV".
+
+Follow-up, now like Android:
+
+- "Colis refusé" and "Client non intéressé" are **hidden** from the list. The business merged them into
+  "Annulé par client" on 13/08/2026. They keep their labels for parcels already recorded with them.
+- "Annulé par client" is offered, in the full list and in the quick one. The driver picks from 19 reasons.
+- The hint "Ce motif ouvre un dossier SAV" is **removed completely** (text, flag and code).
 
 - Files: `lib/failureReasons.ts`, `app/job/[id]/cant-deliver.tsx`, `components/StatusUpdateSheet.tsx`, i18n
 - Test: `__tests__/failure-reasons.test.ts`
@@ -204,14 +214,10 @@ The library `react-native-qrcode-svg` was removed with it.
 
 ## Open doubts
 
-1. **Fix 10 goes against Android.** Android hides "Colis refusé" and "Client non intéressé" on purpose
-   (business decision of 13/08/2026). I showed them because the task asked for it and the web shows them.
-   Please confirm with Jihed. To hide them again: set `selectable: false` on those two lines in `lib/failureReasons.ts`.
-2. **Which reasons open a SAV case.** The hint is on the 9 reasons from the web's list.
-   But in the live test, "Destinataire absent" and "Non disponible / reporté" also opened SAV cases
-   (after the 3rd attempt). The hint may be incomplete.
+1. ~~Fix 10 goes against Android.~~ **Settled in the follow-up:** the two reasons are hidden again.
+2. ~~Which reasons open a SAV case.~~ **Settled in the follow-up:** the hint is removed.
 3. **A modified run locks all its parcels**, not only the new one, until the driver confirms. This was already
-   the behaviour. I don't know if the server would accept updates on the old parcels meanwhile, so I kept it safe.
+   the behaviour. **Decision: keep the full lock for now. It will be compared with the Android app later.**
 4. **"Refuser cette tournée" and "Refuser les nouveaux colis" are still there.** The task did not mention them.
    They may not exist on the live server (a 404 shows "not available yet").
 5. **A fifth status: "Confirmée — à démarrer".** It is for a run that was confirmed but did not start
@@ -221,12 +227,27 @@ The library `react-native-qrcode-svg` was removed with it.
 7. **A run planned yesterday but closed today** shows as closed today, titled with its own date.
 8. **Attempt badge on the cards starts at attempt 2.** A first attempt shows nothing on the card.
    The delivery screen always shows it.
-9. **The pickup "Done all" footer is gone.** It is replaced by "Tout cocher" on each pickup.
-   The client notes had asked for a done-all button.
+9. ~~The pickup "Done all" footer is gone.~~ **Settled in the follow-up:** "Terminer tous les pickups" is back.
+   New doubt: that button finishes every pickup **without** the parcel-by-parcel check. The dialog says so.
 10. **Ticks and scans live in memory only.** If the app is killed mid-check, the driver starts the check again.
 11. **All decimals use a dot now**, not only prices (percentages too).
-12. **Left-over texts.** The old `pickups.doneAll…` keys are unused but still in the i18n files. Harmless.
+12. **Left-over texts.** Some old `pickups.done…` keys are unused but still in the i18n files. Harmless.
 13. **Mock data has three open runs today**, so mock mode shows the rare "several runs" case, not the usual one.
+
+## Follow-up
+
+A second, small round after this file was first written. Writes stayed off. One commit per item.
+
+| Item | Change | Commit |
+|------|--------|--------|
+| 1 | Hide "Colis refusé" and "Client non intéressé" again, like Android. "Annulé par client" is offered. | `845edec` |
+| 2 | Remove the "Ce motif ouvre un dossier SAV" hint completely. | `2b1ba80` |
+| 3 | Keep the full lock on a changed run. No code change. To compare with Android later. | (this file) |
+| 4 | "Terminer tous les pickups" is back, behind "Terminer N pickups (M colis) ?". "Tout cocher" stays. | `541e3a3` |
+
+Tests: `__tests__/failure-reasons.test.ts` updated (19 reasons offered on every attempt, the two hidden ones
+still have labels, "Annulé par client" is in both lists, no SAV hint left). New `__tests__/pickup-batch.test.ts`
+(the N and M of the dialog, the French sentence, all pickups closed on mock data, nothing sent with writes off).
 
 ## What to check on the phone
 
@@ -235,6 +256,7 @@ Nothing here was run on a device. With `npx expo start --clear`:
 - Current tab: the run card, in mock mode (three runs) and in real mode (your real run).
 - A modified run: the banner, the "NOUVEAU" parcel first.
 - Transfers: scan flow, "Confirmer sans scan", then the "En route vers …" card.
-- Pickups: tick, scan, "Terminer le pickup".
+- Pickups: tick, scan, "Terminer le pickup". Then "Terminer tous les pickups" and its dialog.
+- Can't-deliver screen: "Annulé par client" is there, "Colis refusé" is not, no SAV hint.
 - Scanner: hold one label in front of the camera. It must count once.
 - Turn on airplane mode: "Connexion impossible" with a retry.
