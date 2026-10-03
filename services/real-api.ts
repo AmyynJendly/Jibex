@@ -1650,7 +1650,7 @@ export async function markDeliveryFailed(
   // The server has no field for the call log or the GPS fix, so they ride
   // in `notes` as one short line, after the driver's own note.
   await device.hydrateDeviceStore();
-  const proof = failureProofLine({ calls: device.callsFor(id), location });
+  const proof = failureProofLine({ calls: device.callsFor(id), unreachable: device.isUnreachable(id), location });
   const { result, job } = await updateItemStatus(
     id,
     { status: 'FAILED', failureReason: fromFailureReason(reason), notes: failureNotes(note, proof) },

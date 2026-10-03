@@ -31,10 +31,13 @@ function callTime(iso: string, now: Date): string | null {
 
 export function failureProofLine({
   calls,
+  unreachable = false,
   location,
   now = new Date(),
 }: {
   calls: readonly string[];
+  /** The driver noted "client injoignable" after calling. */
+  unreachable?: boolean;
   location?: GeoPoint | null;
   now?: Date;
 }): string {
@@ -46,6 +49,7 @@ export function failureProofLine({
   const parts = [
     times.length === 0 ? t('failureProof.notCalled') : t('failureProof.called', { count: times.length, times: listed }),
   ];
+  if (unreachable && times.length > 0) parts.push(t('failureProof.unreachable'));
   if (location) {
     // Five decimals ≈ one metre: enough to show which door, no more. (Not
     // `lng` as a parameter name: i18next reads that as a language.)

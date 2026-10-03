@@ -14,6 +14,7 @@ import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { deliveryBlocker } from '../lib/deliveryGate';
 import { enumLabel } from '../lib/enumLabel';
 import { commonReasonsFor } from '../lib/failureReasons';
+import { UnreachableButton } from './UnreachableButton';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
 import { safely, writeErrorText } from '../lib/writeResult';
 import {
@@ -232,6 +233,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                     </Text>
                   </View>
                 )}
+                {job && <UnreachableButton parcelId={job.id} callAttempts={job.callAttempts} />}
 
                 <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
                   {t('statusUpdate.failedSection')}

@@ -20,6 +20,7 @@ import { LoadError } from '../../../components/LoadError';
 import { TrackingId } from '../../../components/TrackingId';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
+import { UnreachableButton } from '../../../components/UnreachableButton';
 import {
   Fonts,
   Radii,
@@ -353,6 +354,7 @@ export default function JobDetailScreen() {
               </Text>
             </View>
           )}
+          <UnreachableButton parcelId={job.id} callAttempts={job.callAttempts} />
           <View style={styles.addressRow}>
             <Icon
               name="location-outline"

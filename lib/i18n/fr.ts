@@ -240,6 +240,10 @@ const fr: TranslationResource = {
     failedToast: 'Échec enregistré',
     callRequired: "Appelez d'abord le client - une livraison exige au moins un appel.",
     callHint: 'Appelez le client avant de marquer ce colis livré.',
+    // After a call that went nowhere: the driver may carry on.
+    unreachable: 'Client injoignable — continuer',
+    unreachableNoted: 'Client injoignable — noté',
+    unreachableToast: 'Noté : client injoignable. Vous pouvez continuer.',
     correctSection: 'Corriger une erreur',
     markPending: 'Remettre en attente',
     reopenedToast: 'Statut rouvert',
@@ -291,6 +295,7 @@ const fr: TranslationResource = {
     called_one: 'Client appelé une fois ({{times}}).',
     called_other: 'Client appelé {{count}} fois ({{times}}).',
     notCalled: 'Client non appelé.',
+    unreachable: 'Client injoignable.',
     location: 'Position : {{latitude}}, {{longitude}}.',
   },
 

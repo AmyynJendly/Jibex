@@ -23,3 +23,16 @@ export function deliveryBlocker(parcel: {
   if (parcel.exchange && !parcel.exchangeCollected) return 'exchange.required';
   return null;
 }
+
+/**
+ * "Client injoignable — continuer", the way on when the call went nowhere:
+ *  - `null`    before any call — the rule comes first, Call must be pressed;
+ *  - `'offer'` once Call was pressed: the driver may note the customer
+ *              couldn't be reached and carry on;
+ *  - `'noted'` after they did.
+ * It never replaces the call: it only exists after one.
+ */
+export function unreachableStep(parcel: { callAttempts: number; unreachable: boolean }): 'offer' | 'noted' | null {
+  if (parcel.callAttempts <= 0) return null;
+  return parcel.unreachable ? 'noted' : 'offer';
+}

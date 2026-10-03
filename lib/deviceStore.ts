@@ -23,6 +23,7 @@ const KEYS = {
   stopRanks: 'jibex.device.stopRanks.v1',
   listOrders: 'jibex.device.listOrders.v1',
   callLog: 'jibex.device.callLog.v1',
+  unreachable: 'jibex.device.unreachable.v1',
   hiddenNotifications: 'jibex.device.hiddenNotifications.v1',
   unreadNotifications: 'jibex.device.unreadNotifications.v1',
   failureLocations: 'jibex.device.failureLocations.v1',
@@ -53,6 +54,8 @@ const state = {
   stopRanks: {} as StopRanks,
   listOrders: {} as ListOrders,
   callLog: {} as CallLog,
+  /** Parcels whose customer the driver noted as unreachable after calling, and when. */
+  unreachable: {} as Record<string, string>,
   /** Alerts the driver deleted or cleared. The server has no delete, so they're hidden here. */
   hiddenNotifications: [] as string[],
   /** Alerts the driver marked unread again. The server has no "unread", so it's kept here. */
@@ -109,6 +112,12 @@ export function hydrateDeviceStore(): Promise<void> {
         state.failureLocations = Object.fromEntries(
           Object.entries(parse<FailureLocations>(values[KEYS.failureLocations], {})).filter(
             ([, fix]) => Date.parse(fix.at) >= failureCutoff
+          )
+        );
+
+        state.unreachable = Object.fromEntries(
+          Object.entries(parse<Record<string, string>>(values[KEYS.unreachable], {})).filter(
+            ([, at]) => Date.parse(at) >= failureCutoff
           )
         );
 
@@ -225,6 +234,19 @@ export async function recordCall(parcelId: string): Promise<readonly string[]> {
   state.callLog = { ...state.callLog, [parcelId]: times };
   await persist('callLog', state.callLog);
   return times;
+}
+
+/** The driver called, and noted that the customer couldn't be reached. */
+export function isUnreachable(parcelId: string): boolean {
+  return parcelId in state.unreachable;
+}
+
+/** Notes "client injoignable" for this parcel. Only after a call: it never stands in for one. */
+export async function markUnreachable(parcelId: string): Promise<boolean> {
+  if (!hasCalled(parcelId)) return false;
+  state.unreachable = { ...state.unreachable, [parcelId]: new Date().toISOString() };
+  await persist('unreachable', state.unreachable);
+  return true;
 }
 
 // ── Notifications: what the server can't store ────────────────────────────

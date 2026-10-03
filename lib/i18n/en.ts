@@ -240,6 +240,10 @@ const en = {
     failedToast: 'Failure recorded',
     callRequired: 'Call the customer first - a delivery needs at least one call attempt.',
     callHint: 'Call the customer before marking this delivered.',
+    // After a call that went nowhere: the driver may carry on.
+    unreachable: 'Customer unreachable — continue',
+    unreachableNoted: 'Customer unreachable — noted',
+    unreachableToast: 'Noted: customer unreachable. You can continue.',
     correctSection: 'Correct a mistake',
     markPending: 'Move back to pending',
     reopenedToast: 'Status reopened',
@@ -294,6 +298,7 @@ const en = {
     called_one: 'Called once ({{times}}).',
     called_other: 'Called {{count}} times ({{times}}).',
     notCalled: 'Not called.',
+    unreachable: 'Customer unreachable.',
     location: 'Location: {{latitude}}, {{longitude}}.',
   },
 
