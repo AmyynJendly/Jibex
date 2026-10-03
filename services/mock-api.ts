@@ -312,7 +312,7 @@ const mockJobs: Job[] = [
 /** Raw seed shape — `stopCount`/`deliveredCount`/`completionPercent`/`needsConfirmation` are never trusted from here, always recomputed live from `mockJobs` (see `toRunsheet`) so they can't drift out of sync as job statuses change. */
 type RunsheetSeed = Omit<
   Runsheet,
-  'stopCount' | 'deliveredCount' | 'completionPercent' | 'needsConfirmation'
+  'stopCount' | 'deliveredCount' | 'completionPercent' | 'needsConfirmation' | 'confirmedStopCount' | 'newStopIds' | 'newParcelsCount'
 > & {
   /** Parcel count the driver last attested to. Null until first confirmation; a mismatch against the live count means dispatch added or pulled parcels and the driver must re-confirm. */
   confirmedStopCount: number | null;
@@ -371,9 +371,15 @@ function toRunsheet(seed: RunsheetSeed): Runsheet {
   // either way the driver has to attest to what's actually in the van now.
   const needsConfirmation =
     seed.status === 'A_CONFIRMER' || seed.confirmedStopCount !== stopCount;
+  // What the agency added since the driver accepted the run: the tail of the list.
+  const confirmed = seed.status === 'A_CONFIRMER' ? null : seed.confirmedStopCount;
+  const newStopIds = confirmed !== null && stopCount > confirmed ? jobs.slice(confirmed).map((j) => j.id) : [];
 
   return {
     ...seed,
+    confirmedStopCount: confirmed ?? undefined,
+    newStopIds,
+    newParcelsCount: newStopIds.length,
     stopIds: [...seed.stopIds],
     stopCount,
     deliveredCount,

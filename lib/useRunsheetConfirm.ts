@@ -6,13 +6,14 @@ import { confirmRunsheetReceipt, rejectNewParcels, rejectRunsheet } from '../ser
 import type { Runsheet } from '../types';
 import { promptText } from './promptText';
 import { invalidateDeliveryData } from './query';
+import { runChange, runChangeText } from './runsheetDay';
 import { safely, writeErrorText } from './writeResult';
 
 /**
  * Where a run waiting on the driver stands:
- *  - `first`   — never confirmed: "Confirm" (confirm receipt, then start)
- *  - `recount` — dispatch changed the parcels since: "Re-confirm"
- *  - `start`   — confirmed, but the run didn't start: "Start run"
+ *  - `first`   — never confirmed: "Confirmer la tournée" (confirm, then start)
+ *  - `recount` — the agency changed the parcels since: "Confirmer la tournée modifiée"
+ *  - `start`   — confirmed, but the run didn't start: "Démarrer la tournée"
  */
 export type ConfirmStep = 'first' | 'recount' | 'start';
 
@@ -23,8 +24,10 @@ export function confirmStepOf(runsheet: Runsheet): ConfirmStep {
 
 /**
  * Confirming and refusing a run, shared by Home and Runsheets so both cards
- * behave the same. Nothing on screen changes until the server (or the mock)
- * says yes; a refusal or failure is shown and the card stays as it was.
+ * behave the same. What the driver confirms is the RUN — they accept it and
+ * become responsible for it — never a count of parcels. Nothing on screen
+ * changes until the server (or the mock) says yes; a refusal or failure is
+ * shown and the card stays as it was.
  */
 export function useRunsheetConfirm() {
   const { t } = useTranslation();
@@ -32,18 +35,29 @@ export function useRunsheetConfirm() {
   const { showToast } = useToast();
 
   function title(runsheet: Runsheet) {
-    const count = runsheet.stopCount;
     switch (confirmStepOf(runsheet)) {
       case 'start':
-        return t('runsheets.confirm.startTitle', { count });
+        return t('runsheets.day.startTitle');
       case 'recount':
-        return t('runsheets.confirm.recountTitle', { count });
+        return t('runsheets.day.modifiedTitle');
       default:
-        return t('runsheets.confirm.title', { count });
+        return t('runsheets.day.newTitle');
     }
   }
 
   function actionLabel(runsheet: Runsheet) {
+    switch (confirmStepOf(runsheet)) {
+      case 'start':
+        return t('runsheets.day.start');
+      case 'recount':
+        return t('runsheets.day.confirmModified');
+      default:
+        return t('runsheets.day.confirm');
+    }
+  }
+
+  /** One word, for a small button (Home). */
+  function shortActionLabel(runsheet: Runsheet) {
     switch (confirmStepOf(runsheet)) {
       case 'start':
         return t('runsheets.confirm.startAction');
@@ -68,15 +82,29 @@ export function useRunsheetConfirm() {
 
   async function confirmReceipt(runsheet: Runsheet) {
     const step = confirmStepOf(runsheet);
-    const accepted = await confirm({
-      title: title(runsheet),
-      message:
-        step === 'start'
-          ? t('runsheets.confirm.startDialogMessage')
-          : t('runsheets.confirm.dialogMessage', { count: runsheet.stopCount }),
-      confirmLabel: actionLabel(runsheet),
-      cancelLabel: t('common.cancel'),
-    });
+    const code = runsheet.code ?? runsheet.id;
+    const accepted = await confirm(
+      step === 'start'
+        ? {
+            title: t('runsheets.day.startTitle'),
+            message: t('runsheets.confirm.startDialogMessage'),
+            confirmLabel: t('runsheets.day.start'),
+            cancelLabel: t('common.cancel'),
+          }
+        : step === 'recount'
+          ? {
+              title: t('runsheets.day.confirmModifiedDialogTitle'),
+              message: `${runChangeText(t, runChange(runsheet))} ${t('runsheets.day.modifiedAccept')}`,
+              confirmLabel: t('runsheets.confirm.action'),
+              cancelLabel: t('common.cancel'),
+            }
+          : {
+              title: t('runsheets.day.confirmDialogTitle', { code }),
+              message: t('runsheets.day.confirmDialogMessage', { count: runsheet.stopCount }),
+              confirmLabel: t('runsheets.confirm.action'),
+              cancelLabel: t('common.cancel'),
+            }
+    );
     if (!accepted) return;
 
     // Never crashes on a server or network error: the failure is shown and
@@ -85,7 +113,7 @@ export function useRunsheetConfirm() {
     if (!result.success) {
       showToast(writeErrorText(t, result));
       // Confirmed, but not started: that did change the run — refresh so the
-      // card turns into "Start run".
+      // card turns into "Démarrer la tournée".
       if ('confirmedOnly' in result && result.confirmedOnly) await invalidateDeliveryData();
       return;
     }
@@ -121,5 +149,5 @@ export function useRunsheetConfirm() {
     showToast(onlyNew ? t('runsheets.refuse.newToast') : t('runsheets.refuse.toast'));
   }
 
-  return { confirmReceipt, refuse, title, actionLabel, refuseLabel };
+  return { confirmReceipt, refuse, title, actionLabel, shortActionLabel, refuseLabel };
 }

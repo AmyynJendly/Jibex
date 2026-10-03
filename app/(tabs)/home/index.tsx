@@ -405,11 +405,12 @@ export default function HomeScreen() {
                 <Icon name="lock-closed" size={16} color={colors.warning} />
               </View>
               <View style={styles.toConfirmText}>
+                {/* The run is what gets confirmed: name it, then its size. */}
                 <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
-                  {t('common.package', { count: runsheet.stopCount })}
+                  {runsheetConfirm.title(runsheet)}
                 </Text>
                 <Text style={[Typography.caption2, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {runsheet.zone}
+                  {runsheet.code ?? runsheet.id} · {t('common.package', { count: runsheet.stopCount })}
                 </Text>
               </View>
               <AnimatedPressable
@@ -417,7 +418,7 @@ export default function HomeScreen() {
                 style={[styles.toConfirmButton, { backgroundColor: colors.warning }]}
                 onPress={() => runsheetConfirm.confirmReceipt(runsheet)}>
                 <Text style={[styles.toConfirmButtonText, { color: colors.onWarning }]}>
-                  {runsheetConfirm.actionLabel(runsheet)}
+                  {runsheetConfirm.shortActionLabel(runsheet)}
                 </Text>
               </AnimatedPressable>
             </View>

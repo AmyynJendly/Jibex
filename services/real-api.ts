@@ -478,6 +478,8 @@ export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
     vehiclePlate: text(runsheet.vehiclePlate),
     needsStart,
     newParcelsCount: newParcels,
+    confirmedStopCount: status === 'A_CONFIRMER' ? undefined : Math.max(0, jobs.length - newParcels),
+    newStopIds: jobs.filter((job) => job.server?.itemStatus === 'PENDING_DRIVER_CONFIRMATION').map((job) => job.id),
     serverStatus: raw,
     scheduledDate: text(runsheet.scheduledDate)?.slice(0, 10),
     closedAt: status === 'VALIDE' ? text(runsheet.completedAt) : undefined,

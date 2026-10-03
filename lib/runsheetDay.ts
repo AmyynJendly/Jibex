@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+
 import type { Runsheet } from '../types';
 
 /**
@@ -85,4 +87,33 @@ export function dayRuns(runsheets: Runsheet[], closedToday: Runsheet[], today: s
   );
 
   return { open, closed };
+}
+
+/** How the agency changed a run after the driver accepted it. */
+export interface RunChange {
+  /** Parcels the driver accepted. */
+  before: number;
+  /** Parcels on the run now. */
+  after: number;
+  added: number;
+  removed: number;
+}
+
+/** The change waiting for the driver's OK, or null when the count is the one they accepted. */
+export function runChange(
+  runsheet: Pick<Runsheet, 'stopCount' | 'confirmedStopCount' | 'newParcelsCount'>
+): RunChange | null {
+  const after = runsheet.stopCount;
+  const before = runsheet.confirmedStopCount ?? after - (runsheet.newParcelsCount ?? 0);
+  if (before === after) return null;
+  return { before, after, added: Math.max(0, after - before), removed: Math.max(0, before - after) };
+}
+
+/** "La tournée a été modifiée : 1 colis ajouté (12 → 13)". */
+export function runChangeText(t: TFunction, change: RunChange | null): string {
+  if (!change) return t('runsheets.day.modifiedUnknown');
+  const what = change.added
+    ? t('runsheets.day.added', { count: change.added })
+    : t('runsheets.day.removed', { count: change.removed });
+  return t('runsheets.day.modified', { change: what, before: change.before, after: change.after });
 }

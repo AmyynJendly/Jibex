@@ -208,3 +208,91 @@ describe('real server: the run the agency closed today', () => {
     expect((await api.getRunsheets())[0]).toMatchObject({ scheduledDate: '2026-10-02', closedAt: undefined });
   });
 });
+
+/**
+ * The driver confirms a RUN, not parcels. In the live test the card said
+ * "3 colis à confirmer", and after the agency added a parcel, "Nombre
+ * modifié" — the driver did not know what they were accepting.
+ */
+describe('confirming the run', () => {
+  const { i18next } = require('../lib/i18n') as typeof import('../lib/i18n');
+  const { runChange, runChangeText } = require('../lib/runsheetDay') as typeof import('../lib/runsheetDay');
+  const t = i18next.getFixedT('fr');
+
+  it('says it is the run that is accepted, in the agency’s French', () => {
+    expect(fr.runsheets.day.newTitle).toBe('Nouvelle tournée à confirmer');
+    expect(fr.runsheets.day.newBody).toBe('En confirmant, vous acceptez cette tournée et vous en devenez responsable.');
+    expect(fr.runsheets.day.confirm).toBe('Confirmer la tournée');
+    expect(fr.runsheets.day.confirmModified).toBe('Confirmer la tournée modifiée');
+    expect(t('runsheets.day.confirmDialogTitle', { code: 'RS-20261002-0001' })).toBe('Confirmer la tournée RS-20261002-0001 ?');
+  });
+
+  it('spells out a parcel added after the start: "1 colis ajouté (12 → 13)"', () => {
+    const change = runChange({ stopCount: 13, confirmedStopCount: 12, newParcelsCount: 1 });
+    expect(change).toEqual({ before: 12, after: 13, added: 1, removed: 0 });
+    expect(runChangeText(t, change)).toBe('La tournée a été modifiée : 1 colis ajouté (12 → 13)');
+  });
+
+  it('handles several parcels added, and parcels taken off', () => {
+    expect(runChangeText(t, runChange({ stopCount: 6, confirmedStopCount: 3 }))).toBe(
+      'La tournée a été modifiée : 3 colis ajoutés (3 → 6)'
+    );
+    expect(runChangeText(t, runChange({ stopCount: 4, confirmedStopCount: 5 }))).toBe(
+      'La tournée a été modifiée : 1 colis retiré (5 → 4)'
+    );
+  });
+
+  it('works the old count out from the new parcels when that is all the server gives', () => {
+    expect(runChange({ stopCount: 4, newParcelsCount: 1 })).toMatchObject({ before: 3, after: 4, added: 1 });
+    expect(runChange({ stopCount: 4, confirmedStopCount: 4 })).toBeNull();
+    expect(runChangeText(t, null)).toBe('La tournée a été modifiée.');
+  });
+
+  it('real server: a parcel added to a started run is the one marked new', () => {
+    const { toRunsheet } = require('../services/real-api') as RealApi;
+    const item = (id: number, status: string) => ({
+      id,
+      sequenceOrder: id,
+      status,
+      parcel: { id, trackingNumber: `TUN-100-0000000${id}`, status: 'EN_COURS', recipientName: 'TEST' },
+    });
+    // Round 1 of the live test: three parcels accepted, P4 added afterwards.
+    const modified = toRunsheet({
+      id: 69,
+      code: 'RS-20260929-0004',
+      status: 'IN_PROGRESS',
+      scheduledDate: '2026-09-29',
+      items: [item(1, 'PENDING'), item(2, 'PENDING'), item(3, 'PENDING'), item(4, 'PENDING_DRIVER_CONFIRMATION')],
+    })!;
+    expect(runStage(modified)).toBe('modified');
+    expect(modified).toMatchObject({ stopCount: 4, confirmedStopCount: 3, newStopIds: ['TUN-100-00000004'] });
+    expect(runChangeText(t, runChange(modified))).toBe('La tournée a été modifiée : 1 colis ajouté (3 → 4)');
+
+    // A run never accepted has no "before".
+    const fresh = toRunsheet({ id: 70, code: 'RS-20260930-0001', status: 'VALIDATED', items: [item(1, 'PENDING')] })!;
+    expect(runStage(fresh)).toBe('toConfirm');
+    expect(fresh.confirmedStopCount).toBeUndefined();
+    expect(fresh.newStopIds).toEqual([]);
+  });
+
+  it('mock data: the changed run names its new parcel, and confirming clears it', async () => {
+    let api!: typeof import('../services/mock-api');
+    jest.isolateModules(() => {
+      api = require('../services/mock-api');
+    });
+    const changed = (await api.getRunsheets()).find((r) => runStage(r) === 'modified');
+    if (!changed) throw new Error('seed data has no modified run');
+    expect(runChange(changed)).toEqual({ before: 4, after: 5, added: 1, removed: 0 });
+    expect(changed.newStopIds).toEqual([changed.stopIds[4]]);
+
+    // Until it is confirmed, every parcel of the run stays locked.
+    const blocked = await api.confirmDelivery(changed.stopIds[0], 0);
+    expect(blocked).toMatchObject({ success: false, error: 'runsheets.confirm.blockedError' });
+
+    await api.confirmRunsheetReceipt(changed.id);
+    const after = (await api.getRunsheets()).find((r) => r.id === changed.id)!;
+    expect(runStage(after, 5)).toBe('inProgress');
+    expect(after.newStopIds).toEqual([]);
+    expect(runChange(after)).toBeNull();
+  });
+});

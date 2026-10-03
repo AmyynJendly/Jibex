@@ -44,6 +44,10 @@ export interface Runsheet {
   needsStart?: boolean;
   /** Real server: how many parcels dispatch added since the driver signed, waiting for their OK. */
   newParcelsCount?: number;
+  /** How many parcels the driver accepted last. Absent until they confirm the run. */
+  confirmedStopCount?: number;
+  /** The parcels the agency added since — highlighted until the driver accepts them. */
+  newStopIds?: string[];
   /** The server's raw status. Absent on mock data. */
   serverStatus?: string;
   /** The day the run is for, `YYYY-MM-DD`. */

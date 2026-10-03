@@ -15,7 +15,6 @@ import { NativeSwitch } from '../../../components/NativeSwitch';
 import { TrackingId } from '../../../components/TrackingId';
 import { LoadError } from '../../../components/LoadError';
 import { MetaChip } from '../../../components/MetaChip';
-import { PrimaryButton } from '../../../components/PrimaryButton';
 import { RunsheetDayCard } from '../../../components/RunsheetDayCard';
 import { ScrollToTopButton, useScrollToTop } from '../../../components/ScrollToTopButton';
 import { SegmentedControl } from '../../../components/SegmentedControl';
@@ -41,11 +40,10 @@ import { enumLabel } from '../../../lib/enumLabel';
 import { errorKeyOf } from '../../../lib/errors';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
 import { parcelRowKeys } from '../../../lib/rowKey';
-import { dayRuns } from '../../../lib/runsheetDay';
+import { dayRuns, runStage } from '../../../lib/runsheetDay';
 import { callCustomer } from '../../../lib/stopActions';
 import { useAutoRefresh } from '../../../lib/useAutoRefresh';
 import { usePullToRefresh } from '../../../lib/usePullToRefresh';
-import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
 import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight';
 import {
   invalidateDeliveryData,
@@ -104,6 +102,8 @@ interface ParcelCardProps {
   lockedLabel: string;
   /** Arrived here from a notification about this parcel. */
   highlighted?: boolean;
+  /** Added by the agency after the driver accepted the run: stands out until they accept it. */
+  isNew?: boolean;
   t: TFunction;
 }
 
@@ -123,6 +123,7 @@ function ParcelCard({
   callLabel,
   lockedLabel,
   highlighted = false,
+  isNew = false,
   t,
 }: ParcelCardProps) {
   const hasCod = job.cashToCollect > 0;
@@ -133,7 +134,7 @@ function ParcelCard({
   // History rows are a record of what happened, not a parcel still to
   // deliver: they keep the exchange mark, not the attempt count.
   const showAttempt = !readOnly && attempt.number > 1;
-  const showBadges = showAttempt || !!job.exchange;
+  const showBadges = showAttempt || !!job.exchange || isNew;
 
   const body = (
     <>
@@ -196,6 +197,7 @@ function ParcelCard({
           before opening it. A first attempt is the normal case and says nothing. */}
       {showBadges && (
         <View style={styles.badgeRow}>
+          {isNew && <MetaChip icon="add-circle-outline" tone="warning" label={t('runsheets.day.newParcel')} />}
           {job.exchange && <MetaChip icon="swap-horizontal-outline" tone="warning" label={t('exchange.badge')} />}
           {showAttempt && (
             <MetaChip
@@ -274,8 +276,9 @@ function ParcelCard({
     <Card
       accent={accent}
       gap={Spacing.xs}
-      dimmed={locked}
-      borderColor={highlighted ? colors.accent : undefined}>
+      // A new parcel is the one thing to look at on a changed run: not greyed.
+      dimmed={locked && !isNew}
+      borderColor={highlighted ? colors.accent : isNew ? colors.warning : undefined}>
       {body}
     </Card>
   );
@@ -300,7 +303,6 @@ export default function RunsheetsScreen() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const runsheetConfirm = useRunsheetConfirm();
 
   const activeQuery = useActiveParcels();
   const historyQuery = useHistoryParcels();
@@ -357,7 +359,15 @@ export default function RunsheetsScreen() {
   const lockedIds = new Set(unconfirmed.flatMap((r) => r.stopIds));
   /** `active` already arrives workable-first (see `getActiveParcels`), so this split is stable, not a re-sort. */
   const workable = (active ?? []).filter((j) => !lockedIds.has(j.id));
-  const lockedParcels = (active ?? []).filter((j) => lockedIds.has(j.id));
+  /** Parcels the agency added since the driver accepted the run. */
+  const newIds = new Set(unconfirmed.flatMap((r) => r.newStopIds ?? []));
+  // The preview of a run to confirm: the new parcels first, they are the news.
+  const lockedAll = (active ?? []).filter((j) => lockedIds.has(j.id));
+  const lockedParcels = [...lockedAll.filter((j) => newIds.has(j.id)), ...lockedAll.filter((j) => !newIds.has(j.id))];
+  const activeIds = active ? new Set(active.map((j) => j.id)) : null;
+  /** How many of a run's parcels are still to deliver — unknown until the list is in. */
+  const openCountOf = (stopIds: string[]) =>
+    activeIds ? stopIds.filter((id) => activeIds.has(id)).length : undefined;
 
   async function handleReorder(orderedIds: string[]) {
     // Deliberately no reload: the list already shows the new order, and the
@@ -567,51 +577,16 @@ export default function RunsheetsScreen() {
             <RunsheetDayCard key={runsheet.id} runsheet={runsheet} stage="closed" today={today} />
           ))}
 
-          {unconfirmed.map((runsheet) => {
-            const refuseLabel = runsheetConfirm.refuseLabel(runsheet);
-            return (
-              <View
-                key={runsheet.id}
-                style={[
-                  styles.confirmCard,
-                  { backgroundColor: colors.bgElevated, borderColor: colors.warning },
-                  getCardShadow(scheme),
-                ]}>
-                <View style={styles.confirmHead}>
-                  <View style={[styles.confirmIcon, { backgroundColor: colors.warningSoft }]}>
-                    <Icon name="lock-closed" size={16} color={colors.warning} />
-                  </View>
-                  <View style={styles.confirmHeadText}>
-                    <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
-                      {runsheetConfirm.title(runsheet)}
-                    </Text>
-                    <Text
-                      style={[Typography.caption2, { color: colors.textSecondary }]}
-                      numberOfLines={1}>
-                      {runsheet.zone}
-                    </Text>
-                  </View>
-                </View>
-
-                <PrimaryButton
-                  label={runsheetConfirm.actionLabel(runsheet)}
-                  height={46}
-                  onPress={() => runsheetConfirm.confirmReceipt(runsheet)}
-                />
-                {/* Refusing is the rare case, so it's a quiet text button
-                    under the main one, and it asks for a reason. */}
-                {refuseLabel && (
-                  <AnimatedPressable
-                    scaleTo={0.97}
-                    accessibilityRole="button"
-                    style={styles.refuseButton}
-                    onPress={() => runsheetConfirm.refuse(runsheet)}>
-                    <Text style={[styles.refuseText, { color: colors.danger }]}>{refuseLabel}</Text>
-                  </AnimatedPressable>
-                )}
-              </View>
-            );
-          })}
+          {/* The open runs — normally one. Each says where it stands and
+              carries its own button: confirm, confirm the change, start. */}
+          {day.open.map((runsheet) => (
+            <RunsheetDayCard
+              key={runsheet.id}
+              runsheet={runsheet}
+              stage={runStage(runsheet, openCountOf(runsheet.stopIds))}
+              today={today}
+            />
+          ))}
 
           {currentCount > 0 && (
             <View style={styles.summaryRow}>
@@ -717,6 +692,15 @@ export default function RunsheetsScreen() {
                 />
               )}
             />
+            {/* A run not confirmed yet: its parcels are a preview, read-only. */}
+            {lockedParcels.length > 0 && (
+              <View style={styles.previewNote}>
+                <Icon name="eye-outline" size={14} color={colors.textTertiary} />
+                <Text style={[styles.previewNoteText, { color: colors.textSecondary }]}>
+                  {t('runsheets.day.preview')}
+                </Text>
+              </View>
+            )}
             {lockedParcels.map((job, i) => (
               <View key={job.id} style={styles.row}>
                 <ParcelCard
@@ -726,7 +710,7 @@ export default function RunsheetsScreen() {
                   highlighted={job.id === highlightedId}
                   stopNumber={workable.length + i + 1}
                   locked
-                  onUpdate={() => setSheetJob(job)}
+                  isNew={newIds.has(job.id)}
                   updateLabel={t('runsheets.update')}
                   callLabel={t('runsheets.call')}
                   lockedLabel={t('runsheets.confirm.lockedTag')}
@@ -788,38 +772,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
-  confirmCard: {
-    borderRadius: Radii.card,
-    borderWidth: 1.5,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  confirmHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  confirmIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmHeadText: {
-    flex: 1,
-    gap: 1,
-  },
-  refuseButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 40,
-    marginTop: -Spacing.xs,
-  },
-  refuseText: {
-    fontFamily: Fonts.archivoSemiBold,
-    fontSize: 14,
-  },
   summaryRow: {
     flexDirection: 'row',
     gap: Spacing.smd,
@@ -858,6 +810,18 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.mlg,
     borderRadius: Radii.lg,
+  },
+  previewNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+  },
+  previewNoteText: {
+    flex: 1,
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
+    lineHeight: 16,
   },
   nearestFirstNote: {
     flexDirection: 'row',
