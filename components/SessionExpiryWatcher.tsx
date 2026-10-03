@@ -3,15 +3,17 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useToast } from './Toast';
-import { clearQueryCache } from '../lib/query';
 import { onSessionExpired } from '../lib/session';
 
 /**
- * Sends the driver back to the login screen when the server stops accepting
- * their token. Tokens last 24 hours and can't be refreshed, so this is the
- * normal way a long-open app signs out. The session is already cleared by
- * the time this runs; this drops everything cached for that driver, says why,
- * and moves to login.
+ * Asks the driver to sign in again when the server stops accepting their
+ * token. Tokens last 24 hours and can't be refreshed, so this is the normal
+ * way a long-open app signs out.
+ *
+ * The login screen is opened ON TOP of the current screen, not in its place:
+ * the screen underneath stays alive with whatever the driver had typed or
+ * ticked, and signing in again brings him straight back to it (see
+ * `lib/resume`). The cached lists are kept too, and reload once he is back.
  */
 export function SessionExpiryWatcher() {
   const { t } = useTranslation();
@@ -20,8 +22,7 @@ export function SessionExpiryWatcher() {
   useEffect(
     () =>
       onSessionExpired(() => {
-        clearQueryCache();
-        router.replace('/(auth)/login');
+        router.push({ pathname: '/(auth)/login', params: { resume: '1' } });
         showToast(t('auth.sessionExpired'));
       }),
     [showToast, t]

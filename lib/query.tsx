@@ -115,6 +115,11 @@ export function refreshVisible() {
   return queryClient.invalidateQueries({ type: 'active' }, { cancelRefetch: false });
 }
 
+/** Reloads every list — after signing in again with a new token. */
+export function refreshEverything() {
+  return queryClient.invalidateQueries(undefined, { cancelRefetch: false });
+}
+
 export function invalidateNotifications() {
   return queryClient.invalidateQueries({ queryKey: keys.notifications });
 }

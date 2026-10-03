@@ -103,7 +103,9 @@ export default function RootLayout() {
                     <ToastProvider>
                       <ConfirmDialogProvider>
                         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-                          <Stack.Screen name="(auth)" />
+                          {/* No swipe-back: when login sits over a screen after a session
+                              expiry, the only way out is to sign in. */}
+                          <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
                           <Stack.Screen name="(tabs)" />
                           <Stack.Screen name="job/[id]" />
                           {/* Apple's navigation bar on pushed screens, so the

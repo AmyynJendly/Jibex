@@ -49,6 +49,8 @@ export async function saveSession(token: string, session: Session): Promise<void
   else await SecureStore.setItemAsync(SESSION_KEY, raw);
   await saveToken(token);
   cached = session;
+  // Signed in again: the next expiry is a new event.
+  askedToSignIn = false;
 }
 
 /** The stored session, or null when signed out (or its data no longer parses). */
@@ -93,6 +95,19 @@ export function onSessionExpired(listener: Listener): () => void {
 }
 
 let expiring = false;
+/**
+ * The driver has already been asked to sign in again. The screen he was on
+ * stays alive under the login screen and keeps asking for its data; each of
+ * those requests fails too. Without this, every one of them would open
+ * another login screen.
+ */
+let askedToSignIn = false;
+
+/** Who was signed in when the session last expired — so the same driver can pick up where he was. */
+let expiredDriverId: string | null = null;
+export function lastExpiredDriverId(): string | null {
+  return expiredDriverId;
+}
 
 /**
  * The server said the token is no longer good (24 h old, or revoked — there
@@ -100,9 +115,14 @@ let expiring = false;
  * handful of requests in flight all come back 401 together.
  */
 export async function expireSession(): Promise<void> {
-  if (expiring) return;
+  if (expiring || askedToSignIn) return;
   expiring = true;
   try {
+    const session = await getSession().catch(() => null);
+    // Nobody was signed in: nothing expired, nothing to resume.
+    if (!session) return;
+    expiredDriverId = session.driverId;
+    askedToSignIn = true;
     await clearSession();
     expiryListeners.forEach((listener) => listener());
   } finally {

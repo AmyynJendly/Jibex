@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Linking, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
@@ -15,6 +15,9 @@ import { TickerMarquee } from '../../components/TickerMarquee';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, morphIn, useColors } from '../../constants';
 import { useDispatchContact } from '../../lib/dispatchContact';
 import { telUrl } from '../../lib/phone';
+import { clearQueryCache, refreshEverything } from '../../lib/query';
+import { afterLogin } from '../../lib/resume';
+import { getSession, lastExpiredDriverId } from '../../lib/session';
 import { login } from '../../services/api';
 
 export default function LoginScreen() {
@@ -27,14 +30,21 @@ export default function LoginScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when the screen was opened by a session expiry, over the screen the
+  // driver was on.
+  const { resume } = useLocalSearchParams<{ resume?: string }>();
+  // A ref, not the state: two taps in the same instant must not sign in twice.
+  const busy = useRef(false);
 
   async function handleLogin() {
-    if (loading) return;
+    if (busy.current) return;
+    busy.current = true;
 
     setError(null);
     setLoading(true);
     const result = await login(username.trim(), password);
     setLoading(false);
+    busy.current = false;
 
     if (!result.success || !result.token) {
       setError(t(result.error ?? 'common.genericError'));
@@ -42,6 +52,24 @@ export default function LoginScreen() {
     }
 
     // `login` has already stored the session securely.
+    const session = await getSession().catch(() => null);
+    const next = afterLogin({
+      resumed: resume === '1',
+      canGoBack: router.canGoBack(),
+      expiredDriverId: lastExpiredDriverId(),
+      driverId: session?.driverId ?? null,
+    });
+    if (next === 'back') {
+      // The same driver, back after an expiry: return to the screen he was
+      // on, as he left it, and reload its data with the new token.
+      router.back();
+      refreshEverything().catch(() => {});
+      return;
+    }
+    // A normal sign-in, or another driver: nothing of the previous one stays.
+    clearQueryCache();
+    // Any screen left under the login screen goes too.
+    if (router.canDismiss()) router.dismissAll();
     router.replace('/(tabs)/home');
   }
 
