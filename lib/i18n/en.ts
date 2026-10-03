@@ -281,7 +281,6 @@ const en = {
     noteRequiredLabel: 'Note (required for “Other reason”)',
     noteRequiredPlaceholder: 'What happened?',
     noteRequired: 'Write a short note to explain “Other reason”.',
-    savHint: 'This reason opens an after-sales case',
   },
 
   // One line added to a failed delivery's notes, for the agency. The app

@@ -276,7 +276,6 @@ const fr: TranslationResource = {
     noteRequiredLabel: 'Note (obligatoire pour « Autre raison »)',
     noteRequiredPlaceholder: "Qu'est-ce qui s'est passé ?",
     noteRequired: 'Écrivez une courte note pour expliquer « Autre raison ».',
-    savHint: 'Ce motif ouvre un dossier SAV',
   },
 
   failureProof: {

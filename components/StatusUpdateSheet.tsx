@@ -13,7 +13,7 @@ import { useToast } from './Toast';
 import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { deliveryBlocker } from '../lib/deliveryGate';
 import { enumLabel } from '../lib/enumLabel';
-import { commonReasonsFor, opensSavCase } from '../lib/failureReasons';
+import { commonReasonsFor } from '../lib/failureReasons';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
 import { safely, writeErrorText } from '../lib/writeResult';
 import {
@@ -267,16 +267,6 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                     </Text>
                   </AnimatedPressable>
                 </View>
-
-                {/* The agency opens an after-sales case for some reasons. */}
-                {opensSavCase(reason) && (
-                  <View style={styles.callHintRow}>
-                    <Icon name="alert-circle-outline" size={14} color={colors.warning} />
-                    <Text style={[styles.callHintText, { color: colors.warning }]}>
-                      {t('cantDeliver.savHint')}
-                    </Text>
-                  </View>
-                )}
 
                 <PrimaryButton
                   label={t('statusUpdate.confirmFailed')}

@@ -8,7 +8,6 @@ import fr from '../lib/i18n/fr';
 import {
   FAILURE_REASONS,
   commonReasonsFor,
-  opensSavCase,
   reasonNeedsNote,
   reasonsFor,
 } from '../lib/failureReasons';
@@ -61,19 +60,6 @@ const WEB_LABELS: Record<string, string> = {
   PARCEL_POSTPONED: 'Colis reporté',
   FORCE_MAJEURE: 'Force majeure',
 };
-
-/** The nine the web app marks `anomaly: true`: each opens an after-sales case. */
-const SAV_REASONS = [
-  'REFUSED',
-  'CANCELLED_BY_CLIENT',
-  'NOT_INTERESTED_2ND_ATTEMPT',
-  'DUPLICATE_ORDER',
-  'RETURN_CONFIRMED_BY_SENDER',
-  'NON_COMPLIANT_ORDER',
-  'UNRELIABLE_CLIENT',
-  'WRONG_PAYMENT_MODE',
-  'FORCE_MAJEURE',
-];
 
 beforeEach(() => {
   (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
@@ -137,12 +123,10 @@ describe('failure reasons', () => {
     expect(fr.enums.failureReason).toEqual(WEB_LABELS);
   });
 
-  it('flags the nine reasons that open an after-sales case', () => {
-    expect(FAILURE_REASONS.filter((r) => r.sav).map((r) => r.value).sort()).toEqual([...SAV_REASONS].sort());
-    expect(opensSavCase('NON_COMPLIANT_ORDER')).toBe(true);
-    expect(opensSavCase('NO_ANSWER')).toBe(false);
-    expect(opensSavCase(null)).toBe(false);
-    expect(fr.cantDeliver.savHint).toBe('Ce motif ouvre un dossier SAV');
+  it('says nothing about after-sales cases: the hint was removed', () => {
+    expect(fr.cantDeliver).not.toHaveProperty('savHint');
+    expect(en.cantDeliver).not.toHaveProperty('savHint');
+    for (const reason of FAILURE_REASONS) expect(reason).not.toHaveProperty('sav');
   });
 
   it('refuses OTHER without a note, and accepts it with one', async () => {

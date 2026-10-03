@@ -158,11 +158,6 @@ export default function CantDeliverScreen() {
         </View>
         <View style={styles.reasonLabel}>
           <Text style={[Typography.body, { color: colors.text }]}>{labelOf(option.value)}</Text>
-          {/* The agency opens an after-sales case for these: said before the
-              driver picks one, not discovered afterwards. */}
-          {option.sav && (
-            <Text style={[styles.savHint, { color: colors.warning }]}>{t('cantDeliver.savHint')}</Text>
-          )}
         </View>
         <View
           style={[
@@ -361,11 +356,6 @@ const styles = StyleSheet.create({
   reasonLabel: {
     flex: 1,
     paddingVertical: Spacing.xs,
-  },
-  savHint: {
-    fontFamily: Fonts.archivoMedium,
-    fontSize: 12,
-    marginTop: 1,
   },
   radio: {
     width: 22,
