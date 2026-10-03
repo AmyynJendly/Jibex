@@ -459,7 +459,7 @@ const fr: TranslationResource = {
       noListMessage_other:
         'Confirmez-vous avoir chargé les {{count}} colis de ce transfert ? Vous en devenez responsable.',
     },
-    movingLabel: 'En transit',
+    movingLabel: 'Colis en transit',
     from: 'Agence expéditrice',
     to: 'Agence destinataire',
     // After the driver confirmed: nothing left for them to do.

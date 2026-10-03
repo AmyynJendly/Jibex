@@ -462,7 +462,7 @@ const en = {
       noListMessage_other:
         'Do you confirm you loaded the {{count}} parcels of this transfer? You become responsible for them.',
     },
-    movingLabel: 'Moving',
+    movingLabel: 'Parcels in transit',
     from: 'Sending Agency',
     to: 'Receiving Agency',
     // After the driver confirmed: nothing left for them to do.

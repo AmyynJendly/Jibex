@@ -127,3 +127,10 @@ describe('transfer pickup check', () => {
     expect(fr.transfers.check.progress).toBe('{{done}}/{{total}} colis');
   });
 });
+
+describe('the Transfers header', () => {
+  it('says the big number counts parcels, not transfers', () => {
+    // "5 En transit" next to one transfer card read as five transfers.
+    expect(fr.transfers.movingLabel).toBe('Colis en transit');
+  });
+});
