@@ -99,6 +99,8 @@ const en = {
       pickups: 'To pick up',
     },
     cashCollected: 'Cash On Hand',
+    // The run being delivered.
+    currentRun: 'Run in progress · {{remaining}} left of {{total}}',
     toConfirmTitle_one: 'Run to confirm',
     toConfirmTitle_other: 'Runs to confirm ({{count}})',
     nextStop: {
@@ -193,6 +195,7 @@ const en = {
       doneBody: 'Every parcel is handled. The agency will close the run.',
       preview: 'Waiting for your confirmation — no action on these parcels',
       newParcel: 'NEW',
+      counts: { delivered: 'Delivered', failed: 'Failed', remaining: 'Left' },
       closedTitle: 'Run closed by the agency',
       closedBody: 'Nothing left to deliver on this run. Its parcels are in History.',
     },

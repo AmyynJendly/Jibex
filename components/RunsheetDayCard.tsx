@@ -6,9 +6,9 @@ import { Icon } from './Icon';
 import { MetaChip } from './MetaChip';
 import { PrimaryButton } from './PrimaryButton';
 import { TrackingId } from './TrackingId';
-import { Fonts, Radii, Spacing, getCardShadow, monoLabelStyle, useColors } from '../constants';
+import { Fonts, Radii, Spacing, getCardShadow, monoLabelStyle, monoStyle, useColors } from '../constants';
 import { localeTag } from '../lib/date';
-import { isRunForDay, runChange, runChangeText, runStatusKey, type RunStage } from '../lib/runsheetDay';
+import { isRunForDay, runChange, runChangeText, runCounts, runStatusKey, type RunStage } from '../lib/runsheetDay';
 import { useRunsheetConfirm } from '../lib/useRunsheetConfirm';
 import type { Runsheet } from '../types';
 
@@ -46,6 +46,8 @@ export function RunsheetDayCard({ runsheet, stage, today }: RunsheetDayCardProps
   const dayLabel = runsheet.scheduledDate ? formatRunDay(runsheet.scheduledDate, i18n.language) : null;
 
   const waiting = stage === 'toConfirm' || stage === 'modified' || stage === 'toStart';
+  // Not before the run starts: three zeros say nothing.
+  const counts = stage === 'toConfirm' || stage === 'toStart' ? null : runCounts(runsheet);
   const tone = waiting
     ? { fg: colors.warning, bg: colors.warningSoft }
     : stage === 'inProgress'
@@ -78,6 +80,24 @@ export function RunsheetDayCard({ runsheet, stage, today }: RunsheetDayCardProps
         {dayLabel && <MetaChip icon="calendar-outline" label={dayLabel} />}
         <MetaChip icon="cube-outline" tone="accent" label={t('common.package', { count: runsheet.stopCount })} />
       </View>
+
+      {/* Where the run stands in numbers, once it is being delivered. */}
+      {counts && (
+        <View style={styles.counts}>
+          <View style={styles.count}>
+            <Text style={[styles.countValue, { color: colors.success }]}>{counts.delivered}</Text>
+            <Text style={[styles.countLabel, { color: colors.textSecondary }]}>{t('runsheets.day.counts.delivered')}</Text>
+          </View>
+          <View style={styles.count}>
+            <Text style={[styles.countValue, { color: colors.danger }]}>{counts.failed}</Text>
+            <Text style={[styles.countLabel, { color: colors.textSecondary }]}>{t('runsheets.day.counts.failed')}</Text>
+          </View>
+          <View style={styles.count}>
+            <Text style={[styles.countValue, { color: colors.warning }]}>{counts.remaining}</Text>
+            <Text style={[styles.countLabel, { color: colors.textSecondary }]}>{t('runsheets.day.counts.remaining')}</Text>
+          </View>
+        </View>
+      )}
 
       {stage === 'closed' && (
         <View style={[styles.note, { borderTopColor: colors.separator }]}>
@@ -166,6 +186,20 @@ const styles = StyleSheet.create({
   },
   code: {
     alignSelf: 'flex-start',
+  },
+  counts: {
+    flexDirection: 'row',
+    gap: Spacing.xl,
+  },
+  count: {
+    gap: 1,
+  },
+  countValue: {
+    ...monoStyle(20, 'medium'),
+  },
+  countLabel: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 12,
   },
   metaRow: {
     flexDirection: 'row',

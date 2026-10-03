@@ -476,6 +476,7 @@ export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
     status,
     stopCount: jobs.length || (num(runsheet.totalParcels) ?? 0),
     deliveredCount: delivered,
+    failedCount: jobs.filter((job) => job.status === 'FAILED').length,
     needsConfirmation: status === 'A_CONFIRMER' || needsStart || newParcels > 0,
     completionPercent: jobs.length ? Math.round((delivered / jobs.length) * 100) : 0,
     stopIds: jobs.map((job) => job.id),

@@ -139,3 +139,22 @@ export function lockedStopIdsOf(
 export function lockedStopIds(runsheets: Runsheet[]): Set<string> {
   return new Set(runsheets.flatMap(lockedStopIdsOf));
 }
+
+/** Livrés / Échoués / Restants — where a run stands in numbers, like the Android run header. */
+export function runCounts(runsheet: Pick<Runsheet, 'stopCount' | 'deliveredCount' | 'failedCount'>): {
+  delivered: number;
+  failed: number;
+  remaining: number;
+} {
+  const delivered = runsheet.deliveredCount;
+  const failed = runsheet.failedCount ?? 0;
+  return { delivered, failed, remaining: Math.max(0, runsheet.stopCount - delivered - failed) };
+}
+
+/** The runs Home names: open, accepted and started — the ones being delivered. */
+export function runsInProgress(runsheets: Runsheet[], today: string): Runsheet[] {
+  return dayRuns(runsheets, [], today).open.filter((runsheet) => {
+    const stage = runStage(runsheet);
+    return stage === 'inProgress' || stage === 'modified';
+  });
+}

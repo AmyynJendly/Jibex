@@ -386,6 +386,7 @@ function toRunsheet(seed: RunsheetSeed): Runsheet {
     stopIds: [...seed.stopIds],
     stopCount,
     deliveredCount,
+    failedCount: jobs.filter((j) => j.status === 'FAILED').length,
     completionPercent,
     needsConfirmation,
   };

@@ -24,6 +24,8 @@ export interface Runsheet {
   stopCount: number;
   /** Live count of stops with status DELIVERED — recomputed on every read, not stored. */
   deliveredCount: number;
+  /** Live count of stops with status FAILED. */
+  failedCount?: number;
   /**
    * True while the driver still owes dispatch a physical-receipt attestation
    * — either they've never confirmed this runsheet, or its parcel count has

@@ -104,6 +104,8 @@ const fr: TranslationResource = {
       pickups: 'À ramasser',
     },
     cashCollected: 'Espèces en sacoche',
+    // The run being delivered: "Tournée en cours · 3 colis restants sur 12".
+    currentRun: 'Tournée en cours · {{remaining}} restants sur {{total}}',
     toConfirmTitle_one: 'Tournée à confirmer',
     toConfirmTitle_other: 'Tournées à confirmer ({{count}})',
     nextStop: {
@@ -193,6 +195,7 @@ const fr: TranslationResource = {
       doneBody: 'Tous les colis sont traités. L’agence clôturera la tournée.',
       preview: 'En attente de votre confirmation — aucune action sur ces colis',
       newParcel: 'NOUVEAU',
+      counts: { delivered: 'Livrés', failed: 'Échoués', remaining: 'Restants' },
       closedTitle: 'Tournée clôturée par l’agence',
       closedBody: 'Plus rien à livrer sur cette tournée. Ses colis sont dans l’historique.',
     },
