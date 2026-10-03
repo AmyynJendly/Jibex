@@ -123,3 +123,42 @@ export function resendOtp(
   if (view.resendInMs > 0) return { state, ok: false, error: 'otp.errors.tooSoon' };
   return { state: { code, sentAt: now, wrong: 0, resends: state.resends + 1, verified: false }, ok: true };
 }
+
+/** What the code screen shows, worked out from the service's answer and the time. */
+export interface OtpScreenState {
+  verified: boolean;
+  /** 5 wrong codes: "Code bloqué — renvoyez un nouveau code". */
+  blocked: boolean;
+  expired: boolean;
+  /** The keypad is usable. */
+  canType: boolean;
+  /** Whole seconds until "Renvoyer le code" is allowed. 0 = now. */
+  resendInSeconds: number;
+  canResend: boolean;
+  /** The 3 resends are used with no success: "Impossible de valider — marquez un échec". */
+  exhausted: boolean;
+}
+
+export function otpScreenState(
+  status: { expiresAt: number; resendAvailableAt: number; resendsLeft: number; attemptsLeft: number; verified: boolean },
+  now: number
+): OtpScreenState {
+  const blocked = status.attemptsLeft <= 0;
+  const expired = now >= status.expiresAt;
+  const resendInSeconds = Math.max(0, Math.ceil((status.resendAvailableAt - now) / 1000));
+  return {
+    verified: status.verified,
+    blocked,
+    expired,
+    canType: !status.verified && !blocked && !expired,
+    resendInSeconds,
+    canResend: !status.verified && status.resendsLeft > 0 && resendInSeconds === 0,
+    exhausted: !status.verified && status.resendsLeft <= 0,
+  };
+}
+
+/** "0:42" for the resend countdown. */
+export function countdown(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}

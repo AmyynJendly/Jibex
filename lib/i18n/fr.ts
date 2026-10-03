@@ -329,6 +329,7 @@ const fr: TranslationResource = {
     verified: 'Code correct',
     deliver: 'Livré',
     call: 'Appeler',
+    deleteDigit: 'Effacer le dernier chiffre',
     exhaustedTitle: 'Impossible de valider — marquez un échec',
     exhaustedBody: 'Les 3 renvois sont utilisés. Sans code correct, ce colis ne peut pas être livré.',
     markFailed: 'Marquer un échec',

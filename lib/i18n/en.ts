@@ -332,6 +332,7 @@ const en = {
     verified: 'Code correct',
     deliver: 'Delivered',
     call: 'Call',
+    deleteDigit: 'Delete the last digit',
     exhaustedTitle: 'Cannot validate — record a failure',
     exhaustedBody: 'The 3 resends are used. Without a correct code this parcel cannot be delivered.',
     markFailed: 'Record a failure',

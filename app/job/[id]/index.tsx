@@ -34,7 +34,7 @@ import {
 } from '../../../constants';
 import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
-import { cashDueFor, cashDueLine } from '../../../lib/otpRule';
+import { cashDueFor, cashDueLine, otpRequiredFor } from '../../../lib/otpRule';
 import { localeTag } from '../../../lib/date';
 import { deliveryBlocker } from '../../../lib/deliveryGate';
 import { callCustomer, openInMaps } from '../../../lib/stopActions';
@@ -179,6 +179,20 @@ export default function JobDetailScreen() {
       return;
     }
     if (!requireOnline()) return;
+
+    // Nothing of value to collect: the delivery needs the customer's code.
+    // The call comes first, so a code is not sent for a customer never called.
+    if (otpRequiredFor(job)) {
+      if (job.callAttempts <= 0) {
+        showToast(t('statusUpdate.callRequired'));
+        return;
+      }
+      router.push({
+        pathname: '/job/[id]/otp',
+        params: { id: job.id, exchangeCollected: exchangeCollected ? '1' : '0' },
+      });
+      return;
+    }
 
     if (!write.begin()) return;
     const previousTotal = await getDriverStats()

@@ -374,3 +374,37 @@ describe('real mode', () => {
     }
   });
 });
+
+describe('what the code screen shows', () => {
+  const { countdown, otpScreenState } = require('../lib/otpSession') as typeof import('../lib/otpSession');
+  const base = { expiresAt: 600_000, resendAvailableAt: 60_000, resendsLeft: 3, attemptsLeft: 5, verified: false };
+
+  it('counts the resend down, second by second', () => {
+    expect(otpScreenState(base, 0)).toMatchObject({ resendInSeconds: 60, canResend: false, canType: true });
+    expect(otpScreenState(base, 18_500)).toMatchObject({ resendInSeconds: 42, canResend: false });
+    expect(otpScreenState(base, 60_000)).toMatchObject({ resendInSeconds: 0, canResend: true });
+    expect(countdown(42)).toBe('0:42');
+    expect(countdown(60)).toBe('1:00');
+    expect(countdown(0)).toBe('0:00');
+  });
+
+  it('"Livré" is only ever on after a correct code', () => {
+    expect(otpScreenState(base, 0).verified).toBe(false);
+    expect(otpScreenState({ ...base, verified: true }, 0)).toMatchObject({ verified: true, canType: false, canResend: false, exhausted: false });
+  });
+
+  it('a blocked or expired code cannot be typed', () => {
+    expect(otpScreenState({ ...base, attemptsLeft: 0 }, 0)).toMatchObject({ blocked: true, canType: false });
+    expect(otpScreenState(base, 600_000)).toMatchObject({ expired: true, canType: false });
+  });
+
+  it('with no resend left it shows the failure path — and stays there', () => {
+    const last = { ...base, resendsLeft: 0 };
+    expect(otpScreenState(last, 0)).toMatchObject({ exhausted: true, canResend: false });
+    // The last code may still be typed while it is alive…
+    expect(otpScreenState(last, 0).canType).toBe(true);
+    // …and once it is blocked or expired there is nothing left but the failure screen.
+    expect(otpScreenState({ ...last, attemptsLeft: 0 }, 0)).toMatchObject({ exhausted: true, canType: false });
+    expect(otpScreenState(last, 700_000)).toMatchObject({ exhausted: true, canType: false, canResend: false });
+  });
+});

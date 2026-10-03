@@ -14,6 +14,7 @@ import { Fonts, Radii, Spacing, Typography, useColors } from '../constants';
 import { deliveryBlocker } from '../lib/deliveryGate';
 import { enumLabel } from '../lib/enumLabel';
 import { commonReasonsFor } from '../lib/failureReasons';
+import { otpRequiredFor } from '../lib/otpRule';
 import { UnreachableButton } from './UnreachableButton';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
 import { useWrite } from '../lib/useWrite';
@@ -116,6 +117,14 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
     if (!job) return;
     if (blocker) {
       showToast(t(blocker));
+      return;
+    }
+    // Nothing of value to collect: the delivery needs the customer's code,
+    // typed on its own screen.
+    if (otpRequiredFor(job)) {
+      const { id } = job;
+      handleClose();
+      router.push({ pathname: '/job/[id]/otp', params: { id, exchangeCollected: exchangeCollected ? '1' : '0' } });
       return;
     }
     if (!write.begin()) return;
