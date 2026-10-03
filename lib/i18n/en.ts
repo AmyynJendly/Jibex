@@ -133,7 +133,7 @@ const en = {
       action: 'Confirm',
       recountAction: 'Re-confirm',
       lockedTag: 'Locked',
-      blockedError: 'Confirm the run first.',
+      blockedError: 'Confirm the run or the new parcel first.',
       toast: 'Run confirmed',
       // Confirmed, but the run didn't start — the retry.
       startAction: 'Start Run',
@@ -189,7 +189,7 @@ const en = {
       startBody: 'Start the run to open its parcels for delivery.',
       start: 'Start the run',
       doneBody: 'Every parcel is handled. The agency will close the run.',
-      preview: 'Preview — no action on the parcels before you confirm',
+      preview: 'Waiting for your confirmation — no action on these parcels',
       newParcel: 'NEW',
       closedTitle: 'Run closed by the agency',
       closedBody: 'Nothing left to deliver on this run. Its parcels are in History.',

@@ -14,7 +14,7 @@ jest.mock('expo-secure-store', () => ({
 }));
 
 import fr from '../lib/i18n/fr';
-import { dayRuns, isRunForDay, runStage, runStatusKey } from '../lib/runsheetDay';
+import { dayRuns, isRunForDay, lockedStopIdsOf, runStage, runStatusKey } from '../lib/runsheetDay';
 import type { Runsheet } from '../types';
 
 type RealApi = typeof import('../services/real-api');
@@ -275,6 +275,58 @@ describe('confirming the run', () => {
     expect(fresh.newStopIds).toEqual([]);
   });
 
+  it('locks a whole run not accepted yet, but only the added parcels of a changed one', () => {
+    const { lockedStopIds } = require('../lib/runsheetDay') as typeof import('../lib/runsheetDay');
+    const fresh = run({ id: '1', status: 'A_CONFIRMER', needsConfirmation: true, stopIds: ['A', 'B'] });
+    const toStart = run({ id: '2', needsConfirmation: true, needsStart: true, stopIds: ['C'] });
+    const changed = run({ id: '3', needsConfirmation: true, stopIds: ['D', 'E', 'F'], newStopIds: ['F'] });
+    const normal = run({ id: '4', stopIds: ['G'] });
+    const closed = run({ id: '5', status: 'VALIDE', stopIds: ['H'] });
+    expect(lockedStopIdsOf(fresh)).toEqual(['A', 'B']);
+    expect(lockedStopIdsOf(toStart)).toEqual(['C']);
+    expect(lockedStopIdsOf(changed)).toEqual(['F']);
+    expect(lockedStopIdsOf(normal)).toEqual([]);
+    expect(lockedStopIdsOf(closed)).toEqual([]);
+    expect([...lockedStopIds([fresh, toStart, changed, normal, closed])].sort()).toEqual(['A', 'B', 'C', 'F']);
+  });
+
+  it('real server: on a changed run, old parcels stay first and workable, the new one is refused', async () => {
+    const item = (id: number, status: string) => ({
+      id,
+      sequenceOrder: id,
+      status,
+      parcel: { id, trackingNumber: `TUN-100-0000000${id}`, status: 'EN_COURS', recipientName: 'TEST', price: 10 },
+    });
+    let api!: RealApi;
+    jest.isolateModules(() => {
+      api = require('../services/real-api');
+    });
+    const json = (status: number, body: unknown) =>
+      Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
+    const calls: string[] = [];
+    globalThis.fetch = jest.fn((url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.endsWith('/api/auth/login')) {
+        return json(200, { token: 't', role: 'DRIVER', portal: '/driver', user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true } });
+      }
+      if (url.includes('/api/runsheets/driver/')) {
+        return json(200, [{ id: 69, code: 'RS-20260929-0004', status: 'IN_PROGRESS', scheduledDate: '2026-09-29', items: [item(1, 'PENDING'), item(2, 'PENDING'), item(4, 'PENDING_DRIVER_CONFIRMATION')] }]);
+      }
+      return json(404, { error: 'not found' });
+    }) as unknown as typeof fetch;
+    mockKeychain.clear();
+    (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    await api.login('driver', 'secret');
+
+    const [runsheet] = await api.getRunsheets();
+    expect(lockedStopIdsOf(runsheet)).toEqual(['TUN-100-00000004']);
+    // Workable first, the locked one last.
+    expect((await api.getActiveParcels()).map((p) => p.id)).toEqual(['TUN-100-00000001', 'TUN-100-00000002', 'TUN-100-00000004']);
+    // Nothing was written: only reads so far.
+    expect(calls.filter((c) => !c.startsWith('GET ') && !c.includes('/api/auth/login'))).toEqual([]);
+  });
+
   it('mock data: the changed run names its new parcel, and confirming clears it', async () => {
     let api!: typeof import('../services/mock-api');
     jest.isolateModules(() => {
@@ -285,13 +337,25 @@ describe('confirming the run', () => {
     expect(runChange(changed)).toEqual({ before: 4, after: 5, added: 1, removed: 0 });
     expect(changed.newStopIds).toEqual([changed.stopIds[4]]);
 
-    // Until it is confirmed, every parcel of the run stays locked.
-    const blocked = await api.confirmDelivery(changed.stopIds[0], 0);
-    expect(blocked).toMatchObject({ success: false, error: 'runsheets.confirm.blockedError' });
+    // Only the added parcel is locked. The four the driver accepted stay workable.
+    const added = changed.stopIds[4];
+    expect(lockedStopIdsOf(changed)).toEqual([added]);
+    const active = await api.getActiveParcels();
+    expect(active.map((p) => p.id)).toContain(added);
+
+    await api.logCallAttempt(added);
+    expect(await api.confirmDelivery(added, 0)).toMatchObject({ success: false, error: 'runsheets.confirm.blockedError' });
+
+    const old = active.find((p) => changed.stopIds.slice(0, 4).includes(p.id))!;
+    // Not blocked by the run: the only thing asked is the call first.
+    expect(await api.confirmDelivery(old.id, 0)).toMatchObject({ success: false, error: 'statusUpdate.callRequired' });
+    await api.logCallAttempt(old.id);
+    expect((await api.confirmDelivery(old.id, old.cashToCollect)).success).toBe(true);
 
     await api.confirmRunsheetReceipt(changed.id);
     const after = (await api.getRunsheets()).find((r) => r.id === changed.id)!;
-    expect(runStage(after, 5)).toBe('inProgress');
+    expect(runStage(after, 4)).toBe('inProgress');
+    expect(lockedStopIdsOf(after)).toEqual([]);
     expect(after.newStopIds).toEqual([]);
     expect(runChange(after)).toBeNull();
   });

@@ -66,7 +66,7 @@ describe('the doorstep Delivered button', () => {
   it('still refuses on a run the driver has not signed for', async () => {
     const api = freshApi();
     const runsheets = await api.getRunsheets();
-    const unsigned = runsheets.find((r) => r.needsConfirmation);
+    const unsigned = runsheets.find((r) => r.status === 'A_CONFIRMER');
     if (!unsigned) throw new Error('seed data has no unconfirmed run');
     const parcel = (await api.getActiveParcels()).find((p) => unsigned.stopIds.includes(p.id));
     if (!parcel) throw new Error('seed data has no parcel on an unconfirmed run');
@@ -180,7 +180,7 @@ describe('parcels on an unconfirmed run are locked', () => {
   it('refuses a delivery until the driver signs for the run', async () => {
     const api = freshApi();
     const runsheets = await api.getRunsheets();
-    const unsigned = runsheets.find((r) => r.needsConfirmation && r.status !== 'VALIDE');
+    const unsigned = runsheets.find((r) => r.status === 'A_CONFIRMER');
     if (!unsigned) throw new Error('seed data has no run awaiting confirmation');
 
     const parcelId = unsigned.stopIds[0];

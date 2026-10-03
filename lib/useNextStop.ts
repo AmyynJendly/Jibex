@@ -2,12 +2,13 @@ import { useMemo } from 'react';
 
 import type { Job } from '../types';
 import { useJobsByIds, useRouteOrder, useRunsheets } from './query';
+import { lockedStopIds } from './runsheetDay';
 
 /**
  * The stop the driver should head to now, and its place in the day's order.
  *
- * Only runsheets the driver has signed for count — a parcel on an unconfirmed
- * run isn't deliverable yet, matching the locked cards in Runsheets. Order is
+ * Locked parcels don't count — a run not accepted yet, or a parcel just added
+ * to a started run — matching the locked cards in Runsheets. Order is
  * the same one Runsheets shows (nearest-first or the driver's own drag), and
  * an in-transit parcel goes before a pending one.
  *
@@ -19,11 +20,9 @@ export function useNextStop(): { nextStop: Job | null; index: number } {
 
   const { allStopIds, workableStopIds } = useMemo(() => {
     const all = runsheets ?? [];
-    const workable = all.filter((r) => !(r.needsConfirmation && r.status !== 'VALIDE'));
-    return {
-      allStopIds: all.flatMap((r) => r.stopIds),
-      workableStopIds: workable.flatMap((r) => r.stopIds),
-    };
+    const locked = lockedStopIds(all);
+    const allStopIds = all.flatMap((r) => r.stopIds);
+    return { allStopIds, workableStopIds: allStopIds.filter((id) => !locked.has(id)) };
   }, [runsheets]);
 
   const jobs = useJobsByIds(allStopIds).data;

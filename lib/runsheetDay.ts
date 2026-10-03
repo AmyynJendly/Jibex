@@ -117,3 +117,25 @@ export function runChangeText(t: TFunction, change: RunChange | null): string {
     : t('runsheets.day.removed', { count: change.removed });
   return t('runsheets.day.modified', { change: what, before: change.before, after: change.after });
 }
+
+/**
+ * The parcels of a run the driver can't act on yet.
+ *
+ *  - Run not accepted, or accepted but not started: all of them.
+ *  - Run changed after the start: ONLY the parcels the agency added. The
+ *    others stay workable, like in the Android app — a driver in the middle
+ *    of a round is not stopped by one added parcel.
+ *  - Otherwise: none.
+ */
+export function lockedStopIdsOf(
+  runsheet: Pick<Runsheet, 'status' | 'needsStart' | 'needsConfirmation' | 'stopIds' | 'newStopIds'>
+): string[] {
+  if (runsheet.status === 'VALIDE') return [];
+  if (runsheet.status === 'A_CONFIRMER' || runsheet.needsStart) return [...runsheet.stopIds];
+  return runsheet.needsConfirmation ? [...(runsheet.newStopIds ?? [])] : [];
+}
+
+/** Every locked parcel across the driver's runs. */
+export function lockedStopIds(runsheets: Runsheet[]): Set<string> {
+  return new Set(runsheets.flatMap(lockedStopIdsOf));
+}

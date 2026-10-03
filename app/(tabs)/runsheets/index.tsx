@@ -40,7 +40,7 @@ import { enumLabel } from '../../../lib/enumLabel';
 import { errorKeyOf } from '../../../lib/errors';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
 import { parcelRowKeys } from '../../../lib/rowKey';
-import { dayRuns, runStage } from '../../../lib/runsheetDay';
+import { dayRuns, lockedStopIds, runStage } from '../../../lib/runsheetDay';
 import { callCustomer } from '../../../lib/stopActions';
 import { useAutoRefresh } from '../../../lib/useAutoRefresh';
 import { usePullToRefresh } from '../../../lib/usePullToRefresh';
@@ -355,8 +355,11 @@ export default function RunsheetsScreen() {
   const closedRuns = day.open.length === 0 ? day.closed : [];
 
   const unconfirmed = runsheets.filter((r) => r.needsConfirmation && r.status !== 'VALIDE');
-  /** Parcels the driver hasn't signed for yet — inert until they do. */
-  const lockedIds = new Set(unconfirmed.flatMap((r) => r.stopIds));
+  /**
+   * Parcels the driver can't act on yet: all of a run not accepted, but only
+   * the added ones on a run changed after the start.
+   */
+  const lockedIds = lockedStopIds(runsheets);
   /** `active` already arrives workable-first (see `getActiveParcels`), so this split is stable, not a re-sort. */
   const workable = (active ?? []).filter((j) => !lockedIds.has(j.id));
   /** Parcels the agency added since the driver accepted the run. */

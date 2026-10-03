@@ -44,7 +44,7 @@ import { jobStatusOfParcel } from '../lib/parcelStatus';
 import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
 import { localeTag, toDateKey } from '../lib/date';
-import { dayRuns } from '../lib/runsheetDay';
+import { dayRuns, lockedStopIds } from '../lib/runsheetDay';
 import { i18next } from '../lib/i18n';
 import { nearestFirstByArea } from '../lib/route';
 import { driverPosition } from '../lib/driverPosition';
@@ -1118,15 +1118,16 @@ export async function getRunsheets(): Promise<Runsheet[]> {
 
 /**
  * Every parcel still to deliver, across the driver's runsheets. Delivered and
- * failed ones drop out (they're history). Parcels on a run the driver hasn't
- * signed for yet sit at the end, locked.
+ * failed ones drop out (they're history). Parcels the driver can't act on
+ * yet (a run not accepted, or a parcel just added) sit at the end, locked.
  */
 export async function getActiveParcels(): Promise<Job[]> {
   const { runsheets, jobs, runsheetOf } = await loadDriverData();
-  const locked = new Set(runsheets.filter((r) => r.needsConfirmation).map((r) => r.id));
+  // On a run changed after the start, only the added parcels are locked.
+  const locked = lockedStopIds(runsheets);
   const open = jobs.filter(isOpen);
-  const workable = open.filter((job) => !locked.has(runsheetOf.get(job.id) ?? ''));
-  const blocked = open.filter((job) => locked.has(runsheetOf.get(job.id) ?? ''));
+  const workable = open.filter((job) => !locked.has(job.id));
+  const blocked = open.filter((job) => locked.has(job.id));
   return [...(await orderOpen(workable, runsheetOf)), ...blocked].map(copy);
 }
 
@@ -1604,6 +1605,11 @@ async function updateItemStatus(
   const itemId = job?.server?.itemId;
   if (!job || !itemId) return { result: { success: false, error: 'common.genericError' } };
   if (job.server?.runsheetStatus !== 'IN_PROGRESS') return { result: { success: false, error: whenNotOpen } };
+  // A parcel the agency added after the start waits for the driver's OK.
+  // The rest of the run stays workable.
+  if (job.server?.itemStatus === 'PENDING_DRIVER_CONFIRMATION') {
+    return { result: { success: false, error: 'runsheets.confirm.blockedError' } };
+  }
 
   try {
     await request(path`api/runsheets/items/${itemId}/status`, { method: 'PUT', body });

@@ -1,4 +1,5 @@
 import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
+import { lockedStopIdsOf } from '../lib/runsheetDay';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
 import { nearestFirstByArea, nearestNeighborOrder } from '../lib/route';
@@ -328,7 +329,8 @@ const mockRunsheets: RunsheetSeed[] = [
     // Confirmed at 4 this morning; dispatch added a 5th parcel since, so the
     // driver is asked to re-confirm the new count.
     confirmedStopCount: 4,
-    stopIds: ['TRK-5DF3697E', 'TRK-A12BC034', 'TRK-77F1E9AB', 'TRK-1F4A7D93', 'TRK-B6F31C08'],
+    // The added one is last, and still to deliver.
+    stopIds: ['TRK-5DF3697E', 'TRK-A12BC034', 'TRK-1F4A7D93', 'TRK-B6F31C08', 'TRK-77F1E9AB'],
   },
   {
     id: formatRunsheetId(today, 2),
@@ -970,9 +972,9 @@ export async function logCallAttempt(id: string): Promise<Job> {
 function isJobBlockedByUnconfirmedRunsheet(jobId: string): boolean {
   const seed = mockRunsheets.find((r) => r.stopIds.includes(jobId));
   if (!seed) return false;
-  // Both cases block: never confirmed, and confirmed against a count that has
-  // since changed (dispatch added or pulled a parcel mid-day).
-  return seed.status === 'A_CONFIRMER' || seed.confirmedStopCount !== seed.stopIds.length;
+  // A run never confirmed blocks all its parcels. A run changed since blocks
+  // only the parcels dispatch added: the others stay workable.
+  return lockedStopIdsOf(toRunsheet(seed)).includes(jobId);
 }
 
 export async function getPickups(): Promise<Pickup[]> {
