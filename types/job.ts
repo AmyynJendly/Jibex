@@ -82,8 +82,6 @@ export interface Job {
    * permission was denied or unavailable, never blocks logging the failure.
    */
   failureLocation?: GeoPoint;
-  /** Set when delivery is confirmed via photo instead of OTP. */
-  proofPhotoUri?: string;
   /**
    * How many times the driver has pressed Call for this parcel. A delivery
    * can't be confirmed at zero — the driver must have tried to reach the

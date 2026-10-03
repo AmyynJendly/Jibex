@@ -199,12 +199,6 @@ describe('real transfers', () => {
     expect(transfers[1].server).toMatchObject({ rawType: 'SOMETHING_NEW', transferType: undefined });
   });
 
-  it('fetches one transfer by the server’s numeric id', async () => {
-    const api = await signedIn();
-    const transfer = await api.getTransfer('1');
-    expect(urls).toEqual(['https://jibex.cloud/api/transfers/1']);
-    expect(transfer.id).toBe('TRF-7093829A');
-  });
 });
 
 describe('real returns', () => {

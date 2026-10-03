@@ -37,7 +37,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Jibex uses your camera to scan package barcodes and capture delivery photos."
+          "cameraPermission": "Jibex uses your camera to scan package barcodes."
         }
       ],
       [
@@ -46,20 +46,11 @@
           "locationWhenInUsePermission": "Jibex uses your location, only while the app is open, to sort your stops nearest first and to record where a delivery could not be made."
         }
       ],
-      "expo-notifications",
       "expo-localization",
       [
         "expo-local-authentication",
         {
           "faceIDPermission": "Jibex uses Face ID to unlock your driver session, which holds your route and cash totals."
-        }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "cameraPermission": "Jibex uses your camera to scan package barcodes and capture delivery photos.",
-          "microphonePermission": false,
-          "photosPermission": false
         }
       ],
       "expo-image",

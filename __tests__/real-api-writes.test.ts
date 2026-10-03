@@ -90,8 +90,6 @@ describe('real mode with writes off: no fake success', () => {
     expect(await api.confirmDelivery('TRK-5DF3697E', 42)).toMatchObject(refused);
     expect(await api.markDeliveryFailed('TRK-5DF3697E', 'ABSENT')).toMatchObject(refused);
     expect(await api.reopenParcel('TRK-1F4A7D93')).toMatchObject(refused);
-    expect(await api.confirmDeliveryWithPhoto('TRK-5DF3697E', 'file://x.jpg', 42)).toMatchObject(refused);
-    expect(await api.confirmDeliveryWithOTP('TRK-5DF3697E', '4187', 42)).toMatchObject(refused);
     expect(await api.markNotificationRead('901')).toMatchObject(refused);
     expect(await api.markAllNotificationsRead()).toMatchObject(refused);
 

@@ -165,15 +165,6 @@ function syncCallsFromDevice() {
 const today = new Date();
 const yesterday = addDays(today, -1);
 
-/** Not part of the public Job shape — a real API wouldn't hand the driver
- *  app the correct code either; it's only known to confirmDeliveryWithOTP. */
-const otpByJobId: Record<string, string> = {
-  'TRK-5DF3697E': '4187',
-  'TRK-A12BC034': '2093',
-  'TRK-77F1E9AB': '5521',
-  'TRK-3C4D8F21': '7734',
-};
-
 const mockJobs: Job[] = [
   {
     id: 'TRK-5DF3697E',
@@ -957,7 +948,6 @@ export async function reopenParcel(id: string): Promise<ConfirmDeliveryResult> {
       deliveryRate: recomputeDeliveryRate(lifetimeDeliveries),
     };
     job.cashCollected = undefined;
-    job.proofPhotoUri = undefined;
   } else if (job.status === 'FAILED') {
     mockLifetimeAttempts = Math.max(0, mockLifetimeAttempts - 1);
     mockDriverStats = {
@@ -1031,14 +1021,6 @@ export async function completePickups(ids: string[]): Promise<BatchWriteResult> 
     }
   }
   return { success: failed.length === 0, succeeded, failed };
-}
-
-/** One transfer, by id. */
-export async function getTransfer(id: string): Promise<Transfer> {
-  await delay(undefined);
-  const transfer = mockTransfers.find((t) => t.id === id);
-  if (!transfer) throw new Error(`Transfer ${id} not found`);
-  return { ...transfer };
 }
 
 /** The driver confirms they've loaded a transfer. */
@@ -1198,48 +1180,14 @@ export async function getNextStopId(currentId: string): Promise<string | null> {
   return nearestNeighborOrder(remaining, currentJob.location ?? DEPOT)[0].id;
 }
 
-export async function confirmDeliveryWithOTP(
-  id: string,
-  otp: string,
-  cashAmount: number
-): Promise<ConfirmDeliveryResult> {
-  await delay(undefined);
-
-  const job = mockJobs.find((j) => j.id === id);
-  if (!job) {
-    return { success: false, error: 'common.genericError' };
-  }
-  if (isJobBlockedByUnconfirmedRunsheet(id)) {
-    return { success: false, error: 'runsheets.confirm.blockedError' };
-  }
-  if (!device.hasCalled(id)) {
-    return { success: false, error: 'statusUpdate.callRequired' };
-  }
-
-  const expectedOtp = otpByJobId[id];
-  if (!expectedOtp || otp !== expectedOtp) {
-    return { success: false, error: 'otp.errors.incorrectCode' };
-  }
-
-  const wasAlreadyDelivered = job.status === 'DELIVERED';
-  job.status = 'DELIVERED';
-  job.cashCollected = cashAmount;
-
-  if (!wasAlreadyDelivered) {
-    recordDeliveryCompletion(cashAmount);
-  }
-
-  return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
-}
-
 /**
  * Delivery confirmed by the driver on the doorstep, with no code and no photo.
  *
  * The same gates still apply — the run has to be signed for and the customer
  * has to have been called — but there is no proof artefact attached, so a
  * dispute over this one comes down to the driver's word. That is a deliberate
- * product decision: the OTP and photo routes remain for parcels that warrant
- * proof, and this is the fast path for the ones that don't.
+ * product decision. (The OTP and photo routes were removed: the server has no
+ * field for either.)
  */
 export async function confirmDelivery(
   id: string,
@@ -1261,37 +1209,6 @@ export async function confirmDelivery(
   const wasAlreadyDelivered = job.status === 'DELIVERED';
   job.status = 'DELIVERED';
   job.cashCollected = cashAmount;
-
-  if (!wasAlreadyDelivered) {
-    recordDeliveryCompletion(cashAmount);
-  }
-
-  return { success: true, job: { ...job, packageInfo: { ...job.packageInfo } } };
-}
-
-/** Delivery confirmed by a doorstep photo instead of an OTP — same effect on stats, no code check. */
-export async function confirmDeliveryWithPhoto(
-  id: string,
-  photoUri: string,
-  cashAmount: number
-): Promise<ConfirmDeliveryResult> {
-  await delay(undefined);
-
-  const job = mockJobs.find((j) => j.id === id);
-  if (!job) {
-    return { success: false, error: 'common.genericError' };
-  }
-  if (isJobBlockedByUnconfirmedRunsheet(id)) {
-    return { success: false, error: 'runsheets.confirm.blockedError' };
-  }
-  if (!device.hasCalled(id)) {
-    return { success: false, error: 'statusUpdate.callRequired' };
-  }
-
-  const wasAlreadyDelivered = job.status === 'DELIVERED';
-  job.status = 'DELIVERED';
-  job.cashCollected = cashAmount;
-  job.proofPhotoUri = photoUri;
 
   if (!wasAlreadyDelivered) {
     recordDeliveryCompletion(cashAmount);
@@ -1382,10 +1299,4 @@ export async function confirmScan(code: string): Promise<ScanResult> {
   }
 
   return { success: false, error: 'scanner.errors.notRecognized' };
-}
-
-/** A real backend would associate this token with the driver's account for server-sent push. */
-export async function registerPushToken(token: string): Promise<void> {
-  void token;
-  await delay(undefined);
 }

@@ -403,7 +403,6 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
     failureNote: status === 'FAILED' ? (text(item?.notes) ?? text(parcel.failureNotes)) : undefined,
     // Kept on the phone when the failure was recorded here; the server has no field for it.
     failureLocation: status === 'FAILED' ? device.failureLocationFor(id) : undefined,
-    proofPhotoUri: text(parcel.deliveryPhotoUrl),
     callAttempts: calls.length,
     lastCallAt: calls.at(-1),
     deliveryAttempts: num(parcel.deliveryAttempts),
@@ -1461,13 +1460,6 @@ export async function getTransfers(): Promise<Transfer[]> {
   return openFirst('transfers', shown, (transfer) => transfer.status === 'IN_PROGRESS');
 }
 
-/** `GET /api/transfers/{id}` — by the server's numeric id (`transfer.server.transferId`). */
-export async function getTransfer(transferId: string): Promise<Transfer> {
-  const transfer = toTransfer(await request<ApiTransfer>(`api/transfers/${encodeURIComponent(transferId)}`));
-  if (!transfer) throw new ApiError(404, `Transfer ${transferId} not found`);
-  return transfer;
-}
-
 /** `GET /api/return-management/driver/{driverId}/assigned`. */
 export async function getReturns(): Promise<Return[]> {
   const { driverId } = await requireSession();
@@ -1744,24 +1736,6 @@ export async function reopenParcel(id: string): Promise<ConfirmDeliveryResult> {
     success: true,
     job: { ...copy(job), status: 'PENDING', cashCollected: undefined, failureReason: undefined, failureNote: undefined },
   };
-}
-
-/** The photo route has no server field to send a photo to; it stays refused. */
-export async function confirmDeliveryWithPhoto(
-  _id: string,
-  _photoUri: string,
-  _cashAmount: number
-): Promise<ConfirmDeliveryResult> {
-  return WRITES_OFF;
-}
-
-/** The OTP route was dropped from the app; refused here so it can't reach the mock by accident. */
-export async function confirmDeliveryWithOTP(
-  _id: string,
-  _otp: string,
-  _cashAmount: number
-): Promise<ConfirmDeliveryResult> {
-  return WRITES_OFF;
 }
 
 // ── Pickups ───────────────────────────────────────────────────────────────

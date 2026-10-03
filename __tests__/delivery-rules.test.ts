@@ -40,7 +40,7 @@ async function workableParcel(api: Api) {
 }
 
 describe('the doorstep Delivered button', () => {
-  it('refuses when the driver never called, same as the OTP and photo routes', async () => {
+  it('refuses when the driver never called, like every delivery', async () => {
     const api = freshApi();
     const parcel = await workableParcel(api);
 
@@ -140,24 +140,11 @@ describe('notifications can be cleared', () => {
 });
 
 describe('a delivery needs a call attempt first', () => {
-  it('refuses an OTP delivery when the driver never called', async () => {
-    const api = freshApi();
-    const parcel = await workableParcel(api);
-    expect(parcel.callAttempts).toBe(0);
-
-    const result = await api.confirmDeliveryWithOTP(parcel.id, '4187', parcel.cashToCollect);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('statusUpdate.callRequired');
-  });
-
-  it('refuses a photo delivery when the driver never called', async () => {
-    // The case that shipped broken: the photo screen ignored this rejection
-    // entirely, so Confirm did nothing at all and said nothing about why.
+  it('refuses a delivery when the driver never called', async () => {
     const api = freshApi();
     const parcel = await workableParcel(api);
 
-    const result = await api.confirmDeliveryWithPhoto(parcel.id, 'file://proof.jpg', parcel.cashToCollect);
+    const result = await api.confirmDelivery(parcel.id, parcel.cashToCollect);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('statusUpdate.callRequired');
@@ -171,7 +158,7 @@ describe('a delivery needs a call attempt first', () => {
     expect(called.callAttempts).toBe(1);
     expect(called.lastCallAt).toBeTruthy();
 
-    const result = await api.confirmDeliveryWithPhoto(parcel.id, 'file://proof.jpg', parcel.cashToCollect);
+    const result = await api.confirmDelivery(parcel.id, parcel.cashToCollect);
     expect(result.success).toBe(true);
   });
 });
@@ -186,13 +173,13 @@ describe('parcels on an unconfirmed run are locked', () => {
     const parcelId = unsigned.stopIds[0];
     await api.logCallAttempt(parcelId);
 
-    const blocked = await api.confirmDeliveryWithPhoto(parcelId, 'file://proof.jpg', 0);
+    const blocked = await api.confirmDelivery(parcelId, 0);
     expect(blocked.success).toBe(false);
     expect(blocked.error).toBe('runsheets.confirm.blockedError');
 
     await api.confirmRunsheetReceipt(unsigned.id);
 
-    const allowed = await api.confirmDeliveryWithPhoto(parcelId, 'file://proof.jpg', 0);
+    const allowed = await api.confirmDelivery(parcelId, 0);
     expect(allowed.success).toBe(true);
   });
 });
@@ -204,17 +191,8 @@ describe('undoing a delivery gives the money back', () => {
     const before = await api.getDriverStats();
 
     await api.logCallAttempt(parcel.id);
-    const delivered = await api.confirmDeliveryWithOTP(parcel.id, '4187', parcel.cashToCollect);
-    // OTP may not match this particular parcel; fall back to the photo path,
-    // which is the same completion underneath.
-    if (!delivered.success) {
-      const viaPhoto = await api.confirmDeliveryWithPhoto(
-        parcel.id,
-        'file://proof.jpg',
-        parcel.cashToCollect
-      );
-      expect(viaPhoto.success).toBe(true);
-    }
+    const delivered = await api.confirmDelivery(parcel.id, parcel.cashToCollect);
+    expect(delivered.success).toBe(true);
 
     const after = await api.getDriverStats();
     expect(after.cashCollectedTotal).toBeCloseTo(before.cashCollectedTotal + parcel.cashToCollect, 3);
@@ -232,7 +210,7 @@ describe('undoing a delivery gives the money back', () => {
     const parcel = await workableParcel(api);
 
     await api.logCallAttempt(parcel.id);
-    await api.confirmDeliveryWithPhoto(parcel.id, 'file://proof.jpg', parcel.cashToCollect);
+    await api.confirmDelivery(parcel.id, parcel.cashToCollect);
 
     expect((await api.getActiveParcels()).map((p) => p.id)).not.toContain(parcel.id);
     expect((await api.getHistoryParcels()).map((p) => p.id)).toContain(parcel.id);
@@ -259,7 +237,7 @@ describe('a run stays open after its last parcel', () => {
 
     for (const parcel of open) {
       await api.logCallAttempt(parcel.id);
-      await api.confirmDeliveryWithPhoto(parcel.id, 'file://proof.jpg', parcel.cashToCollect);
+      await api.confirmDelivery(parcel.id, parcel.cashToCollect);
 
       const state = (await api.getRunsheets()).find((r) => r.id === run.id);
       expect(state?.status).toBe('EN_COURS');

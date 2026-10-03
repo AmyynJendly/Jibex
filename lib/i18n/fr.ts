@@ -283,14 +283,6 @@ const fr: TranslationResource = {
     cantDeliver: 'Impossible de livrer',
   },
 
-  // Only the OTP route's error is left: the OTP screen is gone, its mock
-  // function is kept in case the step comes back.
-  otp: {
-    errors: {
-      incorrectCode: 'Code incorrect. Demandez au client de le confirmer et réessayez.',
-    },
-  },
-
   cantDeliver: {
     title: 'Impossible de livrer',
     subtitle: "Indiquez à la répartition pourquoi cet arrêt n'a pas pu être complété",
@@ -320,18 +312,6 @@ const fr: TranslationResource = {
     nextStopWithName: 'Arrêt suivant · {{name}}',
     nextStop: 'Prochain arrêt',
     backToRunsheet: 'Retour aux colis',
-  },
-
-  photoProof: {
-    captureFailed: "Impossible de prendre la photo. Réessayez.",
-    title: 'Preuve photo',
-    permissionBody: "L'accès à la caméra est nécessaire pour capturer la preuve de livraison.",
-    enableCamera: 'Activer la caméra',
-    hintCapture: 'Prenez une photo nette du colis à l\'adresse de livraison.',
-    hintConfirm: 'Colis laissé à la porte ? Confirmez pour terminer cette livraison.',
-    confirmDelivery: 'Confirmer la réception',
-    openCamera: 'Ouvrir l’appareil photo',
-    retake: 'Reprendre la photo',
   },
 
   scanner: {
@@ -408,22 +388,6 @@ const fr: TranslationResource = {
     showMore_one: 'Afficher le dernier colis',
     showMore_other: 'Afficher les {{count}} autres colis',
     collected: 'Ramassé',
-    selectLabel: 'Marquer ce ramassage comme effectué',
-    doneWithCount: 'Terminer ({{count}})',
-    doneHint: 'Clôturez tous les ramassages d’un coup, ou cochez seulement ceux effectués.',
-    doneAllWithCount: 'Tout terminer ({{count}})',
-    doneAllConfirmTitle_one: 'Marquer le ramassage comme effectué ?',
-    doneAllConfirmTitle_other: 'Marquer les {{count}} ramassages comme effectués ?',
-    doneAllConfirmMessage_one: 'Avec tous ses colis : {{names}}',
-    doneAllConfirmMessage_other: 'Avec tous leurs colis : {{names}}',
-    doneSelectedNote_one: '{{count}} ramassage prêt à clôturer',
-    doneSelectedNote_other: '{{count}} ramassages prêts à clôturer',
-    doneConfirmTitle: 'Marquer les ramassages',
-    doneConfirmMessage_one:
-      'Marquer {{count}} ramassage comme effectué, avec tous ses colis ? ({{names}})',
-    doneConfirmMessage_other:
-      'Marquer {{count}} ramassages comme effectués, avec tous leurs colis ? ({{names}})',
-    doneConfirmAction: 'Marquer ramassé',
     doneToast_one: '{{count}} ramassage terminé',
     doneToast_other: '{{count}} ramassages terminés',
     donePartialToast: '{{done}} ramassages sur {{total}} enregistrés — les autres n’ont pas abouti. Réessayez-les.',

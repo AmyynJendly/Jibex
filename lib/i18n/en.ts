@@ -283,14 +283,6 @@ const en = {
     cantDeliver: "Can't Deliver",
   },
 
-  // Only the OTP route's error is left: the OTP screen is gone, its mock
-  // function is kept in case the step comes back.
-  otp: {
-    errors: {
-      incorrectCode: 'Incorrect code. Ask the customer to confirm and try again.',
-    },
-  },
-
   cantDeliver: {
     title: "Can't Deliver",
     subtitle: "Let dispatch know why this stop couldn't be completed",
@@ -323,18 +315,6 @@ const en = {
     nextStopWithName: 'Next Stop · {{name}}',
     nextStop: 'Next Stop',
     backToRunsheet: 'Back to Runsheet',
-  },
-
-  photoProof: {
-    captureFailed: "Couldn't take the photo. Try again.",
-    title: 'Photo Proof',
-    permissionBody: 'Camera access is needed to capture delivery proof.',
-    enableCamera: 'Enable Camera',
-    hintCapture: 'Take a clear photo of the package at the delivery location.',
-    hintConfirm: 'Package left at the door? Confirm to complete this delivery.',
-    confirmDelivery: 'Confirm Delivery',
-    openCamera: 'Open camera',
-    retake: 'Retake Photo',
   },
 
   scanner: {
@@ -411,22 +391,6 @@ const en = {
     showMore_one: 'Show the last parcel',
     showMore_other: 'Show the {{count}} other parcels',
     collected: 'Collected',
-    selectLabel: 'Mark this stop collected',
-    doneWithCount: 'Done ({{count}})',
-    doneHint: 'Close every stop at once, or tick only the ones you collected.',
-    doneAllWithCount: 'Done All ({{count}})',
-    doneAllConfirmTitle_one: 'Mark the {{count}} pickup as collected?',
-    doneAllConfirmTitle_other: 'Mark all {{count}} pickups as collected?',
-    doneAllConfirmMessage_one: 'With every package in it: {{names}}',
-    doneAllConfirmMessage_other: 'With every package in them: {{names}}',
-    doneSelectedNote_one: '{{count}} stop ready to close out',
-    doneSelectedNote_other: '{{count}} stops ready to close out',
-    doneConfirmTitle: 'Mark pickups collected',
-    doneConfirmMessage_one:
-      'Mark {{count}} pickup as collected, with every package in it? ({{names}})',
-    doneConfirmMessage_other:
-      'Mark {{count}} pickups as collected, with every package in them? ({{names}})',
-    doneConfirmAction: 'Mark Collected',
     doneToast_one: '{{count}} pickup marked collected',
     doneToast_other: '{{count}} pickups marked collected',
     donePartialToast: '{{done}} of {{total}} pickups collected — the rest didn’t go through. Try them again.',

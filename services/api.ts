@@ -36,8 +36,6 @@ export const setPickupOrder = mock.setPickupOrder;
 export const setTransferOrder = mock.setTransferOrder;
 export const setReturnOrder = mock.setReturnOrder;
 
-/** Unused for now (see lib/push.ts): push isn't connected to any server, so this is a no-op either way. */
-export const registerPushToken = mock.registerPushToken;
 
 const useReal = API_MODE === 'real';
 
@@ -65,7 +63,6 @@ export const getDispatchContact = useReal ? real.getDispatchContact : mock.getDi
 // by the user account id; everything else by the driver id.
 export const getPickups = useReal ? real.getPickups : mock.getPickups;
 export const getTransfers = useReal ? real.getTransfers : mock.getTransfers;
-export const getTransfer = useReal ? real.getTransfer : mock.getTransfer;
 export const getReturns = useReal ? real.getReturns : mock.getReturns;
 export const getNotifications = useReal ? real.getNotifications : mock.getNotifications;
 
@@ -80,8 +77,6 @@ export const confirmRunsheetReceipt = useReal ? real.confirmRunsheetReceipt : mo
 export const rejectRunsheet = useReal ? real.rejectRunsheet : mock.rejectRunsheet;
 export const rejectNewParcels = useReal ? real.rejectNewParcels : mock.rejectNewParcels;
 export const confirmDelivery = useReal ? real.confirmDelivery : mock.confirmDelivery;
-export const confirmDeliveryWithPhoto = useReal ? real.confirmDeliveryWithPhoto : mock.confirmDeliveryWithPhoto;
-export const confirmDeliveryWithOTP = useReal ? real.confirmDeliveryWithOTP : mock.confirmDeliveryWithOTP;
 export const markDeliveryFailed = useReal ? real.markDeliveryFailed : mock.markDeliveryFailed;
 export const reopenParcel = useReal ? real.reopenParcel : mock.reopenParcel;
 export const completePickups = useReal ? real.completePickups : mock.completePickups;
