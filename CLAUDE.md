@@ -44,7 +44,9 @@ Explain things simply, in short sentences.
 - Real mode reads: login, runsheets (active + history), pickups, transfers,
   returns, notifications.
 - Real writes are built in `real-api.ts`, each guarded by `API_WRITES`.
-  Photo and OTP delivery are always refused (the server has no field for them).
+  There is no photo or OTP delivery (the server has no field for them).
+- Every action button sends through `lib/useWrite.ts`: one write at a time,
+  "Envoi…" while it runs, and a retry when the server did not answer.
 - Phone-only state (`lib/deviceStore.ts`, AsyncStorage): call log, drag order,
   nearest-first toggle, hidden / unread alerts, failure GPS, recent searches.
 - Call-before-delivery: a parcel can be marked delivered only after the
@@ -73,6 +75,8 @@ Explain things simply, in short sentences.
 - `types/` — shared types. `__tests__/` — Jest tests.
 - `scripts/` — read-only probes of the live server.
 - `docs/client-notes.txt` — the client's feature requests.
+- `FIXES.md`, `PARITY.md`, `OPTIMIZATION.md` — what was fixed after the live tests, the
+  comparison with the Android app, and the optimization pass.
 - `docs/web-app-findings.md` — what the agency and sender web app showed (accounts, data, gaps).
 - `docs/web-app-tour.md` — page-by-page tour of the web app and its bugs.
 - `web-tour/` — gitignored: tour screenshots (private data) and the read-only tour scripts.

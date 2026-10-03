@@ -6,7 +6,7 @@ Everything was checked with mocks and Jest. Nothing here was run on a phone.
 This file has two parts:
 
 1. **The audit**: for each point, what the app did before, the risk, and the fix.
-2. **The results**: what was done, the numbers before and after, and what is left. (Filled in at the end.)
+2. **The results**: what was done, the numbers before and after, and what is left.
 
 ---
 
@@ -145,3 +145,154 @@ This file has two parts:
 
 **Fix**
 - Remove them. The list of what was removed is in Part 2.
+
+---
+
+## Part 2 — The results
+
+Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **33 suites, 389 tests, all pass**.
+Writes are off. Nothing was run on a phone.
+
+### What was done
+
+| # | Item | Result | Commit |
+|---|---|---|---|
+| 1 | Home counts today's work, closed runs included | Done | `fb1ca79` |
+| 2 | No failure reason on a parcel that is not failed | Done | `90f751b` |
+| 3 | Weak network: "Envoi…", timeout message, retry | Done | `e22fd59` |
+| 4 | Double taps | Done (same commit as 3: they share one hook) | `e22fd59` |
+| 5 | Session expiry: come back to the same screen | Done | `67eee31` |
+| 6 | Speed: one request at a time, long lists | Done | `c41ae53` |
+| 7 | Polling stops in the background | Done | `77c8d67` |
+| 8 | Error boundary on every screen | Done | `96f322c` |
+| 9 | GPS only when needed, camera off when hidden | Done | `fdf2820` |
+| 10 | Clean-up | Done | `6c7b5e4` |
+
+### Item by item
+
+**1. Home.** The gauge and the three counters take every parcel of today's runs: the runs still open and the
+ones the agency closed today. Rate = delivered ÷ (delivered + failed), two decimals. With nothing attempted it is 0.00%.
+Files: `lib/todayWork.ts`, `app/(tabs)/home/index.tsx`. Test: `__tests__/today-work.test.ts` (with a COMPLETED run).
+
+**2. Failure reason.** The reason, its note and the raw unknown reason are read only when the item is FAILED.
+The card checks it again. Files: `services/real-api.ts`, `lib/failureReasons.ts`, `app/(tabs)/runsheets/index.tsx`.
+
+**3 and 4. Writes.** One hook, `lib/useWrite.ts`, over a small lock, `lib/writeGuard.ts`.
+- The lock is taken before anything is awaited. A second tap gets nothing and sends nothing.
+- While it is held the button is blocked and reads "Envoi…".
+- A request with no answer after 20 s now reads "Connexion lente — réessayez." It used to read "Connexion impossible".
+- A network or timeout failure shows a toast with a "Réessayer" button. After a timeout the screen also reloads,
+  because the server may have received the request.
+- Every write goes through it: deliver, fail, put back to pending, finish a pickup, finish all pickups, take a
+  transfer, confirm returns, confirm / start / refuse a run, "tout lire".
+- Three of those had no guard before: confirming or refusing a run, and "tout lire".
+
+Test: `__tests__/write-guard.test.ts`.
+
+**5. Session expiry.** Login opens on top of the screen the driver was on. The same driver signing in again is
+brought back to it, with what he had typed still there, and the lists reload. A different driver clears
+everything and goes to Home. The driver is asked once, however many requests fail underneath.
+Files: `lib/resume.ts`, `lib/session.ts`, `components/SessionExpiryWatcher.tsx`, `app/(auth)/login.tsx`.
+Test: `__tests__/session-resume.test.ts`.
+
+**6. Speed.**
+- A read asked again while the same read is on its way joins it (`request()` in `services/real-api.ts`).
+  A write empties that list, so a read after a write is never an old answer.
+- Passive refreshes (timer, focus, pull, return to foreground) join a fetch already running. Refreshes after a
+  write still restart it (`lib/query.tsx`).
+- Coming back to the foreground reloads only what is on screen.
+- A pickup's parcels are drawn 30 at a time, with "Afficher les N autres colis".
+- History was already a virtualized list. The Current tab and the scheduled pickups stay non-virtualized on
+  purpose: they are one day's work and need drag-to-reorder.
+- React Compiler is on in this project, so the derived lists on History are already memoized. No manual change.
+
+**7. Polling.** The 60 s timer is cleared when the app leaves the foreground and restarted on return, only if the
+list is still in view. It already stopped when the Current tab was not showing. Test: `__tests__/auto-refresh.test.ts`.
+
+**8. Crash safety.** Every route file exports the same boundary (`components/ScreenErrorBoundary.tsx`): a short
+message, "Réessayer", and "Retour à l'accueil". The error is saved by `lib/errorLog.ts` (last 20: when, which
+route, name, message, top of the stack). A test fails if a new route forgets the export.
+Test: `__tests__/crash-safety.test.ts`.
+
+**9. Battery.**
+- GPS: Home and the parcel screen no longer take a reading when they open. They show the last one. The GPS is
+  switched on by two things only: sorting nearest-first, and the note on a failed delivery. It was already
+  foreground-only, one reading at a time, kept for a minute. There is no background location and no watch.
+- Camera: mounted only while the scanner is the focused screen and the app is open.
+- The iOS location text no longer says "track your route".
+
+Test: `__tests__/battery.test.ts`.
+
+**10. Clean-up. Removed:**
+- `app/job/[id]/photo-proof.tsx` (no screen linked to it) and `confirmDeliveryWithPhoto` (real and mock).
+- `lib/push.ts` and `registerPushToken` (never imported).
+- `confirmDeliveryWithOTP` (real and mock) and the mock's OTP table.
+- `getTransfer` (real and mock): the detail screen reads the list.
+- The `proofPhotoUri` field.
+- Packages: `expo-image-picker`, `expo-notifications`, and their entries in `app.json`.
+- 24 French and 24 English texts: all of `otp.*` and `photoProof.*`, and 14 old pickup texts
+  (`selectLabel`, `doneWithCount`, `doneHint`, `doneAll…`, `doneSelectedNote…`, `doneConfirm…`).
+
+The mock's delivery rules are still tested, on the one delivery route that is left (`confirmDelivery`).
+
+**Mock-only paths in real mode.** I checked `services/api.ts`: in real mode no write can reach the mock.
+Five phone-only settings still come from the mock file in both modes (`getNearestFirst`, `setNearestFirst`,
+`setPickupOrder`, `setTransferOrder`, `setReturnOrder`). They only read and write the phone's own storage,
+so I left them.
+
+### The numbers
+
+Measured on this Windows machine, not on a phone. See "What I could not measure".
+
+| What | Before | After |
+|---|---|---|
+| Requests when the timer, a tab focus and a pull-to-refresh fire together, per list (pickups, transfers, returns, alerts) | 3 | **1** |
+| Requests to load the whole Tournées tab (runs, parcels, history, numbers) | 2 | 2 (already shared) |
+| Timer wake-ups per hour in the background, per open list | 60 | **0** |
+| GPS readings when opening Home or a parcel screen | 1 each time (at most one a minute) | **0** |
+| Writes sent by two taps in the same instant | up to 2 | **1** |
+| iOS JavaScript bundle (`npx expo export --platform ios`, Hermes bytecode) | 5,499,991 bytes | **5,474,058 bytes** (−25,933) |
+| Native packages | 2 unused (`expo-image-picker`, `expo-notifications`) | removed |
+| Build History for 2,000 rows from the server's answer (fetch + map) | 72 ms | 58–67 ms over three runs: **no real change** |
+| History card lines, attempts and keys for 2,000 rows | 5 ms | 5–9 ms: **no real change** |
+| Screen texts | 531 keys | 507 keys |
+
+The first, second and History rows come from `__tests__/performance.test.ts`, run before and after the changes.
+The timer, GPS and double-tap rows are counts read from the code and proved by the tests named above.
+
+The bundle is smaller even though this pass added code (the write hook, the error boundary, the session
+expiry flow), because of what was removed.
+
+The History figures show there was nothing to win there: 2,000 rows cost well under a tenth of a second to
+prepare, and the list was already virtualized. I changed nothing in it.
+
+### What I could not measure
+
+- **App start time on a phone.** The app runs in Expo Go on an iPhone, and I have no device here. Expo Go's own
+  start time also hides the app's. The bundle size above is the closest thing I can measure from this machine:
+  a smaller bundle is less to load at start. To get a real number: time from tapping the project in Expo Go to
+  Home being usable, before and after, on the same phone.
+- **History scrolling on a phone** (frames per second). The timings above are the data work only, not drawing.
+- **Battery use.** The table gives counts (wake-ups, GPS readings), not milliamp-hours.
+
+### Left for later
+
+- **A real offline queue.** A write with no network still fails with a retry button. It is not kept and sent
+  later. That needs a decision on what the agency should see for an action taken offline.
+- **The Current tab is not virtualized.** Fine for one day's work. If a run ever holds several hundred parcels,
+  it will need a virtualized list that still supports drag-to-reorder.
+- **A way to read the error log.** Errors are saved on the phone, but no screen shows them yet. A hidden row in
+  Profil, or a "send to support" button, would make them useful.
+- **Replaying a write after a session expiry.** A write that fails with a 401 is not sent again after signing
+  in. The driver is back on his screen and taps the button again.
+
+### To check on the phone
+
+- Turn the network off, tap an action: "Connexion impossible — réessayez." with "Réessayer".
+- On a slow network: the button reads "Envoi…" and cannot be tapped twice.
+- Leave the app open past the token's 24 hours (or ask Jihed to revoke the token): the login screen opens over
+  the current screen, and signing in brings you back to it.
+- Home after the agency closes the run: the counters keep today's numbers.
+- The scanner: open another screen over it, or send the app to the background; the camera goes off.
+- Home with location refused: the place name falls back to the run's zone, and no permission prompt appears
+  just for opening Home.
