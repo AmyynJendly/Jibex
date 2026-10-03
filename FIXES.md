@@ -6,7 +6,8 @@ These fixes come from the four live test reports (`test-run/` to `test-run-4/`).
 - No write was sent to the live server. Everything was tested with mock data and Jest.
 - One commit per fix.
 - A follow-up round changed fixes 4 and 10. See "Follow-up" below.
-- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **22 suites, 264 tests, all pass**.
+- A parity pass against the Android app came next. See "Parity pass" below and `PARITY.md`.
+- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **28 suites, 323 tests, all pass** (after the parity pass).
 - Not tested on a phone yet. See "What to check on the phone" at the end.
 
 ---
@@ -217,7 +218,8 @@ The library `react-native-qrcode-svg` was removed with it.
 1. ~~Fix 10 goes against Android.~~ **Settled in the follow-up:** the two reasons are hidden again.
 2. ~~Which reasons open a SAV case.~~ **Settled in the follow-up:** the hint is removed.
 3. **A modified run locks all its parcels**, not only the new one, until the driver confirms. This was already
-   the behaviour. **Decision: keep the full lock for now. It will be compared with the Android app later.**
+   the behaviour. ~~Decision: keep the full lock for now.~~ **Settled in the parity pass:** Android locks only the
+   new parcel, and so do we now. Needs a live check.
 4. **"Refuser cette tournée" and "Refuser les nouveaux colis" are still there.** The task did not mention them.
    They may not exist on the live server (a 404 shows "not available yet").
 5. **A fifth status: "Confirmée — à démarrer".** It is for a run that was confirmed but did not start
@@ -249,6 +251,152 @@ Tests: `__tests__/failure-reasons.test.ts` updated (19 reasons offered on every 
 still have labels, "Annulé par client" is in both lists, no SAV hint left). New `__tests__/pickup-batch.test.ts`
 (the N and M of the dialog, the French sentence, all pickups closed on mock data, nothing sent with writes off).
 
+## Parity pass
+
+A fix pass on the gaps listed in `PARITY.md`. Writes stayed off. No write was sent to the live server.
+One commit per gap, each message starting with the gap number.
+
+The client rules from the Moncef / Jihed meeting win over Android parity:
+History is read-only with no phone numbers; a finished run shows no parcels; three decimals on every decimal
+number; "Done All" for pickups; call before "delivered"; the driver can correct a parcel; confirming a run is one tap.
+
+Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **28 suites, 323 tests, all pass**.
+Not run on a phone.
+
+### MUST and SHOULD gaps
+
+| Gap | What | Result | Commit |
+|---|---|---|---|
+| 1 | Changed run locks every parcel | **Done.** Only the added parcel is locked. The banner stays. Needs a live check. | `efceea6` |
+| 2 | Identical History cards | **Done.** Each card shows "RS-20261002-0002 · 02/10 · Tentative 3". Still read-only, no phone. | `b2ee9eb` |
+| 3 | No transfer detail screen | **Done.** Opened from an ongoing transfer only. | `08280d3` |
+| 4 | Pickups: Android has two steps | **Skipped: client rule.** See below. | — |
+| 5 | Pickup counter 6 vs 0 | **Done.** The number is kept and labelled "À ramasser". | `87cf0d6` |
+| 6 | No badges on Home buttons | **Done.** Four badges, like Android. | `b378ceb` |
+| 7 | Three names for pickups | **Done.** "Ramassage" everywhere. | `f877ec1` |
+| 8 | Home gauge has no name | **Done.** "AUJOURD'HUI" under the gauge; Profile says "(total)". Percentages have 3 decimals. | `036ecbf` |
+| 9 | Pickup card: no reference, no day | **Done.** Reference under the address, "02/10 · 23:13". | `27e2ea4` |
+| 10 | No "Naviguer" / contact on a collected pickup | **Skipped: client rule.** See below. | — |
+| 11 | "5 En transit" counts parcels | **Done.** "Colis en transit". | `b592683` |
+| 12 | Home shows no current run | **Done.** A row with the run code and "N restants sur M". | `87d77c8` |
+| 13 | No change password | **Done.** Same call and checks as Android. | `e3086da` |
+| 14 | Confirm also starts the run | **Skipped: client rule.** See below. | — |
+| 15 | Call rule has no way out | **Done.** "Client injoignable — continuer". The rule itself is kept. | `014b177` |
+
+### NICE gaps
+
+| Gap | What | Result | Commit |
+|---|---|---|---|
+| 16 | Run card has no Livrés / Échoués / Restants | **Done.** | `8e39a78` |
+| 17 | Scanner only knows the driver's parcels | **Later.** The backend asked us not to call the tracking endpoint. Only if they change their mind. | — |
+| 18 | Type the password again after the session expires | **Later.** Needs the password kept in secure storage; more than 30 minutes, and a security choice. | — |
+| 19 | "Remettre en attente" | **Kept on purpose** (decision D). It is part of the correction feature. Must be tested live. | — |
+| 20 | English on a phone set to Arabic | **Done.** French is the default. | `e819bbd` |
+| 21 | Transfer anomalies not shown | **Done** with gap 3: missing / extra / damaged are on the detail screen. | `08280d3` |
+| 22 | Cancelled transfers are hidden | **Later.** Showing them means a third list or a "Tous" tab. | — |
+| 23 | No dark-mode switch | **Later.** The app follows the phone's setting. | — |
+
+### Decisions A to K
+
+| | Decision | Result |
+|---|---|---|
+| A | Lock only the new parcel | Done (gap 1). |
+| B | History cards: run code, date, attempt | Done (gap 2). |
+| C | Confirm and start stay one tap | No change needed. One tap sends confirm, then start. If confirm works and start fails, the card shows "Démarrer la tournée" to retry. Already covered by `__tests__/real-api-writes.test.ts`. |
+| D | Keep "Remettre en attente" | Kept. No change. |
+| E | "Client injoignable — continuer" | Done (gap 15). |
+| F | Transfer detail screen | Done (gap 3). |
+| G | "Changer le mot de passe" | Done (gap 13). Personal and vehicle info stay read-only. |
+| H | Pickups: no change to the flow | Flow unchanged. Only the words changed (gap 7). |
+| I | Arabic | Nothing done. |
+| J | Percentages with 3 decimals | Done (gap 8): "0.000%", "65.385%". |
+| K | A closed run shows only its card | Checked and tested (`fc99faa`). The mock now follows the same rule. |
+
+### Skipped: client rule
+
+- **Gap 4, pickups in two steps.** Android has "Confirmer Pickup" then "Terminer Pickup". The client asked for
+  "Done All": all collected at once, no extra steps. Our flow is unchanged: one action sends start, then complete.
+- **Gap 10, "Naviguer" and contact on a collected pickup.** A collected pickup is history. The client rule says
+  history has no details and no phone numbers. A scheduled pickup still has "Appeler" and "Naviguer".
+- **Gap 14, confirm and start as two steps.** Android keeps them apart. The client rule says confirming a run
+  is one tap, confirm and start together.
+
+### What each fix does
+
+**Gap 1 — the lock.** Before: any change to a started run locked all its parcels. Now: a run not accepted, or
+accepted but not started, still locks everything; a run changed after the start locks only the parcels the agency
+added. The other parcels keep their place in the list, the "next stop" and their buttons. The write itself is also
+refused for a parcel waiting for confirmation.
+Files: `lib/runsheetDay.ts`, `lib/useNextStop.ts`, `services/real-api.ts`, `services/mock-api.ts`,
+`app/(tabs)/runsheets/index.tsx`. Tests: `__tests__/runsheet-day.test.ts`, `__tests__/delivery-rules.test.ts`.
+
+**Gap 2 — History cards.** Each parcel now carries its run's code and day. The attempt number is worked out per
+record: the parcel's records are put in time order, the oldest is 1, and the numbering starts higher when the
+server counted failures this driver doesn't have (another driver tried too).
+Files: `lib/historyRecord.ts`, `types/job.ts`, both APIs, `app/(tabs)/runsheets/index.tsx`.
+Test: `__tests__/history-record.test.ts`.
+
+**Gap 3 — transfer detail.** A row "Voir le détail du transfert" on an ongoing transfer's card opens the screen:
+header, itinerary, driver and vehicle, dated history, anomalies, parcels with status and cash, notes.
+It is read-only. Taking the transfer (scan, then "Confirmer la prise en charge") stays on the list card.
+A transfer in History has no such row. No phone number is read from the server into the screen's data.
+Files: `app/transfer/[id].tsx`, `app/transfers.tsx`, `app/_layout.tsx`, `lib/transferState.ts`,
+`types/transfer.ts`, both APIs. Test: `__tests__/transfer-detail.test.ts`.
+
+**Gap 5, 7, 11 — words.** "À ramasser" for the Home number. "Ramassage" in every French text, including
+"Terminer le ramassage", "Terminer tous les ramassages" and "Terminer N ramassages (M colis) ?".
+"Colis en transit" on the Transfers header. One "Pickup" is left: the agency's own parcel status label.
+Files: `lib/i18n/fr.ts`, `lib/i18n/en.ts`. Tests: `__tests__/pickup-batch.test.ts`, `__tests__/transfer-check.test.ts`.
+
+**Gap 6 — badges.** Open runs, ramassages to do, open transfers, returns still with the driver. Nothing at zero.
+Files: `lib/homeBadges.ts`, `app/(tabs)/home/index.tsx`. Test: `__tests__/home-badges.test.ts`.
+
+**Gap 8 and J — percentages.** One formatter, three decimals.
+Files: `lib/currency.ts`, i18n. Tests: `__tests__/currency.test.ts`, `__tests__/recent-searches.test.ts`.
+
+**Gap 9 — pickup card.** Files: `lib/pickupBatch.ts`, `lib/date.ts`, `app/pickups.tsx`.
+Test: `__tests__/pickup-batch.test.ts`.
+
+**Gap 12 and 16 — the run in numbers.** Files: `lib/runsheetDay.ts`, `components/RunsheetDayCard.tsx`,
+`app/(tabs)/home/index.tsx`, `types/runsheet.ts`, both APIs. Test: `__tests__/run-counts.test.ts`.
+
+**Gap 13 — change password.** Profil → "Changer le mot de passe" → three fields. Checks on the phone first:
+the two new entries match, at least 4 characters (as Android), plus two of ours: the current one is filled in, and
+the new one differs. Then `PUT api/driver-auth/change-password` with `{driverId, oldPassword, newPassword}`.
+With writes off it sends nothing and says so. A wrong current password does not sign the driver out.
+Files: `app/change-password.tsx`, `lib/password.ts`, `components/ProfileSettingsList*.tsx`,
+`app/(tabs)/profile/index.tsx`, both APIs, `services/api.ts`. Test: `__tests__/change-password.test.ts`.
+
+**Gap 15 — "Client injoignable — continuer".** Shown on the parcel screen and in the status sheet once Call was
+pressed. It notes "client injoignable" on the phone, and the note goes to the agency with a failure:
+"Client appelé une fois (14:32). Client injoignable." It is never offered before a call.
+Files: `components/UnreachableButton.tsx`, `lib/deliveryGate.ts`, `lib/deviceStore.ts`, `lib/failureProof.ts`,
+`components/StatusUpdateSheet.tsx`, `app/job/[id]/index.tsx`. Test: `__tests__/unreachable.test.ts`.
+
+**Gap 20 — default language.** File: `lib/i18n/languages.ts`.
+
+### Things to know
+
+- **About decision E.** Pressing Call already unlocked "Livré" before this pass: the rule only asks that Call was
+  pressed once. So the new button does not unlock anything more. It makes the way on visible, and it records
+  that the customer could not be reached. If you wanted Call alone to stop unlocking, tell me: that is a
+  different rule.
+- **The mock's added parcel moved.** The mock's changed run had its "added" parcel already delivered, so the new
+  lock showed nothing. The added parcel is now one still to deliver.
+- **Older sections of this file** still say "pickup" in the button names and describe the full-run lock.
+  They describe the app as it was then. This section is the current state.
+
+### To check on the live server
+
+1. **Gap 1.** With a parcel added to a started run and not confirmed yet: update one of the old parcels.
+   The server must accept it. If it refuses, the lock has to go back to the whole run.
+2. **Gap 19.** "Remettre en attente" sends `{status: "PENDING"}`. The Android app never sends that. Test it once.
+3. **Gap 13.** Change the password with the right and with a wrong current password. Check what the server
+   answers for a wrong one (400 or 401) and that the message reads well.
+4. **Gap 2.** Compare the attempt numbers on History cards with the agency's count for the same parcel.
+5. **Gap 3.** Open a real ongoing transfer: check the dates, the parcel statuses and the notes against the web app.
+6. **Decision C.** Confirm a run with one tap and check it is IN_PROGRESS right after.
+
 ## What to check on the phone
 
 Nothing here was run on a device. With `npx expo start --clear`:
@@ -256,7 +404,13 @@ Nothing here was run on a device. With `npx expo start --clear`:
 - Current tab: the run card, in mock mode (three runs) and in real mode (your real run).
 - A modified run: the banner, the "NOUVEAU" parcel first.
 - Transfers: scan flow, "Confirmer sans scan", then the "En route vers …" card.
-- Pickups: tick, scan, "Terminer le pickup". Then "Terminer tous les pickups" and its dialog.
+- Ramassages: tick, scan, "Terminer le ramassage". Then "Terminer tous les ramassages" and its dialog. The reference and the day on each card.
+- Home: the four badges, "À ramasser", "AUJOURD'HUI" under the gauge, the row for the run in progress.
+- History: the line "RS-… · 02/10 · Tentative N" on each card.
+- A changed run: only the "NOUVEAU" parcel is locked, the others still work.
+- A transfer in progress: "Voir le détail du transfert" and the detail screen. None on a transfer in History.
+- Profil: "Changer le mot de passe" (it will say writes are off).
+- A parcel: press Call, then "Client injoignable — continuer".
 - Can't-deliver screen: "Annulé par client" is there, "Colis refusé" is not, no SAV hint.
 - Scanner: hold one label in front of the camera. It must count once.
 - Turn on airplane mode: "Connexion impossible" with a retry.
