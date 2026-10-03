@@ -425,6 +425,7 @@ export function runsheetJobs(runsheet: ApiRunsheet): Job[] {
     .map(({ item }) => {
       const job = toJob(item.parcel!, item, runsheetId);
       if (job.server) job.server.runsheetStatus = runsheetStatus;
+      job.run = { code: text(runsheet.code), date: text(runsheet.scheduledDate)?.slice(0, 10) };
       return job;
     });
 }

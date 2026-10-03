@@ -38,6 +38,7 @@ import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/c
 import { toDateKey } from '../../../lib/date';
 import { enumLabel } from '../../../lib/enumLabel';
 import { errorKeyOf } from '../../../lib/errors';
+import { historyAttempts, historyRecordLine } from '../../../lib/historyRecord';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
 import { parcelRowKeys } from '../../../lib/rowKey';
 import { dayRuns, lockedStopIds, runStage } from '../../../lib/runsheetDay';
@@ -102,6 +103,8 @@ interface ParcelCardProps {
   lockedLabel: string;
   /** Arrived here from a notification about this parcel. */
   highlighted?: boolean;
+  /** History only: run code, day and attempt — what tells two records of one parcel apart. */
+  recordLine?: string;
   /** Added by the agency after the driver accepted the run: stands out until they accept it. */
   isNew?: boolean;
   t: TFunction;
@@ -123,6 +126,7 @@ function ParcelCard({
   callLabel,
   lockedLabel,
   highlighted = false,
+  recordLine,
   isNew = false,
   t,
 }: ParcelCardProps) {
@@ -169,6 +173,12 @@ function ParcelCard({
           </Text>
         </View>
       </View>
+
+      {recordLine ? (
+        <Text style={[styles.recordLine, { color: colors.textSecondary }]} numberOfLines={1}>
+          {recordLine}
+        </Text>
+      ) : null}
 
       <View style={styles.addressRow}>
         <Icon name="location-outline" size={15} color={colors.textSecondary} />
@@ -414,6 +424,10 @@ export default function RunsheetsScreen() {
   // One parcel can be on several runs (one per failed attempt), so a row is
   // keyed by runsheet + parcel, not by tracking number alone.
   const historyKeys = parcelRowKeys(filteredHistory);
+  // Numbered over the whole history, not the filtered view, so a record
+  // keeps its attempt number whichever filter is on.
+  const attemptNumbers = historyAttempts(history ?? []);
+  const attemptOf = new Map((history ?? []).map((job, index) => [job, attemptNumbers[index]] as const));
   const anyCorrectable = (history ?? []).some((j) => j.correctable);
   const codTotal = (active ?? []).reduce((sum, j) => sum + j.cashToCollect, 0);
   const currentCount = workable.length + lockedParcels.length;
@@ -523,6 +537,7 @@ export default function RunsheetsScreen() {
                 scheme={scheme}
                 highlighted={job.id === highlightedId}
                 readOnly
+                recordLine={historyRecordLine(job, t('attempts.plain', { number: attemptOf.get(job) ?? 1 }))}
                 // Open run: Update, to put a mistake right. Closed run: a lock.
                 onUpdate={job.correctable ? () => setSheetJob(job) : undefined}
                 closedLabel={job.correctable ? undefined : t('runsheets.history.closedTag')}
@@ -891,6 +906,10 @@ const styles = StyleSheet.create({
   },
   addressText: {
     flex: 1,
+  },
+  recordLine: {
+    ...monoStyle(12, 'medium'),
+    marginTop: Spacing.xs,
   },
   failureText: {
     fontFamily: Fonts.archivoSemiBold,

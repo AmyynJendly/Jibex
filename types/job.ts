@@ -110,6 +110,11 @@ export interface Job {
    * on a closed run are read-only.
    */
   correctable?: boolean;
+  /**
+   * The run this row belongs to: its printed code and its day (`YYYY-MM-DD`).
+   * Shown on History cards, where one parcel can appear once per run.
+   */
+  run?: { code?: string; date?: string };
   /** What the real server says about this parcel beyond the fields above. Absent on mock data. */
   server?: ParcelServerInfo;
 }

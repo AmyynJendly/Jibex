@@ -210,6 +210,8 @@ const fr: TranslationResource = {
   // Which delivery attempt a parcel is on (the agency allows three).
   attempts: {
     label: 'Tentative {{number}}/{{max}}',
+    // On a History card: which attempt that record was.
+    plain: 'Tentative {{number}}',
     over: 'Tentative {{number}} — au-delà des {{max}} autorisées',
     last: 'Dernière tentative',
     lastHint: 'Dernière tentative : après un nouvel échec, le colis repart à l’agence pour décision.',

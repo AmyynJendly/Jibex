@@ -895,11 +895,15 @@ export async function getHistoryParcels(): Promise<Job[]> {
   const ids = new Set(mockRunsheets.flatMap((r) => r.stopIds));
   return mockJobs
     .filter((j) => ids.has(j.id) && (j.status === 'DELIVERED' || j.status === 'FAILED'))
-    .map((j) => ({
-      ...j,
-      packageInfo: { ...j.packageInfo },
-      correctable: mockRunsheets.find((r) => r.stopIds.includes(j.id))?.status !== 'VALIDE',
-    }));
+    .map((j) => {
+      const seed = mockRunsheets.find((r) => r.stopIds.includes(j.id));
+      return {
+        ...j,
+        packageInfo: { ...j.packageInfo },
+        correctable: seed?.status !== 'VALIDE',
+        run: seed ? { code: seed.code ?? seed.id, date: seed.scheduledDate } : undefined,
+      };
+    });
 }
 
 /**
