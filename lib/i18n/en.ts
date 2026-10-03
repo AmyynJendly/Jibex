@@ -407,6 +407,12 @@ const en = {
     doneToast_other: '{{count}} pickups marked collected',
     donePartialToast: '{{done}} of {{total}} pickups collected — the rest didn’t go through. Try them again.',
     reorderedToast: 'Order saved',
+    // Every scheduled pickup at once, behind a confirmation.
+    finishAll: 'Finish all pickups',
+    finishAllTitle_one: 'Finish {{count}} pickup ({{parcels}} parcels)?',
+    finishAllTitle_other: 'Finish {{count}} pickups ({{parcels}} parcels)?',
+    finishAllMessage: 'All their parcels will be marked as collected, without the parcel-by-parcel check.',
+    finishAllConfirm: 'Confirm',
     // Checking each parcel before closing the pickup.
     check: {
       progress: '{{done}}/{{total}} parcels',

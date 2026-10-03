@@ -15,6 +15,7 @@ import { EmptyState } from '../components/EmptyState';
 import { HistoryDateFilter } from '../components/HistoryDateFilter';
 import { LoadError } from '../components/LoadError';
 import { MetaChip } from '../components/MetaChip';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { ScrollToTopButton, useScrollToTop } from '../components/ScrollToTopButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonBlock, SkeletonRow } from '../components/Skeleton';
@@ -32,6 +33,7 @@ import {
 import { checkAll, checkProgress, checklistKey, clearChecklist, setChecked } from '../lib/checklist';
 import { formatCurrency } from '../lib/currency';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
+import { pickupBatch } from '../lib/pickupBatch';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
 import { normalizeCode } from '../lib/scanSession';
@@ -329,6 +331,8 @@ export default function PickupsScreen() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   // The pickup whose "Terminer le pickup" is on its way to the server.
   const [finishingId, setFinishingId] = useState<string | null>(null);
+  // "Terminer tous les pickups" is on its way to the server.
+  const [finishingAll, setFinishingAll] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const scheduledRef = useRef<ScrollView>(null);
@@ -355,7 +359,7 @@ export default function PickupsScreen() {
    * instead. Either way the same call as before is sent — nothing new.
    */
   async function handleFinish(pickup: Pickup) {
-    if (finishingId) return;
+    if (finishingId || finishingAll) return;
     if (!requireOnline()) return;
 
     if (pickup.parcels.length === 0) {
@@ -386,6 +390,45 @@ export default function PickupsScreen() {
       return next;
     });
     showToast(t('pickups.check.doneToast'));
+  }
+
+  /**
+   * "Terminer tous les pickups": every scheduled pickup at once, as the
+   * client asked. It does not wait for the parcel checks — so it always
+   * asks first, with the numbers: "Terminer N pickups (M colis) ?".
+   */
+  async function handleFinishAll() {
+    if (finishingId || finishingAll) return;
+    if (!requireOnline()) return;
+    const batch = pickupBatch(scheduled);
+    if (batch.count === 0) return;
+
+    const confirmed = await confirm({
+      title: t('pickups.finishAllTitle', { count: batch.count, parcels: batch.parcels }),
+      message: t('pickups.finishAllMessage'),
+      confirmLabel: t('pickups.finishAllConfirm'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!confirmed) return;
+
+    setFinishingAll(true);
+    const result = await safely(() => completePickups(batch.ids));
+    setFinishingAll(false);
+    const succeeded = 'succeeded' in result ? result.succeeded : [];
+    if (succeeded.length === 0) {
+      // Nothing on screen changes, the ticks stay, and the reason is shown.
+      showToast(writeErrorText(t, result));
+      return;
+    }
+
+    for (const id of succeeded) clearChecklist(checklistKey.pickup(id));
+    await invalidatePickups();
+    setExpandedIds(new Set());
+    showToast(
+      succeeded.length < batch.count
+        ? t('pickups.donePartialToast', { done: succeeded.length, total: batch.count })
+        : t('pickups.doneToast', { count: succeeded.length })
+    );
   }
 
   async function handleReorder(orderedIds: string[]) {
@@ -553,6 +596,19 @@ export default function PickupsScreen() {
         />
       </View>
 
+      {/* Every scheduled pickup at once. Each card keeps its own check
+          ("Tout cocher", "Terminer le pickup") for doing them one by one. */}
+      {segment === 'SCHEDULED' && scheduled.length > 0 && (
+        <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.separator }]}>
+          <PrimaryButton
+            label={t('pickups.finishAll')}
+            height={50}
+            loading={finishingAll}
+            disabled={!!finishingId}
+            onPress={handleFinishAll}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -571,6 +627,12 @@ const styles = StyleSheet.create({
   },
   listArea: {
     flex: 1,
+  },
+  footer: {
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   content: {
     paddingHorizontal: Spacing.xxl,

@@ -399,6 +399,12 @@ const fr: TranslationResource = {
     doneToast_other: '{{count}} collectes marquées',
     donePartialToast: '{{done}} collectes sur {{total}} enregistrées — les autres n’ont pas abouti. Réessayez-les.',
     reorderedToast: 'Ordre enregistré',
+    // Every scheduled pickup at once, behind a confirmation.
+    finishAll: 'Terminer tous les pickups',
+    finishAllTitle_one: 'Terminer {{count}} pickup ({{parcels}} colis) ?',
+    finishAllTitle_other: 'Terminer {{count}} pickups ({{parcels}} colis) ?',
+    finishAllMessage: 'Tous leurs colis seront marqués comme récupérés, sans vérification colis par colis.',
+    finishAllConfirm: 'Confirmer',
     // Checking each parcel before closing the pickup.
     check: {
       progress: '{{done}}/{{total}} colis',
