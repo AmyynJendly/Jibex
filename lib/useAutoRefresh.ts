@@ -18,7 +18,15 @@ export function useAutoRefresh(refresh: () => unknown, enabled = true) {
       if (!enabled) return;
       const refresher = autoRefresher(refresh, { isAppActive: () => AppState.currentState === 'active' });
       refresher.start();
-      return refresher.stop;
+      // No timer at all in the background: it stops there and restarts on return.
+      const subscription = AppState.addEventListener('change', (state) => {
+        if (state === 'active') refresher.resume();
+        else refresher.pause();
+      });
+      return () => {
+        subscription.remove();
+        refresher.stop();
+      };
     }, [refresh, enabled])
   );
 }

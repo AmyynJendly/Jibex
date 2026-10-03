@@ -7,9 +7,10 @@
  * went to Home and pulled to refresh. So while a list is on screen it
  * reloads: once when it comes into view, then every minute.
  *
- * Nothing runs while the app is in the background (the tick is skipped, not
- * queued): coming back to the foreground already reloads everything, see
- * `lib/query`.
+ * Nothing runs while the app is in the background: the timer itself is
+ * stopped (`pause`), not just skipped, so the phone isn't woken every minute
+ * for nothing. Coming back to the foreground restarts it (`resume`); the
+ * reload on return is already done by `lib/query`.
  *
  * Kept free of React and React Native so the timing can be tested; the hook
  * that wires it to a screen's focus is `useAutoRefresh`.
@@ -21,6 +22,12 @@ export interface AutoRefresher {
   start: () => void;
   /** The list left the screen: stop. */
   stop: () => void;
+  /** The app went to the background: no timer at all until `resume`. */
+  pause: () => void;
+  /** The app is back: the timer runs again, if the list is still in view. */
+  resume: () => void;
+  /** Whether a timer is running right now. */
+  readonly ticking: boolean;
 }
 
 export function autoRefresher(
@@ -28,6 +35,18 @@ export function autoRefresher(
   { intervalMs = AUTO_REFRESH_MS, isAppActive = () => true }: { intervalMs?: number; isAppActive?: () => boolean } = {}
 ): AutoRefresher {
   let timer: ReturnType<typeof setInterval> | null = null;
+  // In view (started and not stopped), whatever the app's state.
+  let inView = false;
+
+  const tick = () => {
+    timer = setInterval(() => {
+      if (isAppActive()) run();
+    }, intervalMs);
+  };
+  const clear = () => {
+    if (timer) clearInterval(timer);
+    timer = null;
+  };
 
   // A reload that fails must never surface as an uncaught error: the screen
   // already has its own error state and retry.
@@ -41,15 +60,23 @@ export function autoRefresher(
 
   return {
     start() {
-      if (timer) return;
+      if (inView) return;
+      inView = true;
       run();
-      timer = setInterval(() => {
-        if (isAppActive()) run();
-      }, intervalMs);
+      if (isAppActive()) tick();
     },
     stop() {
-      if (timer) clearInterval(timer);
-      timer = null;
+      inView = false;
+      clear();
+    },
+    pause() {
+      clear();
+    },
+    resume() {
+      if (inView && !timer) tick();
+    },
+    get ticking() {
+      return timer !== null;
     },
   };
 }
