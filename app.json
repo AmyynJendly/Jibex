@@ -43,7 +43,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Jibex uses your location to show your current zone on the Home screen and to track your route while on shift."
+          "locationWhenInUsePermission": "Jibex uses your location, only while the app is open, to sort your stops nearest first and to record where a delivery could not be made."
         }
       ],
       "expo-notifications",

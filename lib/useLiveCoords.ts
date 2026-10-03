@@ -25,6 +25,14 @@ const FIX_TIMEOUT_MS = 10_000;
 
 let lastProblem: PositionProblem | null = null;
 
+/** Screens showing the last known position. They are told of a new fix; they never ask for one. */
+const watchers = new Set<(coords: GeoPoint) => void>();
+
+/** The last fix, if any, without asking the GPS for anything. */
+export function lastKnownCoords(): GeoPoint | null {
+  return cachedCoords;
+}
+
 async function resolveCoords(): Promise<GeoPoint | null> {
   const { status } = await Location.requestForegroundPermissionsAsync().catch(() => ({
     status: 'denied' as const,
@@ -51,6 +59,9 @@ async function resolveCoords(): Promise<GeoPoint | null> {
   lastProblem = null;
   cachedCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
   fetchedAt = Date.now();
+  // Screens that only display the position learn of it here.
+  const fix = cachedCoords;
+  watchers.forEach((watcher) => watcher(fix));
   return cachedCoords;
 }
 
@@ -86,31 +97,26 @@ export async function locateDriver(): Promise<DriverPosition> {
 }
 
 /**
- * Driver's real device GPS coordinates — resolves once permission is granted
- * and a fix is available, and stays `null` otherwise (denied, or unsupported
- * on this platform, e.g. Expo web). Callers should fall back to a reasonable
- * static reference point rather than blocking on this or fabricating a value.
+ * The driver's last known position, for DISPLAY only (the place name on
+ * Home, the distance to a stop). It never turns the GPS on.
+ *
+ * The GPS is used for two things only: sorting the stops nearest-first
+ * (`locateDriver`) and stamping a failed delivery (`captureCurrentCoords`).
+ * Home and the parcel screen used to take a reading of their own every time
+ * they opened — many readings a day the driver never asked for. They now
+ * show the last one of those two, and update when a new one comes in.
+ * `null` until there has been one: callers fall back (the run's zone, no
+ * distance) rather than waiting.
  */
 export function useLiveCoords(): GeoPoint | null {
   const [coords, setCoords] = useState<GeoPoint | null>(cachedCoords);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const fresh = cachedCoords && Date.now() - fetchedAt < MAX_AGE_MS;
-    if (fresh) return;
-
-    // Concurrent mounts share one lookup instead of racing several.
-    inFlight = inFlight ?? resolveCoords().finally(() => {
-      inFlight = null;
-    });
-
-    inFlight.then((next) => {
-      if (!cancelled && next) setCoords(next);
-    });
-
+    // A fix may have come in between the first render and this effect.
+    if (cachedCoords) setCoords(cachedCoords);
+    watchers.add(setCoords);
     return () => {
-      cancelled = true;
+      watchers.delete(setCoords);
     };
   }, []);
 

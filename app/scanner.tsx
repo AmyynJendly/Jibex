@@ -1,5 +1,5 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -24,6 +24,8 @@ import { checkProgress, checkScan } from '../lib/checklist';
 import { errorKeyOf } from '../lib/errors';
 import { createScanSession } from '../lib/scanSession';
 import { useChecklist } from '../lib/useChecklist';
+import { cameraOn } from '../lib/cameraState';
+import { useAppActive } from '../lib/useAppActive';
 import { confirmScan, type ScanResult } from '../services/api';
 
 /**
@@ -123,6 +125,8 @@ export default function ScannerScreen() {
   // One session per visit: each code counts once, and a label left under
   // the camera is read once, not once a second (see lib/scanSession).
   const [session] = useState(createScanSession);
+  const focused = useIsFocused();
+  const appActive = useAppActive();
 
   /** Check mode: tick the parcel off its list, or say why not. */
   function handleCheck(code: string) {
@@ -205,7 +209,10 @@ export default function ScannerScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {permission?.granted && !allDone && (
+      {/* Mounted only while this screen is the one in front and the app is
+          open: covered by another screen, or in the background, the camera
+          is off — not just hidden. */}
+      {cameraOn({ granted: !!permission?.granted, done: allDone, focused, appActive }) && (
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
