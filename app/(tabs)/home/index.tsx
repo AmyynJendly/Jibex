@@ -153,8 +153,8 @@ export default function HomeScreen() {
         delivered,
         pending: allJobs.length - delivered - failed,
         failed,
-        // Not rounded: the gauge shows it to three decimals, like every
-        // other decimal number in the app.
+        // Not rounded here: the gauge prints it with two decimals
+        // (`formatPercent`).
         completionPercent: allJobs.length === 0 ? 0 : (delivered / allJobs.length) * 100,
       },
       zone: workableRunsheets[0]?.zone ?? runsheets[0]?.zone ?? null,

@@ -29,10 +29,13 @@ describe('other decimals', () => {
   });
 
   it('percentages carry two', () => {
-    expect(formatPercent(98.4)).toBe('98.400%');
-    // The client's rule: three decimals on every decimal number, percentages included.
-    expect(formatPercent(0)).toBe('0.000%');
-    expect(formatPercent((17 / 26) * 100)).toBe('65.385%');
-    expect(formatPercent(100)).toBe('100.000%');
+    // The client's rule: money has three decimals, percentages two.
+    expect(formatPercent(98.4)).toBe('98.40%');
+    expect(formatPercent(0)).toBe('0.00%');
+    expect(formatPercent((17 / 26) * 100)).toBe('65.38%');
+    expect(formatPercent(99.99)).toBe('99.99%');
+    expect(formatPercent(100)).toBe('100.00%');
+    // Money is not touched by the percentage rule.
+    expect(formatCurrency(10)).toBe('10.000 TND');
   });
 });
