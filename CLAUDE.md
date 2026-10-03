@@ -26,13 +26,15 @@ Explain things simply, in short sentences.
   `git push origin main && git branch -f backup main && git push origin backup`
 - Before writing Expo code, check the SDK 57 docs (see AGENTS.md).
 
-## The two switches (`.env.local`)
+## The switches (`.env.local`)
 
 - `EXPO_PUBLIC_API_MODE` = `mock` (fake data, default) or `real` (https://jibex.cloud).
 - `EXPO_PUBLIC_API_WRITES` = `off` (default, also when missing) or `on`.
   When off, every real write answers "Not connected to the server yet"
   and sends nothing.
-- After changing either one, restart with `npx expo start --clear`.
+- `EXPO_PUBLIC_OTP` = `off`, `mock` or `real`. Default: `mock` on mock data, `off` on the
+  real server, so a real delivery is never blocked by the missing OTP API.
+- After changing any of them, restart with `npx expo start --clear`.
 - Other keys (never `EXPO_PUBLIC_`, so they stay out of the app):
   `JIBEX_TEST_*` (driver, used by the probes), `JIBEX_AGENCY_*`, `JIBEX_SENDER_*`.
 

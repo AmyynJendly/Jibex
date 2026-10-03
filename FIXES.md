@@ -7,7 +7,7 @@ These fixes come from the four live test reports (`test-run/` to `test-run-4/`).
 - One commit per fix.
 - A follow-up round changed fixes 4 and 10. See "Follow-up" below.
 - A parity pass against the Android app came next. See "Parity pass" below and `PARITY.md`.
-- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **35 suites, 434 tests, all pass** (after the optimization pass and the OTP work; see `OPTIMIZATION.md` and "OTP delivery confirmation" below).
+- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **36 suites, 449 tests, all pass** (after the optimization pass and the OTP work; see `OPTIMIZATION.md` and "OTP delivery confirmation" below).
 - Not tested on a phone yet. See "What to check on the phone" at the end.
 
 ---
@@ -490,6 +490,39 @@ photo link were gone), so restoring it and adapting it had to go together.
 5. **The old screen had 4 digits and a "take a photo instead" link.** The new one has 6 digits and no photo.
 6. **The list card still says "Payé"** for a 0 / 0 parcel. Only the delivery screen was asked to change.
 
+### OTP follow-up: the switch, and the list card
+
+| Item | What | Commit |
+|---|---|---|
+| 1 | `EXPO_PUBLIC_OTP` = `off`, `mock` or `real` | `c4c6356` |
+| 2 | List card: "CODE CLIENT" badge and "Frais de livraison : …" | `b5127bd` |
+
+**1. The switch.**
+- `off`: the rule is disabled. Code-required parcels deliver like any other; the call rule still applies.
+  No screen, card or delivery call asks for a code.
+- `mock`: the mock service and the "MODE TEST" banner, as before.
+- `real`: the real service, for when the API exists.
+- Defaults: `mock` on mock data, `off` on the real server. **A real delivery is never blocked because the OTP
+  API is missing.** This settles point 1 of "Things to know" above.
+- One function decides, `otpNeeded()` in `services/otp.ts`. The parcel screen, the status sheet, the list card
+  and both delivery calls all ask it, so they cannot disagree.
+- Documented in `OTP.md` and in the new `README.md`.
+
+**2. The list card.** For a parcel that needs a code, with the switch not `off`:
+- "Payé" is replaced by a small "CODE CLIENT" badge;
+- when the delivery fee is above 0, the card also says "Frais de livraison : 10.000 TND".
+With the switch `off` the card is exactly as before. This settles point 6 above.
+
+Files: `constants/backend.ts`, `services/otp.ts`, `lib/otpRule.ts` (`cardCash`), `app/(tabs)/runsheets/index.tsx`,
+`app/job/[id]/index.tsx`, `app/job/[id]/otp.tsx`, `components/StatusUpdateSheet.tsx`, both APIs, i18n.
+Tests: `__tests__/otp-switch.test.ts` (the three modes, the defaults, the real server delivering with no code
+by default, the card), `__tests__/otp-flow.test.ts` (updated).
+
+Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **36 suites, 449 tests, all pass**.
+
+One choice of mine to know about: **`EXPO_PUBLIC_OTP=mock` on the real server is read as `off`.** A code
+made up by the phone, and shown to the driver in the banner, would prove nothing about a real parcel.
+
 ### To check on the phone (mock mode)
 
 - Open the mock parcel of Sonia Gharbi (8.000 TND, fee only) and Karim Mejri (nothing to collect).
@@ -498,7 +531,9 @@ photo link were gone), so restoring it and adapting it had to go together.
 - Type a wrong code five times: "Code bloqué".
 - Wait 60 s, resend, type the new code: "Livré" becomes available.
 - Use the three resends: "Impossible de valider — marquez un échec" and its button.
-- Switch to real mode: the banner is gone and the screen says the code cannot be sent yet.
+- The list: the two parcels show "CODE CLIENT"; Sonia Gharbi's also shows "Frais de livraison : 8.000 TND".
+- Set `EXPO_PUBLIC_OTP=off`: both parcels deliver in one tap after a call, and the cards say "8.000 TND" and "Payé".
+- Switch to real mode with nothing set: no code is asked for anything.
 
 ## What to check on the phone
 

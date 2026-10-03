@@ -24,6 +24,24 @@ The rule is in one function: `otpRequired()` in `lib/otpRule.ts`.
 The server should refuse `PUT /api/runsheets/items/{itemId}/status` with `DELIVERED` for such a parcel
 unless its code was verified.
 
+## The switch: `EXPO_PUBLIC_OTP`
+
+In `.env.local`. Restart with `npx expo start --clear` after changing it.
+
+| Value | Behaviour |
+|---|---|
+| `off` | The rule is disabled. Code-required parcels are delivered like any other. The call rule still applies. No delivery call asks for a verified code. |
+| `mock` | The mock service: the code is made up on the phone and shown in a "MODE TEST" banner. Mock data only. |
+| `real` | The real service in `services/otp.ts`. For when the API below exists. |
+
+**Defaults:** `mock` on mock data, **`off` on the real server**.
+A real delivery is never blocked because the OTP API is missing.
+
+`mock` set on the real server is read as `off`: a code invented by the phone, and shown to the driver,
+proves nothing about a real parcel.
+
+**When the API is ready:** implement `realOtpService`, then set `EXPO_PUBLIC_OTP=real`.
+
 ## What the app does today
 
 1. The driver taps "Livré" on such a parcel. The app opens the code screen and calls `sendOtp`.
@@ -124,10 +142,10 @@ Replace its three functions with the three calls above. The screen, the rules an
 
 ## Two things to know before turning writes on
 
-1. **In real mode, a parcel that needs a code cannot be delivered today.** The real service cannot send a code,
-   so nothing can be verified, and the app refuses the delivery ("Le code ne peut pas encore être envoyé…").
-   The driver can only record a failure. This is on purpose (no delivery without a correct code), but it means
-   the OTP API must exist before writes are switched on for real drivers, or the rule must be switched off.
-2. **The "MODE TEST" banner** shows the code on the screen. It exists only in mock mode, so the flow can be
-   tested with no SMS. In real mode it cannot appear: the real service never returns a code, and the screen
-   also checks the mode.
+1. **On the real server the rule is off by default** (`EXPO_PUBLIC_OTP` unset). Code-required parcels are
+   delivered like any other, so nothing is blocked while the API does not exist. Only `EXPO_PUBLIC_OTP=real`
+   turns the rule on there. Set it before the API exists and these parcels cannot be delivered: no code can be
+   sent, and the driver can only record a failure.
+2. **The "MODE TEST" banner** shows the code on the screen. It exists only with `EXPO_PUBLIC_OTP=mock`, which
+   itself only works on mock data. With `real` or `off` it cannot appear: the real service never returns a
+   code, and the screen also checks the switch.
