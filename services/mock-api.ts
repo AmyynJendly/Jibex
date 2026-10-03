@@ -1,5 +1,7 @@
 import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
+import { otpItemId, otpRequiredFor } from '../lib/otpRule';
 import { lockedStopIdsOf } from '../lib/runsheetDay';
+import { otpService } from './otp';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
 import { nearestFirstByArea, nearestNeighborOrder } from '../lib/route';
@@ -1237,6 +1239,11 @@ export async function confirmDelivery(
   if (!device.hasCalled(id)) {
     return { success: false, error: 'statusUpdate.callRequired' };
   }
+  // Nothing of value to collect: only the customer's code proves the delivery.
+  if (otpRequiredFor(job) && !otpService.isVerified(otpItemId(job))) {
+    return { success: false, error: 'otp.errors.required' };
+  }
+  otpService.clear(otpItemId(job));
 
   const wasAlreadyDelivered = job.status === 'DELIVERED';
   job.status = 'DELIVERED';

@@ -61,6 +61,15 @@ export function cashDueLine(t: TFunction, due: CashDue): string {
   return due.kind === 'feeOnly' ? line + ' ' + t('cash.feeOnlyNote') : line;
 }
 
+/**
+ * What the OTP service knows a parcel by: its line on the run (the server's
+ * runsheet item id) — the same id a delivery is recorded against. Mock
+ * parcels have none and use their tracking number.
+ */
+export function otpItemId(job: { id: string; server?: { itemId?: string } }): string {
+  return job.server?.itemId ?? job.id;
+}
+
 /** The same two questions asked of a parcel as the app holds it. */
 export function otpRequiredFor(job: { cashToCollect: number; deliveryFee?: number }): boolean {
   return otpRequired({ price: job.cashToCollect, deliveryFee: job.deliveryFee });

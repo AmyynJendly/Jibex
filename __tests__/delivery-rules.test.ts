@@ -11,6 +11,8 @@
  * fresh rather than inheriting whatever the previous test left behind.
  */
 
+import { otpRequiredFor } from '../lib/otpRule';
+
 type Api = typeof import('../services/mock-api');
 
 // Each test starts on a phone with nothing saved yet (see jest.setup.ts).
@@ -232,7 +234,8 @@ describe('a run stays open after its last parcel', () => {
     if (!run) throw new Error('seed data has no confirmed run in progress');
 
     const active = await api.getActiveParcels();
-    const open = active.filter((p) => run.stopIds.includes(p.id));
+    // Parcels that need the customer's code have their own tests (otp-flow.test.ts).
+    const open = active.filter((p) => run.stopIds.includes(p.id) && !otpRequiredFor(p));
     expect(open.length).toBeGreaterThan(0);
 
     for (const parcel of open) {
