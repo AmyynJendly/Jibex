@@ -95,7 +95,8 @@ const en = {
       delivered: 'Delivered',
       pending: 'In Queue',
       failed: 'Failed',
-      pickups: 'Pickups',
+      // Only the pickups still to do — not the finished ones.
+      pickups: 'To pick up',
     },
     cashCollected: 'Cash On Hand',
     toConfirmTitle_one: 'Run to confirm',

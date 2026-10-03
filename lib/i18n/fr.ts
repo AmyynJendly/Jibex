@@ -95,7 +95,8 @@ const fr: TranslationResource = {
       delivered: 'Livrés',
       pending: 'En file',
       failed: 'Échecs',
-      pickups: 'Ramassages',
+      // Only the ramassages still to do — not the finished ones.
+      pickups: 'À ramasser',
     },
     cashCollected: 'Espèces en sacoche',
     toConfirmTitle_one: 'Tournée à confirmer',

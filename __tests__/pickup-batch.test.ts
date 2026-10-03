@@ -64,7 +64,8 @@ describe('finish all pickups', () => {
     expect(stray).toEqual(['fr.enums.parcelStatus.PICKUP=Pickup']);
     expect(fr.pickups.headerTitle).toBe('Ramassages');
     expect(fr.common.nav.pickups).toBe('Ramassages');
-    expect(fr.home.stats.pickups).toMatch(/ramass/i);
+    // The Home number counts only what is still to do, and says so.
+    expect(fr.home.stats.pickups).toBe('À ramasser');
   });
 
   it('keeps "Tout cocher" on each pickup', () => {
