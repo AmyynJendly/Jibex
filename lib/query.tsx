@@ -106,6 +106,15 @@ export function invalidateDeliveryData() {
   });
 }
 
+/**
+ * Reloads what is on screen right now, joining a request already on its way
+ * instead of restarting it. Used after a write that timed out: the server may
+ * have received it, so the screen must show what the server really has.
+ */
+export function refreshVisible() {
+  return queryClient.invalidateQueries({ type: 'active' }, { cancelRefetch: false });
+}
+
 export function invalidateNotifications() {
   return queryClient.invalidateQueries({ queryKey: keys.notifications });
 }

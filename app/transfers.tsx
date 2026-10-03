@@ -33,7 +33,8 @@ import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { invalidateTransfers, useScreenState, useTransfers } from '../lib/query';
 import { agencyShortName, opensDetail, transferStage } from '../lib/transferState';
-import { safely, writeErrorText } from '../lib/writeResult';
+import { useWrite } from '../lib/useWrite';
+import { safely } from '../lib/writeResult';
 import { useAutoRefresh } from '../lib/useAutoRefresh';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { confirmTransferPickup, setTransferOrder } from '../services/api';
@@ -56,6 +57,7 @@ export default function TransfersScreen() {
   const highlightedId = useFocusHighlight();
   // The transfer whose pickup confirmation is on its way to the server.
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const write = useWrite();
   const [dragging, setDragging] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   // The large title floats over this list, so its real top is above offset 0.
@@ -84,13 +86,14 @@ export default function TransfersScreen() {
    * with every parcel scanned, or through "Confirmer sans scan" below.
    */
   async function confirmPickup(transfer: Transfer) {
-    if (confirmingId) return;
+    if (!write.begin()) return;
     setConfirmingId(transfer.id);
     const result = await safely(() => confirmTransferPickup(transfer));
     setConfirmingId(null);
+    write.end();
     if (!result.success) {
       // Nothing changes on screen, the scans stay, and the reason is shown.
-      showToast(writeErrorText(t, result));
+      write.fail(result, () => confirmPickup(transfer));
       return;
     }
     clearChecklist(checklistKey.transfer(transfer.id));

@@ -471,10 +471,14 @@ export default function HomeScreen() {
               </View>
               <AnimatedPressable
                 scaleTo={0.95}
-                style={[styles.toConfirmButton, { backgroundColor: colors.warning }]}
+                disabled={runsheetConfirm.sending}
+                style={[
+                  styles.toConfirmButton,
+                  { backgroundColor: colors.warning, opacity: runsheetConfirm.sending ? 0.5 : 1 },
+                ]}
                 onPress={() => runsheetConfirm.confirmReceipt(runsheet)}>
                 <Text style={[styles.toConfirmButtonText, { color: colors.onWarning }]}>
-                  {runsheetConfirm.shortActionLabel(runsheet)}
+                  {runsheetConfirm.sending ? t('common.sending') : runsheetConfirm.shortActionLabel(runsheet)}
                 </Text>
               </AnimatedPressable>
             </View>

@@ -32,7 +32,8 @@ import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { enumLabel } from '../lib/enumLabel';
 import { invalidateReturns, useReturns, useScreenState } from '../lib/query';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
-import { safely, writeErrorText } from '../lib/writeResult';
+import { useWrite } from '../lib/useWrite';
+import { safely } from '../lib/writeResult';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { confirmReturns, setReturnOrder } from '../services/api';
 import type { Return } from '../types';
@@ -50,7 +51,8 @@ export default function ReturnsScreen() {
   const returns = returnsQuery.data ?? null;
   const [toggle, setToggle] = useTabSegment<Toggle>(['current', 'history'], 'current');
   const highlightedId = useFocusHighlight();
-  const [confirming, setConfirming] = useState(false);
+  const write = useWrite();
+  const confirming = write.sending;
   const [dragging, setDragging] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   // The large title floats over this list, so its real top is above offset 0.
@@ -114,7 +116,7 @@ export default function ReturnsScreen() {
    * for when the paperwork and the pallet disagree, not the normal path.
    */
   async function handleConfirm(batches: Return[]) {
-    if (batches.length === 0 || confirming) return;
+    if (batches.length === 0 || write.sending) return;
     if (!requireOnline()) return;
     const dialog = dialogFor(batches);
 
@@ -126,12 +128,12 @@ export default function ReturnsScreen() {
     });
     if (!accepted) return;
 
-    setConfirming(true);
+    if (!write.begin()) return;
     const result = await safely(() => confirmReturns(batches.map((r) => r.id)));
-    setConfirming(false);
+    write.end();
     const succeeded = 'succeeded' in result ? result.succeeded : [];
     if (succeeded.length === 0) {
-      showToast(writeErrorText(t, result));
+      write.fail(result, () => handleConfirm(batches));
       return;
     }
     await invalidateReturns();
@@ -342,9 +344,11 @@ export default function ReturnsScreen() {
             onPress={() => handleConfirm(staged ? toLoad : pending)}>
             <Icon name="checkmark-done" size={18} color="#fff" />
             <Text style={styles.confirmAllButtonText}>
-              {staged
-                ? t('returns.confirmLoadedWithCount', { count: toLoad.length })
-                : t('returns.confirmAllWithCount', { count: pending.length })}
+              {confirming
+                ? t('common.sending')
+                : staged
+                  ? t('returns.confirmLoadedWithCount', { count: toLoad.length })
+                  : t('returns.confirmAllWithCount', { count: pending.length })}
             </Text>
           </AnimatedPressable>
           <AnimatedPressable

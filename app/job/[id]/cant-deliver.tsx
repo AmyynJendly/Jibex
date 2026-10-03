@@ -29,7 +29,8 @@ import { invalidateDeliveryData } from '../../../lib/query';
 import { captureCurrentCoords } from '../../../lib/useLiveCoords';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { getJobDetail, markDeliveryFailed } from '../../../services/api';
-import { safely, writeErrorText } from '../../../lib/writeResult';
+import { useWrite } from '../../../lib/useWrite';
+import { safely } from '../../../lib/writeResult';
 import type { DeliveryFailureReason } from '../../../types';
 
 /** Case- and accent-insensitive, so "reporte" finds "reporté". */
@@ -62,7 +63,8 @@ export default function CantDeliverScreen() {
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
   const [note, setNote] = useState('');
   const [query, setQuery] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const write = useWrite();
+  const submitting = write.sending;
   const requiredNoteRef = useRef<TextInput>(null);
   // How many attempts on this parcel already failed. Until it's known (or if
   // it can't be read) the parcel is treated as a first attempt.
@@ -90,13 +92,13 @@ export default function CantDeliverScreen() {
   }
 
   async function handleConfirm() {
-    if (!reason || submitting) return;
+    if (!reason || write.sending) return;
     if (needsNote && !note.trim()) {
       showToast(t('cantDeliver.noteRequired'));
       return;
     }
     if (!requireOnline()) return;
-    setSubmitting(true);
+    if (!write.begin()) return;
     // Captured before the write so the fix actually belongs to this failure
     // record rather than to whatever screen the driver is on later. Never
     // lets the failure go unlogged over it though — a denied permission or a
@@ -105,13 +107,14 @@ export default function CantDeliverScreen() {
     const result = await safely(() =>
       markDeliveryFailed(id, reason, note.trim() || undefined, location ?? undefined)
     );
-    setSubmitting(false);
+    write.end();
 
     if (result.success) {
       await invalidateDeliveryData();
       router.replace('/(tabs)/runsheets');
     } else {
-      showToast(writeErrorText(t, result));
+      // The reason and the note stay as typed, so trying again is one tap.
+      write.fail(result, handleConfirm);
     }
   }
 
@@ -286,6 +289,7 @@ export default function CantDeliverScreen() {
           label={t('cantDeliver.confirm')}
           height={56}
           loading={submitting}
+          loadingLabel={t('common.sending')}
           disabled={!canConfirm}
           onPress={handleConfirm}
         />

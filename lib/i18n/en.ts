@@ -32,6 +32,10 @@ const en = {
     // Real server, writes switched off: the action was refused on the phone.
     writesOff: 'Not connected to the server yet',
     networkError: 'No connection — try again.',
+    // The server did not answer in time. It may have received the request.
+    slowConnection: 'Slow connection — try again.',
+    // On a button while its request is on its way.
+    sending: 'Sending…',
     serverRefused: 'The server refused this: {{reason}}',
     notAvailableYet: 'Not available yet',
     nav: {

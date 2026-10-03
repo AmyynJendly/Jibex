@@ -42,7 +42,8 @@ import { useChecklist } from '../lib/useChecklist';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
 import { useOnlineGuard } from '../lib/useOnlineGuard';
 import { openDirections } from '../lib/stopActions';
-import { safely, writeErrorText } from '../lib/writeResult';
+import { useWrite } from '../lib/useWrite';
+import { safely } from '../lib/writeResult';
 import { completePickups, setPickupOrder } from '../services/api';
 import type { Pickup, PickupStatus } from '../types';
 
@@ -262,7 +263,9 @@ function PickupCard({
             ]}
             onPress={onFinish}>
             <Icon name="checkmark-done" size={17} color="#fff" />
-            <Text style={styles.finishButtonText}>{t('pickups.check.finish')}</Text>
+            <Text style={styles.finishButtonText}>
+              {finishing ? t('common.sending') : t('pickups.check.finish')}
+            </Text>
           </AnimatedPressable>
         </View>
       )}
@@ -340,6 +343,8 @@ export default function PickupsScreen() {
   const [finishingId, setFinishingId] = useState<string | null>(null);
   // "Terminer tous les pickups" is on its way to the server.
   const [finishingAll, setFinishingAll] = useState(false);
+  // One write at a time on this screen, whichever button started it.
+  const write = useWrite();
   const [dragging, setDragging] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const scheduledRef = useRef<ScrollView>(null);
@@ -379,13 +384,15 @@ export default function PickupsScreen() {
       if (!confirmed) return;
     }
 
+    if (!write.begin()) return;
     setFinishingId(pickup.id);
     const result = await safely(() => completePickups([pickup.id]));
     setFinishingId(null);
+    write.end();
     const succeeded = 'succeeded' in result ? result.succeeded : [];
     if (succeeded.length === 0) {
       // Nothing on screen changes, the ticks stay, and the reason is shown.
-      showToast(writeErrorText(t, result));
+      write.fail(result, () => handleFinish(pickup));
       return;
     }
 
@@ -418,13 +425,15 @@ export default function PickupsScreen() {
     });
     if (!confirmed) return;
 
+    if (!write.begin()) return;
     setFinishingAll(true);
     const result = await safely(() => completePickups(batch.ids));
     setFinishingAll(false);
+    write.end();
     const succeeded = 'succeeded' in result ? result.succeeded : [];
     if (succeeded.length === 0) {
       // Nothing on screen changes, the ticks stay, and the reason is shown.
-      showToast(writeErrorText(t, result));
+      write.fail(result, handleFinishAll);
       return;
     }
 
@@ -611,6 +620,7 @@ export default function PickupsScreen() {
             label={t('pickups.finishAll')}
             height={50}
             loading={finishingAll}
+            loadingLabel={t('common.sending')}
             disabled={!!finishingId}
             onPress={handleFinishAll}
           />

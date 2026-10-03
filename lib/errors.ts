@@ -16,7 +16,13 @@ export function isNetworkError(error: unknown): boolean {
   return name === 'ApiError' && status === 0;
 }
 
+/** The request left the phone but the server did not answer in time. It may still have received it. */
+export function isTimeoutError(error: unknown): boolean {
+  return isNetworkError(error) && (error as { message?: unknown }).message === 'timeout';
+}
+
 /** The i18n key to show for something a direct API call threw. */
-export function errorKeyOf(error: unknown): 'common.networkError' | 'common.genericError' {
+export function errorKeyOf(error: unknown): 'common.networkError' | 'common.slowConnection' | 'common.genericError' {
+  if (isTimeoutError(error)) return 'common.slowConnection';
   return isNetworkError(error) ? 'common.networkError' : 'common.genericError';
 }

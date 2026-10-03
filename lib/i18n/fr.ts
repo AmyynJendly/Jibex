@@ -34,6 +34,10 @@ const fr: TranslationResource = {
     backToTop: 'Revenir en haut',
     writesOff: 'Pas encore connecté au serveur',
     networkError: 'Connexion impossible — réessayez.',
+    // The server did not answer in time. It may have received the request.
+    slowConnection: 'Connexion lente — réessayez.',
+    // On a button while its request is on its way.
+    sending: 'Envoi…',
     serverRefused: 'Le serveur a refusé : {{reason}}',
     notAvailableYet: 'Pas encore disponible',
     nav: {

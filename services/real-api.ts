@@ -130,7 +130,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  // A request the server never answered in time is told apart from one that
+  // never left the phone: after a timeout the server may have received it.
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, API_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch(urlFor(path), {
@@ -141,7 +147,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     });
   } catch {
     // Offline, DNS, TLS, or the timeout above: the server never answered.
-    throw new ApiError(0, 'network');
+    throw new ApiError(0, timedOut ? 'timeout' : 'network');
   } finally {
     clearTimeout(timer);
   }
@@ -1520,7 +1526,9 @@ const WRITES_OFF: WriteResult = { success: false, error: 'common.writesOff' };
 /** A failed request as a result a screen can show. Never throws. */
 export function writeFailure(error: unknown, { notAvailableOn404 = false } = {}): WriteResult {
   if (error instanceof ApiError) {
-    if (error.status === 0) return { success: false, error: 'common.networkError' };
+    if (error.status === 0) {
+      return { success: false, error: error.message === 'timeout' ? 'common.slowConnection' : 'common.networkError' };
+    }
     if (error.status === 401) return { success: false, error: 'auth.sessionExpired' };
     if (notAvailableOn404 && (error.status === 404 || error.status === 405)) {
       return { success: false, error: 'common.notAvailableYet' };

@@ -139,6 +139,8 @@ export function RunsheetDayCard({ runsheet, stage, today }: RunsheetDayCardProps
           <PrimaryButton
             label={runsheetConfirm.actionLabel(runsheet)}
             height={46}
+            loading={runsheetConfirm.sending}
+            loadingLabel={t('common.sending')}
             onPress={() => runsheetConfirm.confirmReceipt(runsheet)}
           />
           {/* Refusing is the rare case, so it's a quiet text button under
@@ -147,6 +149,7 @@ export function RunsheetDayCard({ runsheet, stage, today }: RunsheetDayCardProps
             <AnimatedPressable
               scaleTo={0.97}
               accessibilityRole="button"
+              disabled={runsheetConfirm.sending}
               style={styles.refuseButton}
               onPress={() => runsheetConfirm.refuse(runsheet)}>
               <Text style={[styles.refuseText, { color: colors.danger }]}>{refuseLabel}</Text>

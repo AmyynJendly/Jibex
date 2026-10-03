@@ -43,7 +43,8 @@ import { useLoadedJob } from '../../../lib/useLoadedJob';
 import { useNow } from '../../../lib/useNow';
 import { invalidateDeliveryData } from '../../../lib/query';
 import { useOnlineGuard } from '../../../lib/useOnlineGuard';
-import { safely, writeErrorText } from '../../../lib/writeResult';
+import { useWrite } from '../../../lib/useWrite';
+import { safely } from '../../../lib/writeResult';
 import { confirmDelivery, getDriverStats, getRunsheets } from '../../../services/api';
 
 /**
@@ -71,7 +72,8 @@ export default function JobDetailScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const requireOnline = useOnlineGuard();
-  const [delivering, setDelivering] = useState(false);
+  const write = useWrite();
+  const delivering = write.sending;
   // Exchange parcels only: the driver ticked "J'ai récupéré l'article".
   const [exchangeCollected, setExchangeCollected] = useState(false);
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -167,7 +169,7 @@ export default function JobDetailScreen() {
    * the money is confirmed the same way however the delivery was recorded.
    */
   async function handleDelivered() {
-    if (!job || delivering) return;
+    if (!job || write.sending) return;
     // An exchange isn't delivered until the article to return is in hand.
     if (deliveryBlocker({ callAttempts: job.callAttempts, exchange: job.exchange, exchangeCollected }) === 'exchange.required') {
       showToast(t('exchange.required'));
@@ -175,15 +177,15 @@ export default function JobDetailScreen() {
     }
     if (!requireOnline()) return;
 
-    setDelivering(true);
+    if (!write.begin()) return;
     const previousTotal = await getDriverStats()
       .then((stats) => stats.cashCollectedTotal)
       .catch(() => 0);
     const result = await safely(() => confirmDelivery(job.id, job.cashToCollect));
-    setDelivering(false);
+    write.end();
 
     if (!result.success) {
-      showToast(writeErrorText(t, result));
+      write.fail(result, handleDelivered);
       return;
     }
 
@@ -473,6 +475,7 @@ export default function JobDetailScreen() {
             label={t('jobDetail.markDelivered')}
             height={56}
             loading={delivering}
+            loadingLabel={t('common.sending')}
             style={styles.deliveredButton}
             onPress={handleDelivered}
           />

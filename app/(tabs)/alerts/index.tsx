@@ -40,6 +40,7 @@ import {
 import { localeTag } from '../../../lib/date';
 import { goToTarget } from '../../../lib/goToTarget';
 import { useNow } from '../../../lib/useNow';
+import { useWrite } from '../../../lib/useWrite';
 import { safely, writeErrorText } from '../../../lib/writeResult';
 import {
   deleteAllNotifications,
@@ -116,6 +117,7 @@ export default function AlertsScreen() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { confirm } = useConfirm();
   const { showToast } = useToast();
+  const write = useWrite();
   const reduceMotion = useReducedMotion();
   const notificationsQuery = useNotifications();
   const screen = useScreenState([notificationsQuery]);
@@ -215,9 +217,11 @@ export default function AlertsScreen() {
   async function handleMarkAllRead() {
     const unreadIds = (visible ?? []).filter((n) => !isRead(n)).map((n) => n.id);
     if (unreadIds.length === 0) return;
+    if (!write.begin()) return;
     const result = await safely(() => markAllNotificationsRead());
+    write.end();
     if (!result.success) {
-      showToast(writeErrorText(t, result));
+      write.fail(result, handleMarkAllRead);
       return;
     }
     if (hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

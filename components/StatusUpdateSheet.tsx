@@ -16,7 +16,8 @@ import { enumLabel } from '../lib/enumLabel';
 import { commonReasonsFor } from '../lib/failureReasons';
 import { UnreachableButton } from './UnreachableButton';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
-import { safely, writeErrorText } from '../lib/writeResult';
+import { useWrite } from '../lib/useWrite';
+import { safely } from '../lib/writeResult';
 import {
   confirmDelivery,
   getDriverStats,
@@ -61,7 +62,8 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const write = useWrite();
+  const submitting = write.sending;
   // Exchange parcels only: the driver ticked "J'ai récupéré l'article".
   const [exchangeCollected, setExchangeCollected] = useState(false);
   // A native sheet keeps sliding down after it's told to close. Holding on
@@ -111,19 +113,19 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
    * same cash receipt the stop screen's Delivered button ends on.
    */
   async function handleDelivered() {
-    if (!job || submitting) return;
+    if (!job) return;
     if (blocker) {
       showToast(t(blocker));
       return;
     }
-    setSubmitting(true);
+    if (!write.begin()) return;
     const previousTotal = await getDriverStats()
       .then((stats) => stats.cashCollectedTotal)
       .catch(() => 0);
     const result = await safely(() => confirmDelivery(job.id, job.cashToCollect));
-    setSubmitting(false);
+    write.end();
     if (!result.success) {
-      showToast(writeErrorText(t, result));
+      write.fail(result, handleDelivered);
       return;
     }
     const { id, cashToCollect } = job;
@@ -144,18 +146,17 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   }
 
   async function handleConfirmFailed() {
-    if (!job || !reason || submitting) return;
-    setSubmitting(true);
+    if (!job || !reason || !write.begin()) return;
     // Same capture as the full-screen Can't Deliver flow — this sheet is the
     // other place a failure reason gets set, so it needs the same proof.
     const location = await captureCurrentCoords().catch(() => null);
     const result = await safely(() =>
       markDeliveryFailed(job.id, reason, undefined, location ?? undefined)
     );
-    setSubmitting(false);
+    write.end();
     if (!result.success) {
       // The reason stays picked, so trying again is one tap.
-      showToast(writeErrorText(t, result));
+      write.fail(result, handleConfirmFailed);
       return;
     }
     setReason(null);
@@ -164,12 +165,11 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   }
 
   async function handleReopen() {
-    if (!job || submitting) return;
-    setSubmitting(true);
+    if (!job || !write.begin()) return;
     const result = await safely(() => reopenParcel(job.id));
-    setSubmitting(false);
+    write.end();
     if (!result.success) {
-      showToast(writeErrorText(t, result));
+      write.fail(result, handleReopen);
       return;
     }
     setReason(null);
@@ -199,11 +199,12 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                 </Text>
                 <AnimatedPressable
                   scaleTo={0.97}
-                  style={[styles.reopenButton, { borderColor: colors.accent }]}
+                  disabled={submitting}
+                  style={[styles.reopenButton, { borderColor: colors.accent, opacity: submitting ? 0.5 : 1 }]}
                   onPress={handleReopen}>
                   <Icon name="arrow-undo-outline" size={18} color={colors.accent} />
                   <Text style={[styles.reopenButtonText, { color: colors.accent }]}>
-                    {t('statusUpdate.markPending')}
+                    {submitting ? t('common.sending') : t('statusUpdate.markPending')}
                   </Text>
                 </AnimatedPressable>
               </>
@@ -219,11 +220,14 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                   scaleTo={0.97}
                   style={[
                     styles.deliveredButton,
-                    { backgroundColor: colors.success, opacity: canDeliver ? 1 : 0.45 },
+                    { backgroundColor: colors.success, opacity: canDeliver && !submitting ? 1 : 0.45 },
                   ]}
+                  disabled={submitting}
                   onPress={handleDelivered}>
                   <Icon name="checkmark-circle" size={20} color="#fff" />
-                  <Text style={styles.deliveredButtonText}>{t('statusUpdate.delivered')}</Text>
+                  <Text style={styles.deliveredButtonText}>
+                    {submitting ? t('common.sending') : t('statusUpdate.delivered')}
+                  </Text>
                 </AnimatedPressable>
                 {!called && (
                   <View style={styles.callHintRow}>
@@ -275,6 +279,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                   height={52}
                   disabled={!reason}
                   loading={submitting}
+                  loadingLabel={t('common.sending')}
                   onPress={handleConfirmFailed}
                   style={styles.confirmFailedButton}
                 />

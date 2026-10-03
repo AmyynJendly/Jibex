@@ -113,6 +113,7 @@ export function TransferPickupCheck({
         label={t('transfers.check.confirm')}
         height={46}
         loading={confirming}
+        loadingLabel={t('common.sending')}
         disabled={!noList && !progress.complete}
         onPress={() => (noList ? onConfirmWithoutScan({ done: 0, total: 0 }) : onConfirm())}
       />

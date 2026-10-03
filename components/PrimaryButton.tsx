@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Text,
+  View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -15,6 +16,8 @@ interface PrimaryButtonProps {
   label: string;
   onPress: () => void;
   loading?: boolean;
+  /** Shown next to the spinner while loading, e.g. "Envoi…". */
+  loadingLabel?: string;
   disabled?: boolean;
   /** Design uses 54 on auth screens, 56 on the delivery flow. Radius is always height/2. */
   height?: number;
@@ -35,6 +38,7 @@ export function PrimaryButton({
   label,
   onPress,
   loading = false,
+  loadingLabel,
   disabled = false,
   height = 54,
   style,
@@ -66,7 +70,12 @@ export function PrimaryButton({
         style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
       />
       {loading ? (
-        <ActivityIndicator color={colors.onAccent} />
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.onAccent} />
+          {loadingLabel ? (
+            <Text style={[Typography.headline, { color: colors.onAccent }, labelStyle]}>{loadingLabel}</Text>
+          ) : null}
+        </View>
       ) : (
         <Text style={[Typography.headline, { color: colors.onAccent }, labelStyle]}>{label}</Text>
       )}
@@ -75,6 +84,11 @@ export function PrimaryButton({
 }
 
 const styles = StyleSheet.create({
+  loading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   button: {
     alignItems: 'center',
     justifyContent: 'center',

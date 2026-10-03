@@ -7,7 +7,8 @@ import type { Runsheet } from '../types';
 import { promptText } from './promptText';
 import { invalidateDeliveryData } from './query';
 import { runChange, runChangeText } from './runsheetDay';
-import { safely, writeErrorText } from './writeResult';
+import { useWrite } from './useWrite';
+import { safely } from './writeResult';
 
 /**
  * Where a run waiting on the driver stands:
@@ -33,6 +34,8 @@ export function useRunsheetConfirm() {
   const { t } = useTranslation();
   const { confirm } = useConfirm();
   const { showToast } = useToast();
+  // One write at a time: a second tap on Confirm (or Refuse) sends nothing.
+  const write = useWrite();
 
   function title(runsheet: Runsheet) {
     switch (confirmStepOf(runsheet)) {
@@ -109,9 +112,11 @@ export function useRunsheetConfirm() {
 
     // Never crashes on a server or network error: the failure is shown and
     // the card stays exactly as it was.
+    if (!write.begin()) return;
     const result = await safely(() => confirmRunsheetReceipt(runsheet.id));
+    write.end();
     if (!result.success) {
-      showToast(writeErrorText(t, result));
+      write.fail(result, () => confirmReceipt(runsheet));
       // Confirmed, but not started: that did change the run — refresh so the
       // card turns into "Démarrer la tournée".
       if ('confirmedOnly' in result && result.confirmedOnly) await invalidateDeliveryData();
@@ -138,16 +143,18 @@ export function useRunsheetConfirm() {
       return;
     }
 
+    if (!write.begin()) return;
     const result = await safely(() =>
       onlyNew ? rejectNewParcels(runsheet.id, reason) : rejectRunsheet(runsheet.id, reason)
     );
+    write.end();
     if (!result.success) {
-      showToast(writeErrorText(t, result));
+      write.fail(result);
       return;
     }
     await invalidateDeliveryData();
     showToast(onlyNew ? t('runsheets.refuse.newToast') : t('runsheets.refuse.toast'));
   }
 
-  return { confirmReceipt, refuse, title, actionLabel, shortActionLabel, refuseLabel };
+  return { confirmReceipt, refuse, title, actionLabel, shortActionLabel, refuseLabel, sending: write.sending };
 }
