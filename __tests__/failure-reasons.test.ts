@@ -37,7 +37,7 @@ const BACKEND_NAMES = [
   'FORCE_MAJEURE',
 ];
 
-/** The web app's own French labels (its `{label, anomaly}` table), REFUSED as the agency asked. */
+/** The web app's own French labels (its `{label, anomaly}` table). Hidden reasons keep theirs, for old records. */
 const WEB_LABELS: Record<string, string> = {
   NO_ANSWER: 'Ne répond pas',
   REFUSED: 'Colis refusé',
@@ -84,26 +84,36 @@ describe('failure reasons', () => {
     expect(FAILURE_REASONS.map((r) => r.value).sort()).toEqual([...BACKEND_NAMES].sort());
   });
 
-  it('offers 20 on a first attempt: all but "Client non intéressé"', () => {
+  it('offers 19: all but the two the business merged into "Annulé par client"', () => {
     const offered = reasonsFor(0).map((r) => r.value);
-    expect(offered).toHaveLength(20);
-    expect(offered).toContain('REFUSED');
+    expect(offered).toHaveLength(19);
+    expect(offered).not.toContain('REFUSED');
     expect(offered).not.toContain('NOT_INTERESTED_2ND_ATTEMPT');
     // No count from the server means a first attempt.
     expect(reasonsFor(undefined).map((r) => r.value)).toEqual(offered);
     expect(reasonsFor(null).map((r) => r.value)).toEqual(offered);
   });
 
-  it('adds "Client non intéressé" once the parcel has already failed', () => {
-    expect(reasonsFor(1).map((r) => r.value)).toContain('NOT_INTERESTED_2ND_ATTEMPT');
-    expect(reasonsFor(1)).toHaveLength(21);
-    expect(reasonsFor(3)).toHaveLength(21);
+  it('hides "Colis refusé" and "Client non intéressé" on every attempt, like Android', () => {
+    for (const attempts of [0, 1, 2, 3]) {
+      const offered = reasonsFor(attempts).map((r) => r.value);
+      expect(offered).toHaveLength(19);
+      expect(offered).not.toContain('REFUSED');
+      expect(offered).not.toContain('NOT_INTERESTED_2ND_ATTEMPT');
+    }
   });
 
-  it('always offers "Colis refusé"', () => {
-    for (const attempts of [0, 1, 2, 3]) {
-      expect(reasonsFor(attempts).map((r) => r.value)).toContain('REFUSED');
+  it('offers "Annulé par client" instead, in the full list and in the quick one', () => {
+    for (const attempts of [0, 1, 3]) {
+      expect(reasonsFor(attempts).map((r) => r.value)).toContain('CANCELLED_BY_CLIENT');
+      expect(commonReasonsFor(attempts).map((r) => r.value)).toContain('CANCELLED_BY_CLIENT');
     }
+    expect(fr.enums.failureReason.CANCELLED_BY_CLIENT).toBe('Annulé par client');
+  });
+
+  it('still names the two hidden reasons on parcels recorded with them', () => {
+    expect(fr.enums.failureReason.REFUSED).toBe('Colis refusé');
+    expect(fr.enums.failureReason.NOT_INTERESTED_2ND_ATTEMPT).toBe('Client non intéressé');
   });
 
   it('keeps the quick list inside what the driver may pick, and without OTHER', () => {

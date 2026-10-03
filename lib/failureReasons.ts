@@ -11,16 +11,14 @@ import type { DeliveryFailureReason } from '../types';
  * `enums.failureReason.<NAME>`, in the agency web app's own words.
  *
  * Which ones the driver is offered:
- *  - `selectable: false` would hide a reason from the picker while keeping
- *    its label for parcels already recorded with it. None is hidden today.
+ *  - `selectable: false` hides a reason from the picker while keeping its
+ *    label for parcels already recorded with it. Two are hidden, like in
+ *    the Android app: REFUSED and NOT_INTERESTED_2ND_ATTEMPT. The business
+ *    merged them into CANCELLED_BY_CLIENT ("Annulé par client") on
+ *    13/08/2026 — that is the one the driver picks instead.
  *  - `fromAttempt: 2` offers a reason only on a second attempt or later
- *    (the parcel already failed once): "Client non intéressé" is the
- *    backend's NOT_INTERESTED_2ND_ATTEMPT.
- *
- * NOTE — the Android app hides REFUSED and NOT_INTERESTED_2ND_ATTEMPT (its
- * source says the business merged them into CANCELLED_BY_CLIENT on
- * 13/08/2026). This app shows them, as asked after the live tests; to hide
- * them again, set `selectable: false` on those two lines.
+ *    (the parcel already failed once). It only matters for a selectable
+ *    reason.
  *
  * `sav: true` marks the reasons the web app treats as an anomaly: choosing
  * one opens an after-sales (SAV) case at the agency. The driver is told.
@@ -53,10 +51,10 @@ export const FAILURE_REASONS: readonly FailureReasonInfo[] = [
   { value: 'ABSENT', group: 'customer', icon: 'home-outline', selectable: true, common: true, sav: false },
   { value: 'NOT_AVAILABLE_RESCHEDULED', group: 'customer', icon: 'calendar-outline', selectable: true, common: true, sav: false },
   { value: 'CANCELLED_BY_CLIENT', group: 'customer', icon: 'ban-outline', selectable: true, common: true, sav: true },
-  { value: 'REFUSED', group: 'customer', icon: 'close-circle-outline', selectable: true, common: false, sav: true },
+  { value: 'REFUSED', group: 'customer', icon: 'close-circle-outline', selectable: false, common: false, sav: true },
   { value: 'PARCEL_POSTPONED', group: 'customer', icon: 'time-outline', selectable: true, common: false, sav: false },
   { value: 'UNRELIABLE_CLIENT', group: 'customer', icon: 'alert-circle-outline', selectable: true, common: false, sav: true },
-  { value: 'NOT_INTERESTED_2ND_ATTEMPT', group: 'customer', icon: 'thumbs-down-outline', selectable: true, common: false, sav: true, fromAttempt: 2 },
+  { value: 'NOT_INTERESTED_2ND_ATTEMPT', group: 'customer', icon: 'thumbs-down-outline', selectable: false, common: false, sav: true, fromAttempt: 2 },
   // The address
   { value: 'WRONG_ADDRESS', group: 'address', icon: 'location-outline', selectable: true, common: true, sav: false },
   { value: 'INCOMPLETE_ADDRESS', group: 'address', icon: 'map-outline', selectable: true, common: false, sav: false },
