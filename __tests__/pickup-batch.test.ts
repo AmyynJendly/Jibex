@@ -39,16 +39,32 @@ describe('finish all pickups', () => {
     expect(batch).toEqual({ ids: ['41', '42'], count: 2, parcels: 12 });
   });
 
-  it('asks with the numbers: "Terminer N pickups (M colis) ?"', () => {
-    expect(t('pickups.finishAllTitle', { count: 3, parcels: 12 })).toBe('Terminer 3 pickups (12 colis) ?');
-    expect(t('pickups.finishAllTitle', { count: 1, parcels: 4 })).toBe('Terminer 1 pickup (4 colis) ?');
-    expect(fr.pickups.finishAll).toBe('Terminer tous les pickups');
+  it('asks with the numbers: "Terminer N ramassages (M colis) ?"', () => {
+    expect(t('pickups.finishAllTitle', { count: 3, parcels: 12 })).toBe('Terminer 3 ramassages (12 colis) ?');
+    expect(t('pickups.finishAllTitle', { count: 1, parcels: 4 })).toBe('Terminer 1 ramassage (4 colis) ?');
+    expect(fr.pickups.finishAll).toBe('Terminer tous les ramassages');
+    expect(fr.pickups.check.finish).toBe('Terminer le ramassage');
     expect(fr.pickups.finishAllConfirm).toBe('Confirmer');
     expect(fr.common.cancel).toBe('Annuler');
   });
 
   it('has nothing to finish on an empty list', () => {
     expect(pickupBatch([])).toEqual({ ids: [], count: 0, parcels: 0 });
+  });
+
+  it('uses one French word everywhere: ramassage', () => {
+    // Every French text, flattened. The only "pickup" left is the agency's own parcel status.
+    const texts: string[] = [];
+    const walk = (node: unknown, path: string) => {
+      if (typeof node === 'string') texts.push(`${path}=${node}`);
+      else if (node && typeof node === 'object') for (const [key, value] of Object.entries(node)) walk(value, `${path}.${key}`);
+    };
+    walk(fr, 'fr');
+    const stray = texts.filter((line) => /collecte|pickup/i.test(line.split('=').slice(1).join('=')));
+    expect(stray).toEqual(['fr.enums.parcelStatus.PICKUP=Pickup']);
+    expect(fr.pickups.headerTitle).toBe('Ramassages');
+    expect(fr.common.nav.pickups).toBe('Ramassages');
+    expect(fr.home.stats.pickups).toMatch(/ramass/i);
   });
 
   it('keeps "Tout cocher" on each pickup', () => {
