@@ -103,7 +103,6 @@ export function ProfileSettingsList(props: ProfileSettingsListProps) {
 
         <Section title={props.labels.security}>
           {toggleRow(props.labels.biometric, 'faceid', props.biometric, props.onBiometricChange)}
-          {navRow(props.labels.changePassword, 'key', props.onChangePassword)}
           {toggleRow(props.labels.haptics, 'iphone.radiowaves.left.and.right', props.haptics, props.onHapticsChange)}
           {props.nextStopBar !== null &&
             toggleRow(

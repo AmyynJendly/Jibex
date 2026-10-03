@@ -115,7 +115,6 @@ export default function RootLayout() {
                           <Stack.Screen name="transfer/[id]" options={standardHeader} />
                           <Stack.Screen name="returns" options={largeTitleHeader} />
                           <Stack.Screen name="help-center" options={standardHeader} />
-                          <Stack.Screen name="change-password" options={standardHeader} />
                           <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
                           <Stack.Screen name="search" options={standardHeader} />
                         </Stack>

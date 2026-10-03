@@ -7,7 +7,6 @@ export interface ProfileSettingsListProps {
     language: string;
     security: string;
     biometric: string;
-    changePassword: string;
     haptics: string;
     nextStopBar: string;
     support: string;
@@ -27,6 +26,5 @@ export interface ProfileSettingsListProps {
   onNextStopBarChange: (on: boolean) => void;
   appVersion: string;
   onOpenHelpCenter: () => void;
-  onChangePassword: () => void;
   onLogOut: () => void;
 }

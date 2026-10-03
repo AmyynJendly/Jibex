@@ -44,7 +44,6 @@ import { jobStatusOfParcel } from '../lib/parcelStatus';
 import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
 import { localeTag, toDateKey } from '../lib/date';
-import { passwordProblem } from '../lib/password';
 import { dayRuns, lockedStopIds } from '../lib/runsheetDay';
 import { i18next } from '../lib/i18n';
 import { nearestFirstByArea } from '../lib/route';
@@ -105,8 +104,6 @@ interface RequestOptions {
   body?: unknown;
   /** Send the stored token. Only the login call goes without. */
   auth?: boolean;
-  /** A 401 on this call is an answer (a wrong current password), not a dead session. */
-  keepSessionOn401?: boolean;
 }
 
 function urlFor(path: string): string {
@@ -125,7 +122,7 @@ async function readServerMessage(response: Response): Promise<string | undefined
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, auth = true, keepSessionOn401 = false } = options;
+  const { method = 'GET', body, auth = true } = options;
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
@@ -154,7 +151,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     // The token is dead (24 h old or revoked; there's no refresh): sign out
     // and send the driver back to login. Not for the login call itself,
     // where a 401 just means a wrong password.
-    if (response.status === 401 && auth && !keepSessionOn401) {
+    if (response.status === 401 && auth) {
       await expireSession();
     }
     throw new ApiError(response.status, `HTTP ${response.status}`, serverMessage);
@@ -1035,38 +1032,6 @@ export async function getUser(): Promise<User> {
     throw new ApiError(401, 'not signed in');
   }
   return { ...session.user };
-}
-
-/**
- * `PUT /api/driver-auth/change-password` `{driverId, oldPassword, newPassword}`
- * — the same call and the same checks as the Android app. A wrong current
- * password must not sign the driver out, so a 401 here does not end the
- * session: it is shown as "ancien mot de passe incorrect".
- */
-export async function changePassword(
-  oldPassword: string,
-  newPassword: string,
-  confirmPassword: string
-): Promise<WriteResult> {
-  const problem = passwordProblem({ oldPassword, newPassword, confirmPassword });
-  if (problem) return { success: false, error: problem };
-  if (!API_WRITES) return WRITES_OFF;
-  try {
-    const { driverId } = await requireSession();
-    await request('api/driver-auth/change-password', {
-      method: 'PUT',
-      body: { driverId: Number(driverId), oldPassword, newPassword },
-      keepSessionOn401: true,
-    });
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 400 || error.status === 401 || error.status === 403)) {
-      return error.serverMessage
-        ? { success: false, error: 'common.serverRefused', errorParams: { reason: error.serverMessage } }
-        : { success: false, error: 'changePassword.errors.wrongOld' };
-    }
-    return writeFailure(error);
-  }
-  return { success: true };
 }
 
 export async function logout(): Promise<void> {

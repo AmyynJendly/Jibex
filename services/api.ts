@@ -45,7 +45,6 @@ const useReal = API_MODE === 'real';
 export const login = useReal ? real.login : mock.login;
 export const getUser = useReal ? real.getUser : mock.getUser;
 export const logout = useReal ? real.logout : mock.logout;
-export const changePassword = useReal ? real.changePassword : mock.changePassword;
 
 // Runsheets and parcels. History includes runsheets the agency has closed.
 export const getRunsheets = useReal ? real.getRunsheets : mock.getRunsheets;
