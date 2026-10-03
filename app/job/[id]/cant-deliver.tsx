@@ -405,3 +405,6 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
 });
+
+// A crash while this screen draws shows a message and "Réessayer", not a white screen.
+export { ErrorBoundary } from '../../../components/ScreenErrorBoundary';

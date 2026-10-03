@@ -26,6 +26,12 @@ const fr: TranslationResource = {
       body: 'Vérifiez votre connexion, puis réessayez.',
       retry: 'Réessayer',
     },
+    // A screen crashed while drawing.
+    screenError: {
+      title: 'Un problème est survenu',
+      body: 'Cet écran n’a pas pu s’afficher. Réessayez ; si cela continue, revenez à l’accueil.',
+      home: 'Retour à l’accueil',
+    },
     cancel: 'Annuler',
     undo: 'Rétablir',
     back: 'Retour',

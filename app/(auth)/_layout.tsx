@@ -7,3 +7,6 @@ export default function AuthLayout() {
     </Stack>
   );
 }
+
+// A crash while this screen draws shows a message and "Réessayer", not a white screen.
+export { ErrorBoundary } from '../../components/ScreenErrorBoundary';

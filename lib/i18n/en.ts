@@ -23,6 +23,12 @@ const en = {
       body: 'Check your connection, then try again.',
       retry: 'Try Again',
     },
+    // A screen crashed while drawing.
+    screenError: {
+      title: 'Something went wrong',
+      body: 'This screen could not be shown. Try again; if it keeps happening, go back to Home.',
+      home: 'Back to Home',
+    },
     cancel: 'Cancel',
     undo: 'Undo',
     back: 'Back',
