@@ -7,7 +7,7 @@ These fixes come from the four live test reports (`test-run/` to `test-run-4/`).
 - One commit per fix.
 - A follow-up round changed fixes 4 and 10. See "Follow-up" below.
 - A parity pass against the Android app came next. See "Parity pass" below and `PARITY.md`.
-- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **28 suites, 323 tests, all pass** (after the parity pass).
+- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **27 suites, 311 tests, all pass** (after the parity pass and its follow-up).
 - Not tested on a phone yet. See "What to check on the phone" at the end.
 
 ---
@@ -103,6 +103,7 @@ No row is dropped: a true repeat gets `#2`.
 ### 6. Prices
 
 "10.000 TND": three decimals, a dot. One shared formatter.
+Percentages have two decimals ("65.38%"). See "Number format" at the end of the parity pass.
 
 - Files: `lib/currency.ts`
 - Test: `__tests__/currency.test.ts`, `__tests__/recent-searches.test.ts`
@@ -257,11 +258,11 @@ A fix pass on the gaps listed in `PARITY.md`. Writes stayed off. No write was se
 One commit per gap, each message starting with the gap number.
 
 The client rules from the Moncef / Jihed meeting win over Android parity:
-History is read-only with no phone numbers; a finished run shows no parcels; three decimals on every decimal
-number; "Done All" for pickups; call before "delivered"; the driver can correct a parcel; confirming a run is one tap.
+History is read-only with no phone numbers; a finished run shows no parcels; money with three decimals and
+percentages with two (changed after the pass, see "Number format" below); "Done All" for pickups; call before "delivered"; the driver can correct a parcel; confirming a run is one tap.
 
-Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **28 suites, 323 tests, all pass**.
-Not run on a phone.
+Final check, after the follow-up below: `npx tsc --noEmit` clean, `npx expo lint` clean,
+`npx jest` → **27 suites, 311 tests, all pass**. Not run on a phone.
 
 ### MUST and SHOULD gaps
 
@@ -274,12 +275,12 @@ Not run on a phone.
 | 5 | Pickup counter 6 vs 0 | **Done.** The number is kept and labelled "À ramasser". | `87cf0d6` |
 | 6 | No badges on Home buttons | **Done.** Four badges, like Android. | `b378ceb` |
 | 7 | Three names for pickups | **Done.** "Ramassage" everywhere. | `f877ec1` |
-| 8 | Home gauge has no name | **Done.** "AUJOURD'HUI" under the gauge; Profile says "(total)". Percentages have 3 decimals. | `036ecbf` |
+| 8 | Home gauge has no name | **Done.** "AUJOURD'HUI" under the gauge; Profile says "(total)". Percentages: now 2 decimals, see "Number format". | `036ecbf`, `acfaac8` |
 | 9 | Pickup card: no reference, no day | **Done.** Reference under the address, "02/10 · 23:13". | `27e2ea4` |
 | 10 | No "Naviguer" / contact on a collected pickup | **Skipped: client rule.** See below. | — |
 | 11 | "5 En transit" counts parcels | **Done.** "Colis en transit". | `b592683` |
 | 12 | Home shows no current run | **Done.** A row with the run code and "N restants sur M". | `87d77c8` |
-| 13 | No change password | **Done.** Same call and checks as Android. | `e3086da` |
+| 13 | No change password | **Removed on request.** Built in `e3086da`, taken out in `839e66d`. See below. | — |
 | 14 | Confirm also starts the run | **Skipped: client rule.** See below. | — |
 | 15 | Call rule has no way out | **Done.** "Client injoignable — continuer". The rule itself is kept. | `014b177` |
 
@@ -306,10 +307,10 @@ Not run on a phone.
 | D | Keep "Remettre en attente" | Kept. No change. |
 | E | "Client injoignable — continuer" | Done (gap 15). |
 | F | Transfer detail screen | Done (gap 3). |
-| G | "Changer le mot de passe" | Done (gap 13). Personal and vehicle info stay read-only. |
+| G | "Changer le mot de passe" | Built, then **removed on request**. Personal and vehicle info stay read-only. |
 | H | Pickups: no change to the flow | Flow unchanged. Only the words changed (gap 7). |
 | I | Arabic | Nothing done. |
-| J | Percentages with 3 decimals | Done (gap 8): "0.000%", "65.385%". |
+| J | Percentages with 3 decimals | **Replaced.** Percentages now have 2 decimals: "0.00%", "65.38%". See "Number format". |
 | K | A closed run shows only its card | Checked and tested (`fc99faa`). The mock now follows the same rule. |
 
 ### Skipped: client rule
@@ -351,7 +352,7 @@ Files: `lib/i18n/fr.ts`, `lib/i18n/en.ts`. Tests: `__tests__/pickup-batch.test.t
 **Gap 6 — badges.** Open runs, ramassages to do, open transfers, returns still with the driver. Nothing at zero.
 Files: `lib/homeBadges.ts`, `app/(tabs)/home/index.tsx`. Test: `__tests__/home-badges.test.ts`.
 
-**Gap 8 and J — percentages.** One formatter, three decimals.
+**Gap 8 and J — percentages.** One shared file, two functions. Two decimals since the follow-up.
 Files: `lib/currency.ts`, i18n. Tests: `__tests__/currency.test.ts`, `__tests__/recent-searches.test.ts`.
 
 **Gap 9 — pickup card.** Files: `lib/pickupBatch.ts`, `lib/date.ts`, `app/pickups.tsx`.
@@ -360,12 +361,7 @@ Test: `__tests__/pickup-batch.test.ts`.
 **Gap 12 and 16 — the run in numbers.** Files: `lib/runsheetDay.ts`, `components/RunsheetDayCard.tsx`,
 `app/(tabs)/home/index.tsx`, `types/runsheet.ts`, both APIs. Test: `__tests__/run-counts.test.ts`.
 
-**Gap 13 — change password.** Profil → "Changer le mot de passe" → three fields. Checks on the phone first:
-the two new entries match, at least 4 characters (as Android), plus two of ours: the current one is filled in, and
-the new one differs. Then `PUT api/driver-auth/change-password` with `{driverId, oldPassword, newPassword}`.
-With writes off it sends nothing and says so. A wrong current password does not sign the driver out.
-Files: `app/change-password.tsx`, `lib/password.ts`, `components/ProfileSettingsList*.tsx`,
-`app/(tabs)/profile/index.tsx`, both APIs, `services/api.ts`. Test: `__tests__/change-password.test.ts`.
+**Gap 13 — change password.** Removed on request. See "Removed on request" below.
 
 **Gap 15 — "Client injoignable — continuer".** Shown on the parcel screen and in the status sheet once Call was
 pressed. It notes "client injoignable" on the phone, and the note goes to the agency with a failure:
@@ -386,16 +382,42 @@ Files: `components/UnreachableButton.tsx`, `lib/deliveryGate.ts`, `lib/deviceSto
 - **Older sections of this file** still say "pickup" in the button names and describe the full-run lock.
   They describe the app as it was then. This section is the current state.
 
+### Removed on request
+
+**"Changer le mot de passe" (parity gap 13, decision G).** Drivers do not change their password in the app.
+Everything it added is gone (commit `839e66d`, which undoes `e3086da`):
+
+- the row in Profil (both the iPhone list and the fallback list);
+- the screen `app/change-password.tsx` and its route;
+- the call `PUT api/driver-auth/change-password`, real and mock, and its entry in `services/api.ts`;
+- the checks in `lib/password.ts`;
+- its French and English texts;
+- its tests (`__tests__/change-password.test.ts`).
+
+The Android app still has this feature. It is now a known difference, on purpose.
+
+### Number format
+
+This replaces the old client rule "3 decimals on every decimal number" (commit `acfaac8`).
+
+| What | Decimals | Example | Function |
+|---|---|---|---|
+| Money | 3 | "10.000 TND" | `formatCurrency` |
+| Percentages | 2 | "0.00%", "65.38%", "99.99%" | `formatPercent` |
+
+Both live in `lib/currency.ts`. Percentages are shown in two places: the Home gauge and the Profile rate.
+I searched the screens for any other percentage and found none.
+Distances and weights keep three decimals: the new rule did not mention them. Say so if they should change.
+Tests: `__tests__/currency.test.ts`, `__tests__/recent-searches.test.ts`.
+
 ### To check on the live server
 
 1. **Gap 1.** With a parcel added to a started run and not confirmed yet: update one of the old parcels.
    The server must accept it. If it refuses, the lock has to go back to the whole run.
 2. **Gap 19.** "Remettre en attente" sends `{status: "PENDING"}`. The Android app never sends that. Test it once.
-3. **Gap 13.** Change the password with the right and with a wrong current password. Check what the server
-   answers for a wrong one (400 or 401) and that the message reads well.
-4. **Gap 2.** Compare the attempt numbers on History cards with the agency's count for the same parcel.
-5. **Gap 3.** Open a real ongoing transfer: check the dates, the parcel statuses and the notes against the web app.
-6. **Decision C.** Confirm a run with one tap and check it is IN_PROGRESS right after.
+3. **Gap 2.** Compare the attempt numbers on History cards with the agency's count for the same parcel.
+4. **Gap 3.** Open a real ongoing transfer: check the dates, the parcel statuses and the notes against the web app.
+5. **Decision C.** Confirm a run with one tap and check it is IN_PROGRESS right after.
 
 ## What to check on the phone
 
@@ -409,7 +431,7 @@ Nothing here was run on a device. With `npx expo start --clear`:
 - History: the line "RS-… · 02/10 · Tentative N" on each card.
 - A changed run: only the "NOUVEAU" parcel is locked, the others still work.
 - A transfer in progress: "Voir le détail du transfert" and the detail screen. None on a transfer in History.
-- Profil: "Changer le mot de passe" (it will say writes are off).
+- Profil: no "Changer le mot de passe" row. Percentages with two decimals on Home and in Profil.
 - A parcel: press Call, then "Client injoignable — continuer".
 - Can't-deliver screen: "Annulé par client" is there, "Colis refusé" is not, no SAV hint.
 - Scanner: hold one label in front of the camera. It must count once.
