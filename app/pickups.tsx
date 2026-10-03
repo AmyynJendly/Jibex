@@ -33,7 +33,7 @@ import {
 import { checkAll, checkProgress, checklistKey, clearChecklist, setChecked } from '../lib/checklist';
 import { formatCurrency } from '../lib/currency';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
-import { pickupBatch } from '../lib/pickupBatch';
+import { pickupBatch, pickupReference, pickupWhen } from '../lib/pickupBatch';
 import { telUrl } from '../lib/phone';
 import { invalidatePickups, usePickups, useScreenState } from '../lib/query';
 import { normalizeCode } from '../lib/scanSession';
@@ -102,6 +102,7 @@ function PickupCard({
   // a confirmation instead (see the screen's `handleFinish`).
   const noList = codes.length === 0;
   const canFinish = progress.complete || noList;
+  const reference = pickupReference(pickup);
 
   return (
     <Card
@@ -127,6 +128,12 @@ function PickupCard({
             <Text style={[Typography.footnote, { color: colors.textSecondary }]} numberOfLines={1}>
               {pickup.address}
             </Text>
+            {/* The agency's reference: what it quotes on the phone. */}
+            {reference && (
+              <Text style={[styles.reference, { color: colors.textSecondary }]} numberOfLines={1}>
+                {reference}
+              </Text>
+            )}
           </View>
 
           <View style={[styles.chevronWell, { backgroundColor: colors.bg }]}>
@@ -140,7 +147,7 @@ function PickupCard({
       </View>
 
       <View style={styles.metaRow}>
-        <MetaChip icon="time-outline" label={pickup.timeWindow} />
+        <MetaChip icon="time-outline" label={pickupWhen(pickup)} />
         <MetaChip
           icon="cube-outline"
           label={t('common.package', { count: pickup.packageCount })}
@@ -807,6 +814,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingVertical: Spacing.smd,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  reference: {
+    ...monoStyle(12, 'medium'),
+    marginTop: 2,
   },
   parcelTracking: {
     ...monoStyle(13, 'medium'),

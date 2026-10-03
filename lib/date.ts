@@ -27,3 +27,11 @@ export function startOfDay(date: Date): Date {
   d.setHours(0, 0, 0, 0);
   return d;
 }
+
+/** "02/10" — the local day and month of a date-time, or nothing when it isn't one. */
+export function formatDayMonth(value: string | undefined | null): string | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+}

@@ -11,7 +11,7 @@ jest.mock('expo-secure-store', () => ({
 
 import { i18next } from '../lib/i18n';
 import fr from '../lib/i18n/fr';
-import { pickupBatch } from '../lib/pickupBatch';
+import { pickupBatch, pickupReference, pickupWhen } from '../lib/pickupBatch';
 
 type MockApi = typeof import('../services/mock-api');
 
@@ -66,6 +66,16 @@ describe('finish all pickups', () => {
     expect(fr.common.nav.pickups).toBe('Ramassages');
     // The Home number counts only what is still to do, and says so.
     expect(fr.home.stats.pickups).toBe('À ramasser');
+  });
+
+  it('shows the agency’s reference and the day on a card', () => {
+    // Android shows "PU-3-20260712-0001" and the date; ours showed a time alone.
+    expect(pickupReference({ id: '41', server: { pickupId: '41', requestNumber: 'PU-3-20261002-0001' } })).toBe('PU-3-20261002-0001');
+    expect(pickupReference({ id: 'PU-3-20261002-0002' })).toBe('PU-3-20261002-0002');
+    // A bare server id is not a reference.
+    expect(pickupReference({ id: '41' })).toBeUndefined();
+    expect(pickupWhen({ requestedByDate: '2026-10-02T23:13:00', timeWindow: '23:13' })).toBe('02/10 · 23:13');
+    expect(pickupWhen({ requestedByDate: '', timeWindow: '23:13' })).toBe('23:13');
   });
 
   it('keeps "Tout cocher" on each pickup', () => {
