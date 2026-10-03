@@ -7,7 +7,7 @@ These fixes come from the four live test reports (`test-run/` to `test-run-4/`).
 - One commit per fix.
 - A follow-up round changed fixes 4 and 10. See "Follow-up" below.
 - A parity pass against the Android app came next. See "Parity pass" below and `PARITY.md`.
-- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **27 suites, 311 tests, all pass** (after the parity pass and its follow-up).
+- Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **35 suites, 434 tests, all pass** (after the optimization pass and the OTP work; see `OPTIMIZATION.md` and "OTP delivery confirmation" below).
 - Not tested on a phone yet. See "What to check on the phone" at the end.
 
 ---
@@ -418,6 +418,87 @@ Tests: `__tests__/currency.test.ts`, `__tests__/recent-searches.test.ts`.
 3. **Gap 2.** Compare the attempt numbers on History cards with the agency's count for the same parcel.
 4. **Gap 3.** Open a real ongoing transfer: check the dates, the parcel statuses and the notes against the web app.
 5. **Decision C.** Confirm a run with one tap and check it is IN_PROGRESS right after.
+
+## OTP delivery confirmation
+
+Requested by Jihed. Writes stayed off; no write was sent to the live server. One commit per item.
+There is no server API for the code yet, so it is built behind a small service with a mock.
+The API contract the app expects is in `OTP.md`.
+
+Final check: `npx tsc --noEmit` clean, `npx expo lint` clean, `npx jest` → **35 suites, 434 tests, all pass**.
+Not run on a phone.
+
+| Item | What | Commit |
+|---|---|---|
+| 1 | The OTP screen is restored from git history and adapted. The photo-proof screen is not restored. | `6e6f51c` |
+| 2 | The rule: `itemValue = price − deliveryFee` (missing fee → 0); a code is required when it is 0. | `65a37dc` |
+| 3 | The cash wording on the delivery screen. | `c725585` |
+| 4 | The code flow (send, type, resend, block, failure path, test banner). | `6e6f51c` |
+| 5 | The service `sendOtp` / `verifyOtp` / `resendOtp`, with a mock, and `OTP.md`. | `7dd846e` |
+| 6 | Tests. | with each item |
+
+Items 1 and 4 are one commit: the old screen could not build on its own any more (its mock function and its
+photo link were gone), so restoring it and adapting it had to go together.
+
+### What the driver sees
+
+**When a code is required.** Two cases, both with nothing of value to collect for the sender:
+
+| price | deliveryFee | Code? | Cash line on the delivery screen |
+|---|---|---|---|
+| 0 | 0 | Yes | "Rien à encaisser" |
+| 10 | 10 | Yes | "10.000 TND" with "(frais de livraison)": the driver collects the fee in cash |
+| 950 | 10 | No | "950.000 TND", as before |
+| 10 | none | No | "10.000 TND", as before |
+
+**The flow.** "Livré" on such a parcel opens the code screen instead of delivering.
+- Opening it sends the code: "Code envoyé au client".
+- The driver types 6 digits. "Livré" is enabled only after a correct code.
+- "Renvoyer le code" is available after 60 s, at most 3 times.
+- 5 wrong codes: "Code bloqué — renvoyez un nouveau code".
+- After 3 resends with no success: "Impossible de valider — marquez un échec", with a button to the failure screen.
+- There is no way to deliver without a correct code. The delivery call itself refuses, on the mock and on the
+  real side, even if the screen were bypassed.
+- The call-before-delivery rule still applies. It is checked before the code is sent, so no SMS goes out for a
+  customer who was never called.
+- In mock mode only, a "MODE TEST" banner shows the code so the flow can be tested.
+
+### Files
+
+- Rule and cash: `lib/otpRule.ts`. Parcels now carry `deliveryFee` (`types/job.ts`, `services/real-api.ts`).
+- Code rules (6 digits, 10 minutes, 60 s, 3 resends, 5 wrong codes): `lib/otpSession.ts`.
+- Service: `services/otp.ts`. **This is the one file to change when the real API exists.**
+- Screen: `app/job/[id]/otp.tsx`. Entry points: `app/job/[id]/index.tsx`, `components/StatusUpdateSheet.tsx`.
+- Enforcement: `confirmDelivery` in `services/mock-api.ts` and `services/real-api.ts`.
+- Mock data: two parcels on a confirmed run, one "fee only" (8 / 8) and one "nothing" (0 / 0).
+- Tests: `__tests__/otp-rule.test.ts` (0/0, 10/10, 950/10, fee null, decimals, the cash line) and
+  `__tests__/otp-flow.test.ts` (resend timer and limit, wrong-code limit, the failure path, no delivery without
+  a code, the call rule first, and real mode never showing the test banner).
+
+### Things to know
+
+1. **In real mode, a parcel that needs a code cannot be delivered today.** The real service has no API to call,
+   so it cannot send a code, nothing can be verified, and the delivery is refused. The driver can only record a
+   failure. Writes are off, so this blocks nobody now. But **the OTP API must exist before writes are switched
+   on for real drivers**, or the rule must be switched off. Please tell Jihed.
+2. **The rule is only checked on the phone.** The server will still accept a plain "delivered" for these
+   parcels from another client (the Android app, the web). `OTP.md` asks Jihed to check it on the server too.
+3. **Price 0 and fee 0 now needs a code.** Before, such a parcel showed "Payé" and was delivered in one tap.
+   If prepaid parcels are common, most of them will now ask for a code. That follows the rule as given.
+4. **The mock's codes live in memory.** Closing the app forgets the code and its counters, so a restart gives
+   three new resends. The real API will keep them on the server.
+5. **The old screen had 4 digits and a "take a photo instead" link.** The new one has 6 digits and no photo.
+6. **The list card still says "Payé"** for a 0 / 0 parcel. Only the delivery screen was asked to change.
+
+### To check on the phone (mock mode)
+
+- Open the mock parcel of Sonia Gharbi (8.000 TND, fee only) and Karim Mejri (nothing to collect).
+- Tap "Livré" without calling: "Appelez d'abord le client".
+- Call, then "Livré": the code screen opens, with the "MODE TEST" banner and the code.
+- Type a wrong code five times: "Code bloqué".
+- Wait 60 s, resend, type the new code: "Livré" becomes available.
+- Use the three resends: "Impossible de valider — marquez un échec" and its button.
+- Switch to real mode: the banner is gone and the screen says the code cannot be sent yet.
 
 ## What to check on the phone
 

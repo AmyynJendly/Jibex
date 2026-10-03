@@ -44,7 +44,10 @@ Explain things simply, in short sentences.
 - Real mode reads: login, runsheets (active + history), pickups, transfers,
   returns, notifications.
 - Real writes are built in `real-api.ts`, each guarded by `API_WRITES`.
-  There is no photo or OTP delivery (the server has no field for them).
+  There is no photo delivery (the server has no field for it).
+- OTP: a parcel with nothing of value to collect (price - deliveryFee = 0, see
+  `lib/otpRule.ts`) needs the customer's code. `services/otp.ts` is the only file to
+  change when the real API exists (contract in `OTP.md`); today it is a mock.
 - Every action button sends through `lib/useWrite.ts`: one write at a time,
   "Envoi…" while it runs, and a retry when the server did not answer.
 - Phone-only state (`lib/deviceStore.ts`, AsyncStorage): call log, drag order,
