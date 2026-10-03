@@ -40,13 +40,19 @@ import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { useNextStop } from '../../../lib/useNextStop';
 import {
   invalidateDeliveryData,
+  invalidatePickups,
+  invalidateReturns,
+  invalidateTransfers,
   useDriverStats,
   useJobsByIds,
   usePickups,
+  useReturns,
   useRunsheets,
   useScreenState,
+  useTransfers,
   useUser,
 } from '../../../lib/query';
+import { badgeText, homeBadges } from '../../../lib/homeBadges';
 import { useRunsheetConfirm } from '../../../lib/useRunsheetConfirm';
 import type { DriverStats, Runsheet, User } from '../../../types';
 
@@ -96,6 +102,10 @@ export default function HomeScreen() {
   const statsQuery = useDriverStats();
   const runsheetsQuery = useRunsheets();
   const pickupsQuery = usePickups();
+  // Only for the counts on the four buttons. A list that fails to load
+  // simply shows no badge: Home never waits on these.
+  const transfersQuery = useTransfers();
+  const returnsQuery = useReturns();
 
   const runsheets = useMemo(() => runsheetsQuery.data ?? [], [runsheetsQuery.data]);
 
@@ -188,7 +198,7 @@ export default function HomeScreen() {
     setRefreshing(true);
     try {
       await Promise.race([
-        invalidateDeliveryData(),
+        Promise.all([invalidateDeliveryData(), invalidatePickups(), invalidateTransfers(), invalidateReturns()]),
         new Promise((resolve) => setTimeout(resolve, REFRESH_MAX_MS)),
       ]);
     } finally {
@@ -266,6 +276,13 @@ export default function HomeScreen() {
   const nextStopEtaMinutes =
     nextStopDistanceKm === null ? null : Math.max(1, Math.round((nextStopDistanceKm / 35) * 60));
 
+  const badges = homeBadges({
+    runsheets,
+    pickups: pickupsQuery.data,
+    transfers: transfersQuery.data,
+    returns: returnsQuery.data,
+  });
+
   const compactActions: {
     key: string;
     label: string;
@@ -273,6 +290,8 @@ export default function HomeScreen() {
     color: string;
     soft: ColorValue;
     href: '/runsheets' | '/pickups' | '/transfers' | '/returns';
+    /** How many are waiting behind the button. */
+    badge: number;
   }[] = [
     {
       key: 'runsheets',
@@ -281,6 +300,7 @@ export default function HomeScreen() {
       color: colors.accent,
       soft: colors.accentSoft,
       href: '/runsheets',
+      badge: badges.runsheets,
     },
     {
       key: 'pickups',
@@ -289,6 +309,7 @@ export default function HomeScreen() {
       color: colors.purple,
       soft: colors.purpleSoft,
       href: '/pickups',
+      badge: badges.pickups,
     },
     {
       key: 'transfers',
@@ -297,6 +318,7 @@ export default function HomeScreen() {
       color: colors.warning,
       soft: colors.warningSoft,
       href: '/transfers',
+      badge: badges.transfers,
     },
     {
       key: 'returns',
@@ -305,6 +327,7 @@ export default function HomeScreen() {
       color: colors.danger,
       soft: colors.dangerSoft,
       href: '/returns',
+      badge: badges.returns,
     },
   ];
 
@@ -553,6 +576,13 @@ export default function HomeScreen() {
                 numberOfLines={1}>
                 {action.label}
               </Text>
+              {badgeText(action.badge) && (
+                <View
+                  style={[styles.compactBadge, { backgroundColor: colors.danger }]}
+                  accessibilityLabel={t('home.a11y.waiting', { count: action.badge })}>
+                  <Text style={styles.compactBadgeText}>{badgeText(action.badge)}</Text>
+                </View>
+              )}
             </AnimatedPressable>
           </View>
         ))}
@@ -808,6 +838,19 @@ const styles = StyleSheet.create({
     borderRadius: Radii.xl,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
+  },
+  compactBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactBadgeText: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 12,
+    color: '#fff',
   },
   compactActionIcon: {
     width: 40,
