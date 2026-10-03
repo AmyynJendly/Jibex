@@ -28,8 +28,41 @@ export interface Transfer {
    * they've loaded it (READY_FOR_PICKUP). Shows "Confirm pickup".
    */
   awaitingPickupConfirmation?: boolean;
+  /** What the detail screen shows: who, when, and each parcel. */
+  detail?: TransferDetail;
   /** What the real server says beyond the fields above. Absent on mock data. */
   server?: TransferServerInfo;
+}
+
+/** One parcel of a transfer, as the detail screen lists it. */
+export interface TransferParcel {
+  trackingNumber: string;
+  recipientName?: string;
+  recipientCity?: string;
+  /** The parcel's own lifecycle status (EN_TRANSIT_AGENCE, AU_DEPOT_RELAIS…). */
+  status?: string;
+  /** Cash to collect on it (COD). */
+  price?: number;
+}
+
+export interface TransferDetail {
+  type?: TransferType;
+  driverName?: string;
+  vehicle?: string;
+  notes?: string;
+  createdAt?: string;
+  /** Validated by the origin agency: ready to load. */
+  readyAt?: string;
+  /** Taken by the driver. */
+  takenAt?: string;
+  /** Received by the destination agency. */
+  closedAt?: string;
+  cancelledAt?: string;
+  /** What the destination agency found on arrival. */
+  missingParcels: number;
+  extraParcels: number;
+  damagedParcels: number;
+  parcels: TransferParcel[];
 }
 
 /** The backend's transfer kinds. */

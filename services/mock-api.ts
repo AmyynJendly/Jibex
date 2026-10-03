@@ -498,6 +498,24 @@ const mockTransfers: Transfer[] = [
     parcelTrackingNumbers: ['TRK-51B62DC7', 'TRK-699F0F1D', 'TRK-C9166BCA', 'TRK-6107B96B', 'TRK-561D8F37'],
     location: 'Dépôt Sahloul',
     scheduledAt: todayAt(15, 10),
+    detail: {
+      type: 'HUB_RELAY',
+      driverName: 'Mourad',
+      vehicle: 'TUN-261',
+      notes: 'Créé automatiquement — routage à l’entrée stock',
+      createdAt: toDateKey(yesterday) + 'T15:17:00',
+      readyAt: toDateKey(today) + 'T14:55:00',
+      missingParcels: 0,
+      extraParcels: 0,
+      damagedParcels: 0,
+      parcels: [
+        { trackingNumber: 'TRK-51B62DC7', recipientName: 'Sami Klibi', recipientCity: 'Médenine, Ajim', status: 'AU_DEPOT', price: 1520 },
+        { trackingNumber: 'TRK-699F0F1D', recipientName: 'Nadia Ferjani', recipientCity: 'Monastir, Ksibet el-Médiouni', status: 'AU_DEPOT', price: 100 },
+        { trackingNumber: 'TRK-C9166BCA', recipientName: 'Hatem Sassi', recipientCity: 'Médenine, Ben Gardane', status: 'AU_DEPOT', price: 15 },
+        { trackingNumber: 'TRK-6107B96B', recipientName: 'Emna Rekik', recipientCity: 'Sousse, Sousse Médina', status: 'AU_DEPOT_RELAIS', price: 10 },
+        { trackingNumber: 'TRK-561D8F37', recipientName: 'Bilel Chtioui', recipientCity: 'Tataouine, Tataouine Nord', status: 'AU_DEPOT', price: 10 }
+      ]
+    },
   },
   {
     id: 'TR-9201',
@@ -1044,6 +1062,10 @@ export async function confirmTransferPickup(transfer: Transfer): Promise<WriteRe
   // driver (still "in progress") until the destination agency receives it.
   if (!found.awaitingPickupConfirmation) return { success: false, error: 'common.genericError' };
   found.awaitingPickupConfirmation = false;
+  if (found.detail) {
+    found.detail.takenAt = new Date().toISOString().slice(0, 19);
+    found.detail.parcels = found.detail.parcels.map((parcel) => ({ ...parcel, status: 'EN_TRANSIT_AGENCE' }));
+  }
   return { success: true };
 }
 

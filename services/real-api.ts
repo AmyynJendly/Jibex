@@ -545,7 +545,15 @@ export interface ApiTransfer {
   driver?: { id?: number | string | null; fullName?: string | null } | null;
   driverName?: string | null;
   vehicleRegistration?: string | null;
-  parcels?: { trackingNumber?: string | null }[] | null;
+  parcels?:
+    | {
+        trackingNumber?: string | null;
+        recipientName?: string | null;
+        recipientCity?: string | null;
+        status?: string | null;
+        price?: number | null;
+      }[]
+    | null;
   notes?: string | null;
   scannedCount?: number | null;
   scanDeparture?: boolean | null;
@@ -661,6 +669,31 @@ export function toTransfer(apiTransfer: ApiTransfer): Transfer | null {
     location: text(from?.city) ?? text(from?.name) ?? '',
     scheduledAt:
       text(apiTransfer.validatedAt) ?? text(apiTransfer.confirmedAt) ?? text(apiTransfer.createdAt) ?? '',
+    detail: {
+      type: toTransferType(rawType),
+      driverName: text(apiTransfer.driverName) ?? text(apiTransfer.driver?.fullName),
+      vehicle: text(apiTransfer.vehicleRegistration),
+      notes: text(apiTransfer.notes),
+      createdAt: text(apiTransfer.createdAt),
+      readyAt: text(apiTransfer.validatedAt),
+      takenAt: text(apiTransfer.confirmedAt) ?? text(apiTransfer.shippedAt),
+      closedAt: text(apiTransfer.completedAt) ?? text(apiTransfer.receivedAt) ?? text(apiTransfer.closedAt),
+      cancelledAt: text(apiTransfer.cancelledAt),
+      missingParcels: num(apiTransfer.missingParcels) ?? 0,
+      extraParcels: num(apiTransfer.extraParcels) ?? 0,
+      damagedParcels: num(apiTransfer.damagedParcels) ?? 0,
+      // Only what the screen prints: number, recipient's name and city,
+      // status, cash. No phone, no address.
+      parcels: (apiTransfer.parcels ?? [])
+        .filter((parcel) => text(parcel?.trackingNumber))
+        .map((parcel) => ({
+          trackingNumber: text(parcel.trackingNumber)!,
+          recipientName: text(parcel.recipientName),
+          recipientCity: text(parcel.recipientCity),
+          status: text(parcel.status),
+          price: num(parcel.price),
+        })),
+    },
     server: {
       transferId: idString(apiTransfer.id) ?? '',
       status: raw,

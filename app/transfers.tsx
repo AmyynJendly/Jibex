@@ -1,10 +1,11 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { AgencyFlow } from '../components/AgencyFlow';
+import { AnimatedPressable } from '../components/AnimatedPressable';
 import { Card } from '../components/Card';
 import { useConfirm } from '../components/ConfirmDialog';
 import { DragHandle, DraggableList, type DragBinding } from '../components/DraggableList';
@@ -31,7 +32,7 @@ import { checklistKey, clearChecklist } from '../lib/checklist';
 import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { invalidateTransfers, useScreenState, useTransfers } from '../lib/query';
-import { agencyShortName, transferStage } from '../lib/transferState';
+import { agencyShortName, opensDetail, transferStage } from '../lib/transferState';
 import { safely, writeErrorText } from '../lib/writeResult';
 import { useAutoRefresh } from '../lib/useAutoRefresh';
 import { useFocusHighlight, useTabSegment } from '../lib/useFocusHighlight';
@@ -178,6 +179,19 @@ export default function TransfersScreen() {
           toLabel={t('transfers.to')}
           to={transfer.destinationAgency}
         />
+
+        {/* An ongoing transfer opens its detail screen. History stays a
+            read-only card: nothing to open. */}
+        {!isHistory && opensDetail(transfer) && (
+          <AnimatedPressable
+            scaleTo={0.98}
+            accessibilityRole="button"
+            style={[styles.detailLink, { backgroundColor: colors.bg }]}
+            onPress={() => router.push({ pathname: '/transfer/[id]', params: { id: transfer.id } })}>
+            <Text style={[styles.detailLinkText, { color: colors.text }]}>{t('transfers.detail.open')}</Text>
+            <Icon name="chevron-forward" size={15} color={colors.textSecondary} />
+          </AnimatedPressable>
+        )}
 
         <View style={styles.metaRow}>
           <MetaChip
@@ -338,6 +352,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
+  },
+  detailLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radii.md,
+  },
+  detailLinkText: {
+    fontFamily: Fonts.archivoSemiBold,
+    fontSize: 14,
   },
   endState: {
     flexDirection: 'row',

@@ -112,6 +112,7 @@ export default function RootLayout() {
                               its own (translated) title. */}
                           <Stack.Screen name="pickups" options={solidHeader} />
                           <Stack.Screen name="transfers" options={largeTitleHeader} />
+                          <Stack.Screen name="transfer/[id]" options={standardHeader} />
                           <Stack.Screen name="returns" options={largeTitleHeader} />
                           <Stack.Screen name="help-center" options={standardHeader} />
                           <Stack.Screen name="change-password" options={standardHeader} />
