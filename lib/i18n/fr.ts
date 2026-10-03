@@ -156,8 +156,23 @@ const fr: TranslationResource = {
       toast: 'Tournée refusée',
       newToast: 'Nouveaux colis refusés',
     },
+    // The run of the day, at the top of the Current tab.
+    day: {
+      today: 'Tournée du jour',
+      other: 'Tournée du {{date}}',
+      status: {
+        toConfirm: 'En attente de votre confirmation',
+        toStart: 'Confirmée — à démarrer',
+        inProgress: 'En cours',
+        done: 'Terminée',
+        closed: 'Clôturée par l’agence',
+      },
+      closedTitle: 'Tournée clôturée par l’agence',
+      closedBody: 'Plus rien à livrer sur cette tournée. Ses colis sont dans l’historique.',
+    },
     empty: {
       current: 'Tous les colis sont traités',
+      none: 'Aucune tournée pour le moment',
       history: 'Aucun historique',
     },
     history: {

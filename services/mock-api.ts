@@ -1,4 +1,4 @@
-import { addDays, toCompactDateKey } from '../lib/date';
+import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
 import { nearestFirstByArea, nearestNeighborOrder } from '../lib/route';
@@ -321,6 +321,7 @@ type RunsheetSeed = Omit<
 const mockRunsheets: RunsheetSeed[] = [
   {
     id: formatRunsheetId(today, 1),
+    scheduledDate: toDateKey(today),
     zone: 'Sousse, Sahloul',
     agency: 'Agence Sousse',
     status: 'EN_COURS',
@@ -331,6 +332,7 @@ const mockRunsheets: RunsheetSeed[] = [
   },
   {
     id: formatRunsheetId(today, 2),
+    scheduledDate: toDateKey(today),
     zone: 'Sfax, Zone Industrielle',
     agency: 'Agence Sousse',
     status: 'A_CONFIRMER',
@@ -339,6 +341,7 @@ const mockRunsheets: RunsheetSeed[] = [
   },
   {
     id: formatRunsheetId(today, 3),
+    scheduledDate: toDateKey(today),
     zone: 'Monastir',
     agency: 'Agence Sousse',
     status: 'EN_COURS',
@@ -347,6 +350,7 @@ const mockRunsheets: RunsheetSeed[] = [
   },
   {
     id: formatRunsheetId(yesterday, 1),
+    scheduledDate: toDateKey(yesterday),
     zone: 'Sousse, Centre Ville',
     agency: 'Agence Sousse',
     status: 'VALIDE',
@@ -787,6 +791,14 @@ export async function getDriverStats(): Promise<DriverStats> {
 
 export async function getRunsheets(): Promise<Runsheet[]> {
   return delay(mockRunsheets.map(toRunsheet));
+}
+
+/**
+ * Runs the agency closed today. On mock data the closed runs are already in
+ * `getRunsheets`, so there is nothing more to add.
+ */
+export async function getClosedRunsheetsToday(): Promise<Runsheet[]> {
+  return delay([]);
 }
 
 /**

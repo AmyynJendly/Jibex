@@ -48,6 +48,7 @@ export const logout = useReal ? real.logout : mock.logout;
 
 // Runsheets and parcels. History includes runsheets the agency has closed.
 export const getRunsheets = useReal ? real.getRunsheets : mock.getRunsheets;
+export const getClosedRunsheetsToday = useReal ? real.getClosedRunsheetsToday : mock.getClosedRunsheetsToday;
 export const getActiveParcels = useReal ? real.getActiveParcels : mock.getActiveParcels;
 export const getHistoryParcels = useReal ? real.getHistoryParcels : mock.getHistoryParcels;
 export const getJobsByIds = useReal ? real.getJobsByIds : mock.getJobsByIds;

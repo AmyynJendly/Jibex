@@ -16,6 +16,7 @@ import { TrackingId } from '../../../components/TrackingId';
 import { LoadError } from '../../../components/LoadError';
 import { MetaChip } from '../../../components/MetaChip';
 import { PrimaryButton } from '../../../components/PrimaryButton';
+import { RunsheetDayCard } from '../../../components/RunsheetDayCard';
 import { ScrollToTopButton, useScrollToTop } from '../../../components/ScrollToTopButton';
 import { SegmentedControl } from '../../../components/SegmentedControl';
 import { SkeletonRow } from '../../../components/Skeleton';
@@ -35,10 +36,12 @@ import {
 } from '../../../constants';
 import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
+import { toDateKey } from '../../../lib/date';
 import { enumLabel } from '../../../lib/enumLabel';
 import { errorKeyOf } from '../../../lib/errors';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
 import { parcelRowKeys } from '../../../lib/rowKey';
+import { dayRuns } from '../../../lib/runsheetDay';
 import { callCustomer } from '../../../lib/stopActions';
 import { useAutoRefresh } from '../../../lib/useAutoRefresh';
 import { usePullToRefresh } from '../../../lib/usePullToRefresh';
@@ -47,6 +50,7 @@ import { useFocusHighlight, useTabSegment } from '../../../lib/useFocusHighlight
 import {
   invalidateDeliveryData,
   useActiveParcels,
+  useClosedRunsheetsToday,
   useDriverPosition,
   useHistoryParcels,
   useNearestFirst,
@@ -301,6 +305,7 @@ export default function RunsheetsScreen() {
   const activeQuery = useActiveParcels();
   const historyQuery = useHistoryParcels();
   const runsheetsQuery = useRunsheets();
+  const closedTodayQuery = useClosedRunsheetsToday();
   const nearestFirstQuery = useNearestFirst();
   const screen = useScreenState([activeQuery, historyQuery, runsheetsQuery]);
 
@@ -340,6 +345,12 @@ export default function RunsheetsScreen() {
   // The active list itself follows the finger during a drag, so the
   // ScrollView around it has to step aside or the two fight over the touch.
   const [dragging, setDragging] = useState(false);
+
+  // The run of the day. Once the agency closes it, it leaves the open list:
+  // it is then shown as closed, instead of an empty "nothing left" screen.
+  const today = toDateKey(new Date());
+  const day = dayRuns(runsheets, closedTodayQuery.data ?? [], today);
+  const closedRuns = day.open.length === 0 ? day.closed : [];
 
   const unconfirmed = runsheets.filter((r) => r.needsConfirmation && r.status !== 'VALIDE');
   /** Parcels the driver hasn't signed for yet — inert until they do. */
@@ -417,7 +428,7 @@ export default function RunsheetsScreen() {
   // Current and History are separate lists, each starting at the top.
   const resetToTop = toTop.reset;
   useEffect(() => resetToTop(), [toggle, resetToTop]);
-  const pending = toggle === 'current' ? !active : !history;
+  const pending = toggle === 'current' ? !active || closedTodayQuery.isPending : !history;
 
   const titleAndToggle = (
     <>
@@ -529,8 +540,12 @@ export default function RunsheetsScreen() {
       <SkeletonRow />
       <SkeletonRow />
     </View>
-  ) : (
-    <EmptyState icon="checkmark-done-outline" title={t('runsheets.empty.current')} />
+  ) : closedRuns.length > 0 ? null : (
+    // No run at all is not the same as a run with everything done.
+    <EmptyState
+      icon={day.open.length > 0 ? 'checkmark-done-outline' : 'file-tray-outline'}
+      title={day.open.length > 0 ? t('runsheets.empty.current') : t('runsheets.empty.none')}
+    />
   );
 
   return (
@@ -547,6 +562,10 @@ export default function RunsheetsScreen() {
         contentContainerStyle={styles.content}>
         <View style={styles.headerBlock}>
           {titleAndToggle}
+
+          {closedRuns.map((runsheet) => (
+            <RunsheetDayCard key={runsheet.id} runsheet={runsheet} stage="closed" today={today} />
+          ))}
 
           {unconfirmed.map((runsheet) => {
             const refuseLabel = runsheetConfirm.refuseLabel(runsheet);

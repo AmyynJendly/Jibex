@@ -46,4 +46,8 @@ export interface Runsheet {
   newParcelsCount?: number;
   /** The server's raw status. Absent on mock data. */
   serverStatus?: string;
+  /** The day the run is for, `YYYY-MM-DD`. */
+  scheduledDate?: string;
+  /** When the agency closed the run. Only on a closed (`VALIDE`) run. */
+  closedAt?: string;
 }

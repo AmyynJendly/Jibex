@@ -43,7 +43,8 @@ import { governorateIn, governorateOfCity } from '../lib/governorates';
 import { jobStatusOfParcel } from '../lib/parcelStatus';
 import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
-import { localeTag } from '../lib/date';
+import { localeTag, toDateKey } from '../lib/date';
+import { dayRuns } from '../lib/runsheetDay';
 import { i18next } from '../lib/i18n';
 import { nearestFirstByArea } from '../lib/route';
 import { driverPosition } from '../lib/driverPosition';
@@ -478,6 +479,8 @@ export function toRunsheet(runsheet: ApiRunsheet): Runsheet | null {
     needsStart,
     newParcelsCount: newParcels,
     serverStatus: raw,
+    scheduledDate: text(runsheet.scheduledDate)?.slice(0, 10),
+    closedAt: status === 'VALIDE' ? text(runsheet.completedAt) : undefined,
   };
 }
 
@@ -1149,6 +1152,20 @@ function loadPastRunsheets(): Promise<ApiRunsheet[]> {
     if (pastRunsheets?.promise === promise) pastRunsheets = null;
   });
   return promise;
+}
+
+/**
+ * The runs the agency closed today. The active endpoint stops listing a run
+ * the moment it is closed, so without this the Current tab would only say
+ * "nothing left to deliver" — it now says the run was closed, and by whom.
+ * Same request as History (shared, kept a minute). A failure here is not
+ * worth an error screen: the tab simply has no closed run to show.
+ */
+export async function getClosedRunsheetsToday(now: Date = new Date()): Promise<Runsheet[]> {
+  const today = toDateKey(now);
+  const past = await loadPastRunsheets().catch(() => [] as ApiRunsheet[]);
+  const runs = [...past].sort(newestFirst).map(toRunsheet);
+  return dayRuns([], runs.filter((run): run is Runsheet => !!run), today).closed;
 }
 
 /** Newest run first: by the day it was for, then by when it was closed. */

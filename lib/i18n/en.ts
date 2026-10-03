@@ -161,8 +161,23 @@ const en = {
       toast: 'Run refused',
       newToast: 'New packages refused',
     },
+    // The run of the day, at the top of the Current tab.
+    day: {
+      today: 'Today’s run',
+      other: 'Run of {{date}}',
+      status: {
+        toConfirm: 'Waiting for your confirmation',
+        toStart: 'Confirmed — to start',
+        inProgress: 'In progress',
+        done: 'Finished',
+        closed: 'Closed by the agency',
+      },
+      closedTitle: 'Run closed by the agency',
+      closedBody: 'Nothing left to deliver on this run. Its parcels are in History.',
+    },
     empty: {
       current: 'All packages done - nothing left to deliver',
+      none: 'No run for now',
       history: 'No history yet',
     },
     history: {

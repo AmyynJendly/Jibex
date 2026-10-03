@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 import { driverPosition } from './driverPosition';
 import {
   getActiveParcels,
+  getClosedRunsheetsToday,
   getDriverStats,
   getHistoryParcels,
   getJobsByIds,
@@ -73,6 +74,7 @@ export const keys = {
   vehicle: ['vehicle'] as const,
   stats: ['stats'] as const,
   runsheets: ['runsheets'] as const,
+  closedRunsheetsToday: ['runsheets', 'closedToday'] as const,
   activeParcels: ['parcels', 'active'] as const,
   historyParcels: ['parcels', 'history'] as const,
   jobsByIds: (ids: string[]) => ['jobs', ids.join(',')] as const,
@@ -124,6 +126,9 @@ export const useUser = () => useQuery({ queryKey: keys.user, queryFn: getUser })
 export const useVehicle = () => useQuery({ queryKey: keys.vehicle, queryFn: getVehicle });
 export const useDriverStats = () => useQuery({ queryKey: keys.stats, queryFn: getDriverStats });
 export const useRunsheets = () => useQuery({ queryKey: keys.runsheets, queryFn: getRunsheets });
+/** Runs the agency closed today — what the Current tab shows once nothing is open. */
+export const useClosedRunsheetsToday = () =>
+  useQuery({ queryKey: keys.closedRunsheetsToday, queryFn: () => getClosedRunsheetsToday() });
 export const useActiveParcels = () =>
   useQuery({ queryKey: keys.activeParcels, queryFn: getActiveParcels });
 export const useHistoryParcels = () =>
