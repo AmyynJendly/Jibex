@@ -906,7 +906,9 @@ export async function confirmRunsheetReceipt(id: string): Promise<RunsheetWriteR
  */
 export async function getActiveParcels(): Promise<Job[]> {
   await delay(undefined);
-  const ids = new Set(mockRunsheets.flatMap((r) => r.stopIds));
+  // A run the agency closed shows no parcel in the active view, whatever
+  // state its parcels were left in.
+  const ids = new Set(mockRunsheets.filter((r) => r.status !== 'VALIDE').flatMap((r) => r.stopIds));
   const jobs = mockJobs.filter(
     (j) => ids.has(j.id) && j.status !== 'DELIVERED' && j.status !== 'FAILED'
   );

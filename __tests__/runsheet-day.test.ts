@@ -360,3 +360,63 @@ describe('confirming the run', () => {
     expect(runChange(after)).toBeNull();
   });
 });
+
+/**
+ * Client rule: a finished run shows no parcels in the active view. Once the
+ * agency closes the run, the Current tab shows only the card "Tournée
+ * clôturée par l'agence".
+ */
+describe('a closed run shows no parcel in the active view', () => {
+  it('real server: the parcel left pending on a closed run is not listed', async () => {
+    const closedWithPending = {
+      id: 72,
+      code: 'RS-20261002-0001',
+      status: 'COMPLETED',
+      scheduledDate: '2026-10-02',
+      completedAt: '2026-10-02T20:47:31',
+      items: [
+        { id: 1, sequenceOrder: 1, status: 'DELIVERED', parcel: { id: 1, trackingNumber: 'TUN-100-AAAA0001', status: 'LIVRE', recipientName: 'TEST' } },
+        { id: 2, sequenceOrder: 2, status: 'PENDING', parcel: { id: 2, trackingNumber: 'TUN-100-AAAA0002', status: 'EN_COURS', recipientName: 'TEST' } },
+      ],
+    };
+    let api!: RealApi;
+    jest.isolateModules(() => {
+      api = require('../services/real-api');
+    });
+    const json = (status: number, body: unknown) =>
+      Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
+    globalThis.fetch = jest.fn((url: string) => {
+      if (url.endsWith('/api/auth/login')) {
+        return json(200, { token: 't', role: 'DRIVER', portal: '/driver', user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true } });
+      }
+      if (url.includes('/api/runsheets/driver/')) return json(200, []);
+      if (url.includes('/api/runsheets?driverId=')) return json(200, [closedWithPending]);
+      return json(404, { error: 'not found' });
+    }) as unknown as typeof fetch;
+    mockKeychain.clear();
+    (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    await api.login('driver', 'secret');
+
+    // Nothing to deliver, no open run: only the closed card is left.
+    expect(await api.getActiveParcels()).toEqual([]);
+    const closed = await api.getClosedRunsheetsToday(new Date(2026, 9, 2, 21, 0, 0));
+    const day = dayRuns(await api.getRunsheets(), closed, '2026-10-02');
+    expect(day.open).toEqual([]);
+    expect(day.closed.map((r) => r.code)).toEqual(['RS-20261002-0001']);
+    expect(lockedStopIdsOf(day.closed[0])).toEqual([]);
+    // The parcel left pending is in neither list: not active, and not delivered or failed.
+    expect((await api.getHistoryParcels()).map((job) => job.id)).toEqual(['TUN-100-AAAA0001']);
+  });
+
+  it('mock data: parcels of a closed run are never in the active list', async () => {
+    let api!: typeof import('../services/mock-api');
+    jest.isolateModules(() => {
+      api = require('../services/mock-api');
+    });
+    (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
+    const closedIds = new Set((await api.getRunsheets()).filter((r) => r.status === 'VALIDE').flatMap((r) => r.stopIds));
+    expect(closedIds.size).toBeGreaterThan(0);
+    expect((await api.getActiveParcels()).filter((job) => closedIds.has(job.id))).toEqual([]);
+  });
+});
