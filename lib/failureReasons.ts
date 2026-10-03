@@ -87,6 +87,17 @@ export function commonReasonsFor(deliveryAttempts: number | null | undefined): F
   return reasonsFor(deliveryAttempts).filter((reason) => reason.common);
 }
 
+/**
+ * The reason to show on a parcel: only when the parcel is failed. A pending
+ * or delivered parcel never shows one, whatever the data still carries.
+ */
+export function shownFailureReason(job: {
+  status: string;
+  failureReason?: DeliveryFailureReason;
+}): DeliveryFailureReason | undefined {
+  return job.status === 'FAILED' ? job.failureReason : undefined;
+}
+
 /** OTHER says nothing on its own, so it can't be confirmed without a note. */
 export function reasonNeedsNote(reason: DeliveryFailureReason | null | undefined): boolean {
   return reason === 'OTHER';

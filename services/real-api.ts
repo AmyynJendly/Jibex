@@ -365,7 +365,10 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
     location: point(parcel.recipientLat, parcel.recipientLng),
     governorate: governorateOfCity(parcel.recipientCity),
     failureReason: status === 'FAILED' ? failureReason : undefined,
-    failureNote: text(item?.notes) ?? text(parcel.failureNotes),
+    // Only on a parcel that IS failed. The server can keep an old reason on
+    // an item put back to pending ("Remettre en attente") or delivered
+    // since: it is ignored, so a parcel never shows a failure it no longer has.
+    failureNote: status === 'FAILED' ? (text(item?.notes) ?? text(parcel.failureNotes)) : undefined,
     // Kept on the phone when the failure was recorded here; the server has no field for it.
     failureLocation: status === 'FAILED' ? device.failureLocationFor(id) : undefined,
     proofPhotoUri: text(parcel.deliveryPhotoUrl),
@@ -380,7 +383,7 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
       sequenceOrder: num(item?.sequenceOrder),
       itemStatus,
       parcelStatus,
-      unknownFailureReason: rawReason && !failureReason ? rawReason : undefined,
+      unknownFailureReason: status === 'FAILED' && rawReason && !failureReason ? rawReason : undefined,
       price: num(parcel.price),
       amountToCollect,
       deliveryFee: num(parcel.deliveryFee),

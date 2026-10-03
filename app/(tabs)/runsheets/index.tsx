@@ -38,6 +38,7 @@ import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/c
 import { toDateKey } from '../../../lib/date';
 import { enumLabel } from '../../../lib/enumLabel';
 import { errorKeyOf } from '../../../lib/errors';
+import { shownFailureReason } from '../../../lib/failureReasons';
 import { historyAttempts, historyRecordLine } from '../../../lib/historyRecord';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
 import { parcelRowKeys } from '../../../lib/rowKey';
@@ -139,6 +140,7 @@ function ParcelCard({
   // deliver: they keep the exchange mark, not the attempt count.
   const showAttempt = !readOnly && attempt.number > 1;
   const showBadges = showAttempt || !!job.exchange || isNew;
+  const failureReason = shownFailureReason(job);
 
   const body = (
     <>
@@ -219,9 +221,9 @@ function ParcelCard({
         </View>
       )}
 
-      {job.status === 'FAILED' && job.failureReason && (
+      {failureReason && (
         <Text style={[styles.failureText, { color: colors.danger }]} numberOfLines={1}>
-          {enumLabel(t, 'failureReason', job.failureReason)}
+          {enumLabel(t, 'failureReason', failureReason)}
         </Text>
       )}
 
