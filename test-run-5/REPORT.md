@@ -18,7 +18,7 @@ test data only, nothing deleted. **No write was blocked. No transfer was touched
 | "Remettre en attente" (correction) | **Works.** The server accepts `PENDING`. It leaves a stale failure reason behind (problem 2). |
 | Call rule and "Client injoignable — continuer" | **Works.** The note reached the agency. |
 | One-tap confirm (confirm + start) | **Works.** The run was IN_PROGRESS after one tap. |
-| History: run code, date, attempt | **Mostly confirmed.** Three of four lines match. One card and one number need a second look (problem 3). |
+| History: run code, date, attempt | **Works.** Every card matches the agency's data (checked on screenshots). |
 | Transfer detail screen | **Works.** Dates and parcel statuses match the web exactly. |
 
 One new app problem came out of the round: **Home drops to zero once the agency closes the run** (problem 1).
@@ -107,7 +107,8 @@ Driver: done. Remark: with all parcels done, the Current tab still shows the "To
 Actual: P10 `DELIVERED` at 17:11:23. P11 `FAILED`, notes
 **"Client appelé une fois (17:11). Client injoignable. Position : 35.81434, 10.64048."**
 P11's reason on the server is `NOT_AVAILABLE_RESCHEDULED`, not `ABSENT`. P10 was sent as `ABSENT` in step 8a,
-so the mapping is right; the driver most likely picked "Client non disponible (reporté)". To confirm with him.
+so the mapping is right. The History screenshot confirms it: the card reads "Client non disponible (reporté)",
+which is the reason the driver picked.
 
 **Step 10 — Entrée Stock: P11.**
 Expected: RTN dépôt, attempt 1/3. Actual: **`RTN_DEPOT`**, "Retour dépôt — tentative n°1/3. Recréer dans une
@@ -121,17 +122,25 @@ Final: total 3, delivered 2, failed 1. Web: P9 "Livré", P10 "Livré", P11 "RTN 
 
 **Step 12 — History cards against the agency's data.**
 
-| Parcel | Run (agency) | Item on the run (agency) | Card in the app (driver's notes) | Same? |
+| Parcel | Run (agency) | Item on the run (agency) | Card in the app (screenshots) | Same? |
 |---|---|---|---|---|
-| P2 | RS-20261002-0002 (02/10) | FAILED / ABSENT | "RS-20261002-0002 · 02/10 · Tentative 4" | Yes |
-| P2 | RS-20261002-0001 (02/10) | FAILED / ABSENT | "RS-20261002-0001 · 02/10 · Tentative 4" (an earlier, interrupted message said 3) | **Unclear** |
-| P2 | RS-20260930-0002 (30/09) | FAILED / ABSENT | "RS-20260930-0002 · 30/09 · Tentative 2" | Yes |
-| P2 | RS-20260930-0001 (30/09) | FAILED / NOT_AVAILABLE_RESCHEDULED | (no card reported) | **Not confirmed** |
-| P11 | RS-20261003-0001 (03/10) | FAILED / NOT_AVAILABLE_RESCHEDULED | "RS-20261003-0001 · 03/10 · Tentative 1" | Yes |
+| P2 | RS-20261002-0002 (02/10) | FAILED / ABSENT | "RS-20261002-0002 · 02/10 · Tentative 4", Destinataire absent | Yes |
+| P2 | RS-20261002-0001 (02/10) | FAILED / ABSENT | "RS-20261002-0001 · 02/10 · Tentative 3", Destinataire absent | Yes |
+| P2 | RS-20260930-0002 (30/09) | FAILED / ABSENT | "RS-20260930-0002 · 30/09 · Tentative 2", Destinataire absent | Yes |
+| P2 | RS-20260930-0001 (30/09) | FAILED / NOT_AVAILABLE_RESCHEDULED | "RS-20260930-0001 · 30/09 · Tentative 1", Client non disponible (reporté) | Yes |
+| P11 | RS-20261003-0001 (03/10) | FAILED / NOT_AVAILABLE_RESCHEDULED | "RS-20261003-0001 · 03/10 · Tentative 1", Client non disponible (reporté), "Colis : Retour dépôt" | Yes |
 
-The run codes and dates are right on every card reported. P2 really is on four of mourad's runs, so the app
-should show four cards numbered 4, 3, 2, 1. Two points are open: see problem 3.
-P11's "Tentative 1" matches the stock entry's "tentative n°1/3".
+The driver first typed the list by hand, with one number wrong and one card missing. He then sent screenshots
+of the History tab, and those settle it: P2 has **four cards, numbered 4, 3, 2, 1**, each with its own run
+code and date. The four cards can now be told apart. P11's "Tentative 1" matches the stock entry's
+"tentative n°1/3".
+
+Also seen on the screenshots, all consistent with the server:
+- P9 and P10: "RS-20261003-0001 · 03/10 · Tentative 1", Livré.
+- P4 (TUN-100-71DEEE7A) has two cards: failed on RS-20260930-0001 as "Tentative 1", then delivered on
+  RS-20260930-0002 as "Tentative 2".
+- P5 shows its "ÉCHANGE" badge. Every card is read-only ("Tournée clôturée"), with no phone number.
+- Money shows as "10.000 TND".
 
 **Step 13 — transfer TRF-FA75ED72, still `IN_TRANSIT`.**
 
@@ -159,12 +168,8 @@ Read-only: no transfer call was sent.
    closed. The same happens after a transfer or a pickup is finished. Home should count today's work,
    closed runs included (the app already reads today's closed run for the "Tournée clôturée" card).
 2. **(Server side, seen through the app.)** See problem 4.
-3. **History, two points to re-check on the phone.**
-   - The card for RS-20261002-0001 was reported as "Tentative 4" in the final message and "Tentative 3" in an
-     earlier one. Expected: 3. Two cards with the same number would be a bug in the numbering.
-   - No card was reported for RS-20260930-0001 (expected "· 30/09 · Tentative 1"). It may simply be further
-     down the list.
-   Neither could be settled from the notes. A screenshot of the four cards would settle both.
+3. ~~History, two points to re-check.~~ **Settled by the screenshots:** the numbers are 4, 3, 2, 1 and the fourth
+   card is there. No problem.
 
 ### On the server
 
