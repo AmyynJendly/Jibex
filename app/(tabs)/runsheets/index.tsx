@@ -34,13 +34,14 @@ import {
   type ColorPalette,
 } from '../../../constants';
 import { attemptInfo, attemptLabel } from '../../../lib/attempts';
-import { CURRENCY_DECIMALS, formatCurrency, formatDecimal } from '../../../lib/currency';
+import { CURRENCY_DECIMALS, formatDecimal } from '../../../lib/currency';
 import { toDateKey } from '../../../lib/date';
 import { enumLabel } from '../../../lib/enumLabel';
 import { errorKeyOf } from '../../../lib/errors';
 import { shownFailureReason } from '../../../lib/failureReasons';
 import { historyAttempts, historyRecordLine } from '../../../lib/historyRecord';
 import { notableParcelStatus, parcelStatusLabel } from '../../../lib/parcelStatus';
+import { cardCash } from '../../../lib/otpRule';
 import { parcelRowKeys } from '../../../lib/rowKey';
 import { dayRuns, lockedStopIds, runStage } from '../../../lib/runsheetDay';
 import { callCustomer } from '../../../lib/stopActions';
@@ -59,6 +60,7 @@ import {
   useScreenState,
 } from '../../../lib/query';
 import { setNearestFirst, setStopOrder } from '../../../services/api';
+import { otpNeeded } from '../../../services/otp';
 import type { Job, JobStatus } from '../../../types';
 
 type Toggle = 'current' | 'history';
@@ -132,7 +134,7 @@ function ParcelCard({
   isNew = false,
   t,
 }: ParcelCardProps) {
-  const hasCod = job.cashToCollect > 0;
+  const cash = cardCash(t, job, otpNeeded(job));
   const accent = stateColor(job.status, colors);
   const inert = locked || readOnly;
   const notableStatus = notableParcelStatus(job.server?.parcelStatus);
@@ -237,11 +239,18 @@ function ParcelCard({
       )}
 
       <View style={[styles.cardFooter, { borderTopColor: colors.separator }]}>
-        <MetaChip
-          icon={hasCod ? 'cash-outline' : 'checkmark-circle-outline'}
-          tone={hasCod ? 'accent' : 'success'}
-          label={hasCod ? formatCurrency(job.cashToCollect) : t('runsheets.paidTag')}
-        />
+        {/* Money first, then the code badge: a parcel delivered with the
+            customer's code says so here instead of "Payé". */}
+        <View style={styles.cashChips}>
+          {cash.label && (
+            <MetaChip
+              icon={cash.paid ? 'checkmark-circle-outline' : 'cash-outline'}
+              tone={cash.paid ? 'success' : 'accent'}
+              label={cash.label}
+            />
+          )}
+          {cash.codeBadge && <MetaChip icon="keypad-outline" tone="warning" label={cash.codeBadge} />}
+        </View>
 
         {locked || closedLabel ? (
           <View style={styles.lockedRow}>
@@ -929,6 +938,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.xs,
     marginTop: Spacing.xs,
+  },
+  cashChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexShrink: 1,
   },
   cardFooter: {
     flexDirection: 'row',
