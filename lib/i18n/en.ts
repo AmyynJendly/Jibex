@@ -228,6 +228,15 @@ const en = {
   },
 
   // Which delivery attempt a parcel is on (the agency allows three).
+  // What the driver collects at the door (see lib/otpRule).
+  cash: {
+    nothing: 'Nothing to collect',
+    toCollect: 'To collect: {{amount}}',
+    feeOnlyNote: '(delivery fee)',
+    feeOnlyHint: 'The customer only pays the delivery fee, in cash.',
+    nothingHint: 'Already paid: nothing to ask the customer for.',
+  },
+
   attempts: {
     label: 'Attempt {{number}}/{{max}}',
     // On a History card: which attempt that record was.

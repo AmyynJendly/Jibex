@@ -14,6 +14,9 @@
  *
  * `price` is what the customer pays at the door — `Job.cashToCollect`.
  */
+import type { TFunction } from 'i18next';
+
+import { formatCurrency } from './currency';
 
 /** Money is stored to the millime: two amounts closer than this are the same amount. */
 const MILLIME = 0.0005;
@@ -44,6 +47,18 @@ export function cashDue(parcel: { price?: number | null; deliveryFee?: number | 
   const fee = amount(parcel.deliveryFee);
   if (!otpRequired(parcel)) return { kind: 'price', amount: price };
   return fee > MILLIME ? { kind: 'feeOnly', amount: fee } : { kind: 'nothing', amount: 0 };
+}
+
+/**
+ * The cash line on the delivery screen, as one sentence:
+ *  - nothing:  "Rien à encaisser"
+ *  - fee only: "À encaisser : 10.000 TND (frais de livraison)"
+ *  - price:    "À encaisser : 950.000 TND"
+ */
+export function cashDueLine(t: TFunction, due: CashDue): string {
+  if (due.kind === 'nothing') return t('cash.nothing');
+  const line = t('cash.toCollect', { amount: formatCurrency(due.amount) });
+  return due.kind === 'feeOnly' ? line + ' ' + t('cash.feeOnlyNote') : line;
 }
 
 /** The same two questions asked of a parcel as the app holds it. */

@@ -301,6 +301,37 @@ const mockJobs: Job[] = [
   },
 ];
 
+// Appended after the list above so the existing parcels keep their order.
+mockJobs.push(
+  {
+    // Price equal to the delivery fee: the driver collects the fee, and the
+    // delivery needs the customer's code.
+    id: 'TRK-0F33A1C2',
+    customerName: 'Sonia Gharbi',
+    customerPhone: '+216 22 310 774',
+    address: 'Avenue Habib Bourguiba, Monastir',
+    packageInfo: { count: 1, weightKg: 1.0, fragile: false },
+    status: 'PENDING',
+    cashToCollect: 8,
+    deliveryFee: 8,
+    location: { lat: 35.777, lng: 10.826 },
+    callAttempts: 0,
+  },
+  {
+    // Nothing to collect at all: the code is the only proof of delivery.
+    id: 'TRK-0E11B7D4',
+    customerName: 'Karim Mejri',
+    customerPhone: '+216 29 665 102',
+    address: 'Rue de la République, Monastir',
+    packageInfo: { count: 1, weightKg: 0.5, fragile: false },
+    status: 'PENDING',
+    cashToCollect: 0,
+    deliveryFee: 0,
+    location: { lat: 35.771, lng: 10.82 },
+    callAttempts: 0,
+  }
+);
+
 /** Raw seed shape — `stopCount`/`deliveredCount`/`completionPercent`/`needsConfirmation` are never trusted from here, always recomputed live from `mockJobs` (see `toRunsheet`) so they can't drift out of sync as job statuses change. */
 type RunsheetSeed = Omit<
   Runsheet,
@@ -338,8 +369,9 @@ const mockRunsheets: RunsheetSeed[] = [
     zone: 'Monastir',
     agency: 'Agence Sousse',
     status: 'EN_COURS',
-    confirmedStopCount: 2,
-    stopIds: ['TRK-9E0A2B6D', 'TRK-6C2E9F45'],
+    confirmedStopCount: 4,
+    // The last two need the customer's code: only the fee to collect, and nothing at all.
+    stopIds: ['TRK-9E0A2B6D', 'TRK-6C2E9F45', 'TRK-0F33A1C2', 'TRK-0E11B7D4'],
   },
   {
     id: formatRunsheetId(yesterday, 1),

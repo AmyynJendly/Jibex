@@ -34,6 +34,7 @@ import {
 } from '../../../constants';
 import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
+import { cashDueFor, cashDueLine } from '../../../lib/otpRule';
 import { localeTag } from '../../../lib/date';
 import { deliveryBlocker } from '../../../lib/deliveryGate';
 import { callCustomer, openInMaps } from '../../../lib/stopActions';
@@ -131,6 +132,8 @@ export default function JobDetailScreen() {
   // the card then offers directions by address instead.
   const location = job.location;
   const distanceKm = location ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, location) : 0;
+  // Nothing, only the delivery fee, or the full price (see lib/otpRule).
+  const due = cashDueFor(job);
   const etaMinutes = Math.max(1, Math.round((distanceKm / 35) * 60));
   const etaTime = new Date(now + etaMinutes * 60_000).toLocaleTimeString(
     localeTag(i18n.language),
@@ -429,7 +432,17 @@ export default function JobDetailScreen() {
           <ExchangeCheck checked={exchangeCollected} onToggle={() => setExchangeCollected((v) => !v)} />
         )}
 
-        {job.cashToCollect > 0 && (
+        {/* What to collect, always said — including "nothing" and "only
+            the delivery fee", the two cases that need the customer's code. */}
+        {due.kind === 'nothing' ? (
+          <View style={[styles.cashNote, { backgroundColor: colors.successSoft }]}>
+            <Icon name="checkmark-circle-outline" size={18} color={colors.success} />
+            <View style={styles.cashNoteText}>
+              <Text style={[styles.cashNoteTitle, { color: colors.text }]}>{cashDueLine(t, due)}</Text>
+              <Text style={[styles.cashNoteBody, { color: colors.textSecondary }]}>{t('cash.nothingHint')}</Text>
+            </View>
+          </View>
+        ) : (
           <View
             style={[
               styles.codCard,
@@ -445,8 +458,13 @@ export default function JobDetailScreen() {
                 {t('jobDetail.codLabel')}
               </Text>
               <Text style={styles.codAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {formatCurrency(job.cashToCollect)}
+                {formatCurrency(due.amount)}
               </Text>
+              {due.kind === 'feeOnly' && (
+                <Text style={styles.codLabel} numberOfLines={2}>
+                  {t('cash.feeOnlyNote')} — {t('cash.feeOnlyHint')}
+                </Text>
+              )}
             </View>
             <View style={styles.codIcon}>
               <Icon name="cash-outline" size={22} color="#fff" />
@@ -672,6 +690,26 @@ const styles = StyleSheet.create({
   codText: {
     flex: 1,
     minWidth: 0,
+  },
+  cashNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.lg,
+    borderRadius: Radii.card,
+  },
+  cashNoteText: {
+    flex: 1,
+    gap: 2,
+  },
+  cashNoteTitle: {
+    fontFamily: Fonts.archivoBold,
+    fontSize: 16,
+  },
+  cashNoteBody: {
+    fontFamily: Fonts.archivoMedium,
+    fontSize: 13,
+    lineHeight: 18,
   },
   codLabel: {
     fontFamily: Fonts.archivoSemiBold,

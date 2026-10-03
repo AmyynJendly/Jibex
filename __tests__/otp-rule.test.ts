@@ -8,7 +8,8 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async () => {},
 }));
 
-import { cashDue, cashDueFor, itemValue, otpRequired, otpRequiredFor } from '../lib/otpRule';
+import { i18next } from '../lib/i18n';
+import { cashDue, cashDueFor, cashDueLine, itemValue, otpRequired, otpRequiredFor } from '../lib/otpRule';
 import { toJob } from '../services/real-api';
 
 describe('the OTP rule', () => {
@@ -62,6 +63,22 @@ describe('what the driver collects', () => {
   it('otherwise: the full price, unchanged', () => {
     expect(cashDue({ price: 950, deliveryFee: 10 })).toEqual({ kind: 'price', amount: 950 });
     expect(cashDue({ price: 12, deliveryFee: null })).toEqual({ kind: 'price', amount: 12 });
+  });
+});
+
+describe('the cash line on the delivery screen', () => {
+  const t = i18next.getFixedT('fr');
+
+  it('0 / 0: "Rien à encaisser"', () => {
+    expect(cashDueLine(t, cashDue({ price: 0, deliveryFee: 0 }))).toBe('Rien à encaisser');
+  });
+
+  it('10 / 10: "À encaisser : 10.000 TND (frais de livraison)"', () => {
+    expect(cashDueLine(t, cashDue({ price: 10, deliveryFee: 10 }))).toBe('À encaisser : 10.000 TND (frais de livraison)');
+  });
+
+  it('otherwise: the full price, three decimals', () => {
+    expect(cashDueLine(t, cashDue({ price: 950, deliveryFee: 10 }))).toBe('À encaisser : 950.000 TND');
   });
 });
 

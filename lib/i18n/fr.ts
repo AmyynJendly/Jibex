@@ -228,6 +228,15 @@ const fr: TranslationResource = {
   },
 
   // Which delivery attempt a parcel is on (the agency allows three).
+  // What the driver collects at the door (see lib/otpRule).
+  cash: {
+    nothing: 'Rien à encaisser',
+    toCollect: 'À encaisser : {{amount}}',
+    feeOnlyNote: '(frais de livraison)',
+    feeOnlyHint: 'Le client ne paie que les frais de livraison, en espèces.',
+    nothingHint: 'Colis déjà payé : aucun montant à demander au client.',
+  },
+
   attempts: {
     label: 'Tentative {{number}}/{{max}}',
     // On a History card: which attempt that record was.
