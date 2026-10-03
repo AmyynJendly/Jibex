@@ -34,7 +34,8 @@ import {
   useColors,
 } from '../../../constants';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
-import { localeTag } from '../../../lib/date';
+import { localeTag, toDateKey } from '../../../lib/date';
+import { runCounts, runsInProgress } from '../../../lib/runsheetDay';
 import { FALLBACK_ORIGIN, haversineKm } from '../../../lib/geo';
 import { useLiveCoords } from '../../../lib/useLiveCoords';
 import { useNextStop } from '../../../lib/useNextStop';
@@ -261,6 +262,8 @@ export default function HomeScreen() {
   }
 
   const { user, stats, zone } = data;
+  const waitingIds = new Set(unconfirmedRunsheets.map((r) => r.id));
+  const currentRuns = runsInProgress(runsheets, toDateKey(new Date())).filter((r) => !waitingIds.has(r.id));
   const locationLabel = gpsLocation ?? zone;
   const totalStops = stats.delivered + stats.pending + stats.failed;
   const firstName = user.name.split(' ')[0];
@@ -410,6 +413,36 @@ export default function HomeScreen() {
           </Text>
         </View>
       </View>
+
+      {/* The run being delivered, named on Home like on the Android
+          dashboard. A run still to confirm has its own card below. */}
+      {currentRuns.map((runsheet) => {
+        const counts = runCounts(runsheet);
+        return (
+          <AnimatedPressable
+            key={runsheet.id}
+            scaleTo={0.98}
+            accessibilityRole="button"
+            onPress={() => router.push('/runsheets')}
+            style={[styles.currentRun, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+            <View style={[styles.toConfirmIcon, { backgroundColor: colors.accentSoft }]}>
+              <Icon name="clipboard-outline" size={16} color={colors.accent} />
+            </View>
+            <View style={styles.toConfirmText}>
+              <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
+                {runsheet.code ?? runsheet.id}
+              </Text>
+              <Text style={[Typography.caption2, { color: colors.textSecondary }]} numberOfLines={1}>
+                {t('home.currentRun', {
+                  remaining: counts.remaining,
+                  total: runsheet.stopCount,
+                })}
+              </Text>
+            </View>
+            <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
+          </AnimatedPressable>
+        );
+      })}
 
       {unconfirmedRunsheets.length > 0 && (
         <View style={styles.toConfirmSection}>
@@ -662,6 +695,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginTop: Spacing.sm,
+  },
+  currentRun: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderRadius: Radii.card,
+    padding: Spacing.lg,
   },
   toConfirmSection: {
     gap: Spacing.sm,
