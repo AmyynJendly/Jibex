@@ -29,6 +29,10 @@ describe('other decimals', () => {
   });
 
   it('percentages carry two', () => {
-    expect(formatPercent(98.4)).toBe('98.40%');
+    expect(formatPercent(98.4)).toBe('98.400%');
+    // The client's rule: three decimals on every decimal number, percentages included.
+    expect(formatPercent(0)).toBe('0.000%');
+    expect(formatPercent((17 / 26) * 100)).toBe('65.385%');
+    expect(formatPercent(100)).toBe('100.000%');
   });
 });

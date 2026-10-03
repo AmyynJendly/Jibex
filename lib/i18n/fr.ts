@@ -88,7 +88,8 @@ const fr: TranslationResource = {
       late: 'Service de nuit',
     },
     deliveriesCardTitle: 'Colis à livrer',
-    stopsCaption: '{{delivered}} / {{total}} ARRÊTS',
+    // The gauge is today's rate (the open runs), not the all-time one on Profile.
+    stopsCaption: 'AUJOURD’HUI · {{delivered}} / {{total}} ARRÊTS',
     onPace: 'En bonne voie pour terminer à {{time}}',
     stats: {
       delivered: 'Livrés',
@@ -536,7 +537,7 @@ const fr: TranslationResource = {
     headerTitle: 'Profil',
     stats: {
       lifetimeDeliveries: 'Livraisons',
-      deliveryRate: 'Taux de livraison',
+      deliveryRate: 'Taux de livraison (total)',
       weeklyCash: 'DT / semaine',
     },
     sectionSupport: 'Assistance',

@@ -88,7 +88,8 @@ const en = {
       late: 'Late Shift',
     },
     deliveriesCardTitle: "Today's Deliveries",
-    stopsCaption: '{{delivered}} / {{total}} STOPS',
+    // The gauge is today's rate (the open runs), not the all-time one on Profile.
+    stopsCaption: 'TODAY · {{delivered}} / {{total}} STOPS',
     onPace: 'On pace to finish by {{time}}',
     stats: {
       delivered: 'Delivered',
@@ -543,7 +544,7 @@ const en = {
 
   profile: {
     headerTitle: 'Profile',
-    stats: { lifetimeDeliveries: 'Deliveries', deliveryRate: 'Delivery Rate', weeklyCash: 'DT / Week' },
+    stats: { lifetimeDeliveries: 'Deliveries', deliveryRate: 'Delivery Rate (all time)', weeklyCash: 'DT / Week' },
     sectionSupport: 'Support',
     rows: {
       helpCenter: 'Help Center',

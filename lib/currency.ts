@@ -1,11 +1,10 @@
 /**
  * Decimal formatting for everything the driver sees.
  *
- * Decimal numbers carry three digits after a DOT — money, distances and
- * weights — the client's rule ("50.000"), which is also what the agency's
- * web app prints ("10.000 TND") and how the backend stores money (millimes).
- * Percentages are the one exception, at two ("98.40%"). Whole counts
- * (parcels, stops, minutes) stay whole.
+ * Every decimal number carries three digits after a DOT — money, distances,
+ * weights AND percentages — the client's rule ("50.000", "65.385%"), which
+ * is also what the agency's web app prints ("10.000 TND") and how the backend
+ * stores money (millimes). Whole counts (parcels, stops, minutes) stay whole.
  *
  * A dot, never a comma: "10,000 TND" reads as ten thousand to anyone used to
  * English number grouping, and this is the amount a driver collects at the
@@ -14,7 +13,7 @@
  */
 export const CURRENCY_DECIMALS = 3;
 export const MEASURE_DECIMALS = 3;
-export const PERCENT_DECIMALS = 2;
+export const PERCENT_DECIMALS = 3;
 
 /** e.g. 4.6 -> "4.600". Use for distances, weights, percentages. */
 export function formatDecimal(value: number, places: number = MEASURE_DECIMALS): string {
@@ -26,7 +25,7 @@ export function formatCurrency(amount: number): string {
   return `${formatDecimal(amount, CURRENCY_DECIMALS)} TND`;
 }
 
-/** e.g. 98.4 -> "98.40%". Every percentage in the app goes through here. */
+/** e.g. 98.4 -> "98.400%". Every percentage in the app goes through here. */
 export function formatPercent(value: number): string {
   return `${formatDecimal(value, PERCENT_DECIMALS)}%`;
 }
