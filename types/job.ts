@@ -97,6 +97,12 @@ export interface Job {
    */
   deliveryAttempts?: number;
   /**
+   * The delivery fee inside `cashToCollect`, when the server gives one.
+   * `cashToCollect − deliveryFee` is what the goods are worth; when that is
+   * zero the delivery needs the customer's code. See `lib/otpRule`.
+   */
+  deliveryFee?: number;
+  /**
    * An exchange: the driver hands over this parcel and takes an article back
    * for the sender. See `lib/deliveryGate`.
    */

@@ -393,6 +393,7 @@ export function toJob(parcel: ApiParcel, item?: ApiRunsheetItem, runsheetId?: st
     },
     status,
     cashToCollect: price ?? 0,
+    deliveryFee: num(parcel.deliveryFee),
     cashCollected: status === 'DELIVERED' ? price : undefined,
     location: point(parcel.recipientLat, parcel.recipientLng),
     governorate: governorateOfCity(parcel.recipientCity),
