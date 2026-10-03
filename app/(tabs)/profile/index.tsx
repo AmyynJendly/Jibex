@@ -155,6 +155,7 @@ export default function ProfileScreen() {
             language: t('settings.sectionLanguage'),
             security: t('settings.sectionSecurity'),
             biometric: t('settings.biometricLogin'),
+            changePassword: t('changePassword.title'),
             haptics: t('settings.hapticFeedback'),
             nextStopBar: t('settings.nextStopBar'),
             support: t('profile.sectionSupport'),
@@ -176,6 +177,7 @@ export default function ProfileScreen() {
           onNextStopBarChange={setNextStopBarEnabled}
           appVersion={Constants.expoConfig?.version ?? '1.0.0'}
           onOpenHelpCenter={() => router.push('/help-center')}
+          onChangePassword={() => router.push('/change-password')}
           onLogOut={handleLogOut}
         />
       </>
@@ -300,6 +302,23 @@ export default function ProfileScreen() {
                 { backgroundColor: colors.bgElevated },
                 getCardShadow(scheme),
               ]}>
+              <AnimatedPressable
+                onPress={() => router.push('/change-password')}
+                style={[
+                  styles.row,
+                  {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.separator,
+                  },
+                ]}>
+                <View style={[styles.rowIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Icon name="key-outline" size={15} color={colors.accent} />
+                </View>
+                <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
+                  {t('changePassword.title')}
+                </Text>
+                <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
+              </AnimatedPressable>
               <AnimatedPressable
                 onPress={() => router.push('/help-center')}
                 style={[

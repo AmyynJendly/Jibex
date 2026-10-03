@@ -302,6 +302,23 @@ const en = {
     location: 'Location: {{latitude}}, {{longitude}}.',
   },
 
+  changePassword: {
+    title: 'Change password',
+    oldPassword: 'Current password',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm the password',
+    submit: 'Confirm',
+    hint: 'At least 4 characters.',
+    done: 'Password changed',
+    errors: {
+      oldRequired: 'Enter your current password.',
+      mismatch: 'The passwords don’t match',
+      tooShort: 'Password too short (min. 4 characters)',
+      same: 'The new password is the same as the current one.',
+      wrongOld: 'Current password incorrect.',
+    },
+  },
+
   cashCollected: {
     title: 'Stop {{index}} Wrapped Up',
     subtitle: 'Code verified · {{time}} · {{place}}',

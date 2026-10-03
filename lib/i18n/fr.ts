@@ -299,6 +299,23 @@ const fr: TranslationResource = {
     location: 'Position : {{latitude}}, {{longitude}}.',
   },
 
+  changePassword: {
+    title: 'Changer le mot de passe',
+    oldPassword: 'Ancien mot de passe',
+    newPassword: 'Nouveau mot de passe',
+    confirmPassword: 'Confirmer le mot de passe',
+    submit: 'Confirmer',
+    hint: 'Au moins 4 caractères.',
+    done: 'Mot de passe modifié avec succès',
+    errors: {
+      oldRequired: 'Entrez votre ancien mot de passe.',
+      mismatch: 'Les mots de passe ne correspondent pas',
+      tooShort: 'Mot de passe trop court (min. 4 caractères)',
+      same: 'Le nouveau mot de passe est identique à l’ancien.',
+      wrongOld: 'Ancien mot de passe incorrect.',
+    },
+  },
+
   cashCollected: {
     title: 'Arrêt {{index}} bouclé',
     subtitle: 'Code vérifié · {{time}} · {{place}}',

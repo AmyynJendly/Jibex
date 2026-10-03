@@ -1,4 +1,5 @@
 import { addDays, toCompactDateKey, toDateKey } from '../lib/date';
+import { passwordProblem } from '../lib/password';
 import { lockedStopIdsOf } from '../lib/runsheetDay';
 import { formatCurrency } from '../lib/currency';
 import * as device from '../lib/deviceStore';
@@ -724,7 +725,7 @@ let mockUser: User = {
 };
 
 /** Dev-only mock credentials — irrelevant once login() calls a real API. */
-const mockPassword = 'password123';
+let mockPassword = 'password123';
 
 let mockVehicle: Vehicle = {
   type: 'motorcycle',
@@ -787,6 +788,20 @@ export async function getDispatchContact(): Promise<DispatchContact> {
 /** The driver's vehicle, or null when nobody has recorded one. */
 export async function getVehicle(): Promise<Vehicle | null> {
   return delay({ ...mockVehicle });
+}
+
+/** Same checks as the real one. The mock account's password really changes, until the app restarts. */
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string,
+  confirmPassword: string
+): Promise<WriteResult> {
+  await delay(undefined);
+  const problem = passwordProblem({ oldPassword, newPassword, confirmPassword });
+  if (problem) return { success: false, error: problem };
+  if (oldPassword !== mockPassword) return { success: false, error: 'changePassword.errors.wrongOld' };
+  mockPassword = newPassword;
+  return { success: true };
 }
 
 export async function getUser(): Promise<User> {
