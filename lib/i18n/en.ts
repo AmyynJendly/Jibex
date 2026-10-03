@@ -233,6 +233,7 @@ const en = {
     nothing: 'Nothing to collect',
     toCollect: 'To collect: {{amount}}',
     feeOnlyNote: '(delivery fee)',
+    deliveryFee: 'Delivery fee: {{amount}}',
     feeOnlyHint: 'The customer only pays the delivery fee, in cash.',
     nothingHint: 'Already paid: nothing to ask the customer for.',
   },
@@ -337,6 +338,8 @@ const en = {
     exhaustedBody: 'The 3 resends are used. Without a correct code this parcel cannot be delivered.',
     markFailed: 'Record a failure',
     testBanner: 'TEST MODE',
+    // On a list card: this parcel is delivered with the customer's code.
+    cardBadge: 'CUSTOMER CODE',
     testBannerBody: 'Code generated on this phone: {{code}}',
     errors: {
       incorrect: 'Wrong code. Ask the customer to confirm it and try again.',

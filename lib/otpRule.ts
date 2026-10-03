@@ -62,6 +62,35 @@ export function cashDueLine(t: TFunction, due: CashDue): string {
 }
 
 /**
+ * The cash corner of a list card.
+ *
+ * A parcel that needs the customer's code no longer says "Payé": it carries
+ * a "CODE CLIENT" badge, so the driver knows before opening it, and when
+ * there is a delivery fee to collect it says so: "Frais de livraison :
+ * 10.000 TND". Every other parcel is unchanged — the price, or "Payé".
+ *
+ * @param needsCode the rule AND the OTP switch (`otpNeeded` in services/otp):
+ *   with OTP off the card is exactly as before.
+ */
+export function cardCash(
+  t: TFunction,
+  job: { cashToCollect: number; deliveryFee?: number },
+  needsCode: boolean
+): { label: string | null; codeBadge: string | null; paid: boolean } {
+  if (needsCode) {
+    const due = cashDueFor(job);
+    return {
+      label: due.kind === 'feeOnly' ? t('cash.deliveryFee', { amount: formatCurrency(due.amount) }) : null,
+      codeBadge: t('otp.cardBadge'),
+      paid: false,
+    };
+  }
+  return job.cashToCollect > 0
+    ? { label: formatCurrency(job.cashToCollect), codeBadge: null, paid: false }
+    : { label: t('runsheets.paidTag'), codeBadge: null, paid: true };
+}
+
+/**
  * What the OTP service knows a parcel by: its line on the run (the server's
  * runsheet item id) — the same id a delivery is recorded against. Mock
  * parcels have none and use their tracking number.

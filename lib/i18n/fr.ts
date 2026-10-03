@@ -233,6 +233,7 @@ const fr: TranslationResource = {
     nothing: 'Rien à encaisser',
     toCollect: 'À encaisser : {{amount}}',
     feeOnlyNote: '(frais de livraison)',
+    deliveryFee: 'Frais de livraison : {{amount}}',
     feeOnlyHint: 'Le client ne paie que les frais de livraison, en espèces.',
     nothingHint: 'Colis déjà payé : aucun montant à demander au client.',
   },
@@ -334,6 +335,8 @@ const fr: TranslationResource = {
     exhaustedBody: 'Les 3 renvois sont utilisés. Sans code correct, ce colis ne peut pas être livré.',
     markFailed: 'Marquer un échec',
     testBanner: 'MODE TEST',
+    // On a list card: this parcel is delivered with the customer's code.
+    cardBadge: 'CODE CLIENT',
     testBannerBody: 'Code généré sur ce téléphone : {{code}}',
     errors: {
       incorrect: 'Code incorrect. Demandez au client de le confirmer et réessayez.',

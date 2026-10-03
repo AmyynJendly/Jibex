@@ -299,7 +299,7 @@ describe('no delivery without a correct code', () => {
   });
 });
 
-describe('real mode', () => {
+describe('the real OTP service', () => {
   it('never shows the test banner, whatever the status carries', () => {
     const leaked = { sentAt: 0, expiresAt: 1, resendAvailableAt: 1, resendsLeft: 3, attemptsLeft: 5, verified: false, testCode: '123456' };
     expect(testBannerCode('real', leaked)).toBeNull();
@@ -328,9 +328,10 @@ describe('real mode', () => {
     expect(fr.otp.errors.notConnected).toMatch(/serveur/);
   });
 
-  it('the real delivery call refuses a code-required parcel before sending anything', async () => {
+  it('with EXPO_PUBLIC_OTP=real, the real delivery call refuses a code-required parcel before sending anything', async () => {
     process.env.EXPO_PUBLIC_API_MODE = 'real';
     process.env.EXPO_PUBLIC_API_WRITES = 'on';
+    process.env.EXPO_PUBLIC_OTP = 'real';
     let api!: typeof import('../services/real-api');
     jest.isolateModules(() => {
       api = require('../services/real-api');
@@ -371,6 +372,7 @@ describe('real mode', () => {
     } finally {
       delete process.env.EXPO_PUBLIC_API_MODE;
       delete process.env.EXPO_PUBLIC_API_WRITES;
+      delete process.env.EXPO_PUBLIC_OTP;
     }
   });
 });

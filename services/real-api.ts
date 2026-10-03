@@ -44,9 +44,9 @@ import { jobStatusOfParcel } from '../lib/parcelStatus';
 import { findExact } from '../lib/parcelSearch';
 import * as device from '../lib/deviceStore';
 import { localeTag, toDateKey } from '../lib/date';
-import { otpItemId, otpRequiredFor } from '../lib/otpRule';
+import { otpItemId } from '../lib/otpRule';
 import { dayRuns, lockedStopIds } from '../lib/runsheetDay';
-import { otpService } from './otp';
+import { otpNeeded, otpService } from './otp';
 import { i18next } from '../lib/i18n';
 import { nearestFirstByArea } from '../lib/route';
 import { driverPosition } from '../lib/driverPosition';
@@ -1695,9 +1695,10 @@ export async function confirmDelivery(id: string, cashAmount: number): Promise<C
   if (!device.hasCalled(id)) return { success: false, error: 'statusUpdate.callRequired' };
   // Nothing of value to collect: only the customer's code proves the
   // delivery. Checked on the phone before anything is sent; the server will
-  // check it again once it has the OTP API.
+  // check it again once it has the OTP API. With EXPO_PUBLIC_OTP=off (the
+  // default on the real server) this never refuses anything.
   const parcel = await ownParcel(id).catch(() => undefined);
-  if (parcel && otpRequiredFor(parcel) && !otpService.isVerified(otpItemId(parcel))) {
+  if (parcel && otpNeeded(parcel) && !otpService.isVerified(otpItemId(parcel))) {
     return { success: false, error: 'otp.errors.required' };
   }
 

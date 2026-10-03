@@ -34,7 +34,7 @@ import {
 } from '../../../constants';
 import { attemptInfo, attemptLabel } from '../../../lib/attempts';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
-import { cashDueFor, cashDueLine, otpRequiredFor } from '../../../lib/otpRule';
+import { cashDueFor, cashDueLine } from '../../../lib/otpRule';
 import { localeTag } from '../../../lib/date';
 import { deliveryBlocker } from '../../../lib/deliveryGate';
 import { callCustomer, openInMaps } from '../../../lib/stopActions';
@@ -47,6 +47,7 @@ import { useOnlineGuard } from '../../../lib/useOnlineGuard';
 import { useWrite } from '../../../lib/useWrite';
 import { safely } from '../../../lib/writeResult';
 import { confirmDelivery, getDriverStats, getRunsheets } from '../../../services/api';
+import { otpNeeded } from '../../../services/otp';
 
 /**
  * No-key static map image — shows the job's real location instead of a
@@ -182,7 +183,7 @@ export default function JobDetailScreen() {
 
     // Nothing of value to collect: the delivery needs the customer's code.
     // The call comes first, so a code is not sent for a customer never called.
-    if (otpRequiredFor(job)) {
+    if (otpNeeded(job)) {
       if (job.callAttempts <= 0) {
         showToast(t('statusUpdate.callRequired'));
         return;

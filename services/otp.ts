@@ -10,13 +10,17 @@
  * with the three calls described in OTP.md. Nothing else changes — not the
  * screen, not the rules, not the tests of the rules.
  *
- *  - Mock mode: `mockOtpService` makes the code up on the phone and hands it
+ * Which one is used is the `EXPO_PUBLIC_OTP` switch (see constants/backend):
+ *  - `off`:  the rule is disabled. Nothing here is asked; `otpNeeded()` is
+ *    false for every parcel, so no delivery waits for a code.
+ *  - `mock`: `mockOtpService` makes the code up on the phone and hands it
  *    back as `testCode`, so the flow can be tested with no SMS. That code is
  *    shown in a "MODE TEST" banner.
- *  - Real mode: `realOtpService`. Until the API exists it answers "not
+ *  - `real`: `realOtpService`. Until the API exists it answers "not
  *    connected", and it never carries a `testCode`: the banner cannot appear.
  */
-import { API_MODE, type ApiMode } from '../constants/backend';
+import { OTP_MODE, type OtpMode } from '../constants/backend';
+import { otpRequiredFor } from '../lib/otpRule';
 import {
   OTP_MAX_RESENDS,
   OTP_MAX_WRONG,
@@ -151,19 +155,34 @@ export const realOtpService: OtpService = {
 
 export const mockOtpService = createMockOtpService();
 
-/** The one place the mode is read. */
-export function otpServiceFor(mode: ApiMode): OtpService {
-  return mode === 'real' ? realOtpService : mockOtpService;
+/** The one place the mode is read. With the rule off the real service stands in; it is never asked. */
+export function otpServiceFor(mode: OtpMode): OtpService {
+  return mode === 'mock' ? mockOtpService : realOtpService;
 }
 
-export const otpService: OtpService = otpServiceFor(API_MODE);
+export const otpService: OtpService = otpServiceFor(OTP_MODE);
 
 /**
- * The code to show in the "MODE TEST" banner, or null. Only ever in mock
- * mode: in real mode this is null whatever the status says, so the banner
- * cannot appear even if a `testCode` slipped through.
+ * Whether THIS delivery needs the customer's code: the rule (nothing of
+ * value to collect) AND the switch. With `EXPO_PUBLIC_OTP=off` it is false
+ * for every parcel — screens, list cards and delivery calls all ask here, so
+ * none of them can wait for a code the switch has turned off.
  */
-export function testBannerCode(mode: ApiMode, status: OtpStatus | null | undefined): string | null {
+export function otpNeededIn(mode: OtpMode, job: { cashToCollect: number; deliveryFee?: number }): boolean {
+  return mode !== 'off' && otpRequiredFor(job);
+}
+
+export function otpNeeded(job: { cashToCollect: number; deliveryFee?: number }): boolean {
+  return otpNeededIn(OTP_MODE, job);
+}
+
+/**
+ * The code to show in the "MODE TEST" banner, or null. Only ever with
+ * `EXPO_PUBLIC_OTP=mock`, which itself only exists on mock data: with `real`
+ * or `off` this is null whatever the status says, so the banner cannot appear
+ * even if a `testCode` slipped through.
+ */
+export function testBannerCode(mode: OtpMode, status: OtpStatus | null | undefined): string | null {
   if (mode !== 'mock') return null;
   return status?.testCode ?? null;
 }

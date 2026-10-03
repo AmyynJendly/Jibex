@@ -10,7 +10,7 @@ import { LoadError } from '../../../components/LoadError';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { useToast } from '../../../components/Toast';
 import { TrackingId } from '../../../components/TrackingId';
-import { API_MODE } from '../../../constants/backend';
+import { OTP_MODE } from '../../../constants/backend';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, monoStyle, useColors } from '../../../constants';
 import { deliveryBlocker } from '../../../lib/deliveryGate';
 import { cashDueFor, cashDueLine, otpItemId } from '../../../lib/otpRule';
@@ -88,7 +88,7 @@ export default function OtpScreen() {
   }, [itemId, t]);
 
   const view = status ? otpScreenState(status, now) : null;
-  const testCode = testBannerCode(API_MODE, status);
+  const testCode = testBannerCode(OTP_MODE, status);
 
   async function verify(entered: string) {
     if (!itemId || checking.current) return;
