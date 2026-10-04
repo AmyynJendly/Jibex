@@ -89,7 +89,7 @@ Explain things simply, in short sentences.
 - `docs/web-app-tour.md` — page-by-page tour of the web app and its bugs.
 - `web-tour/`, `explore-2/`, `test-run*/` — not in the project any more: screenshots, logs
   (private data) and the scripts of the tours and live tests. They live in
-  `DocumentsJibex-tests` on the developer's PC. Their `.gitignore` lines are kept.
+  `Documents\Jibex-tests` on the developer's PC. Their `.gitignore` lines are kept.
 - `SynapseDriverApp/` — gitignored reference clone of the backend and Android app. Read only.
 
 ## Commands
