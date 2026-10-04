@@ -188,9 +188,7 @@ export function applyStopOrder<T extends { id: string }>(
     const runsheetId = runsheetOf(item.id);
     return runsheetId ? state.stopRanks[runsheetId]?.[item.id] : undefined;
   };
-  const ranked = items
-    .filter((item) => rankOf(item) !== undefined)
-    .sort((a, b) => rankOf(a)! - rankOf(b)!);
+  const ranked = items.filter((item) => rankOf(item) !== undefined).sort((a, b) => rankOf(a)! - rankOf(b)!);
   const rest = items.filter((item) => rankOf(item) === undefined);
   return [...ranked, ...rest];
 }
@@ -264,10 +262,7 @@ export async function hideNotifications(ids: string[]): Promise<void> {
   const next = [...new Set([...state.hiddenNotifications, ...ids])].slice(-NOTIFICATION_MEMORY);
   state.hiddenNotifications = next;
   state.unreadNotifications = state.unreadNotifications.filter((id) => !ids.includes(id));
-  await Promise.all([
-    persist('hiddenNotifications', next),
-    persist('unreadNotifications', state.unreadNotifications),
-  ]);
+  await Promise.all([persist('hiddenNotifications', next), persist('unreadNotifications', state.unreadNotifications)]);
 }
 
 export function isMarkedUnread(id: string): boolean {
@@ -310,7 +305,11 @@ export function storedDispatchContact(): { phone?: string; email?: string; agenc
   return state.dispatchContact;
 }
 
-export async function saveDispatchContact(contact: { phone?: string; email?: string; agencyName?: string }): Promise<void> {
+export async function saveDispatchContact(contact: {
+  phone?: string;
+  email?: string;
+  agencyName?: string;
+}): Promise<void> {
   state.dispatchContact = contact;
   await persist('dispatchContact', contact);
 }

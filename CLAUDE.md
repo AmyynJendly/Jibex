@@ -49,7 +49,7 @@ Explain things simply, in short sentences.
   There is no photo delivery (the server has no field for it).
 - OTP: a parcel with nothing of value to collect (price - deliveryFee = 0, see
   `lib/otpRule.ts`) needs the customer's code. `services/otp.ts` is the only file to
-  change when the real API exists (contract in `OTP.md`); today it is a mock.
+  change when the real API exists (contract in `docs/OTP.md`); today it is a mock.
 - Every action button sends through `lib/useWrite.ts`: one write at a time,
   "Envoi…" while it runs, and a retry when the server did not answer.
 - Phone-only state (`lib/deviceStore.ts`, AsyncStorage): call log, drag order,
@@ -80,19 +80,24 @@ Explain things simply, in short sentences.
 - `types/` — shared types. `__tests__/` — Jest tests.
 - `scripts/` — read-only probes of the live server.
 - `docs/client-notes.txt` — the client's feature requests.
-- `FIXES.md`, `PARITY.md`, `OPTIMIZATION.md` — what was fixed after the live tests, the
-  comparison with the Android app, and the optimization pass.
+- `docs/FIXES.md`, `docs/PARITY.md`, `docs/OPTIMIZATION.md` — what was fixed after the live
+  tests, the comparison with the Android app, and the optimization pass.
+- `docs/OTP.md` — the delivery code, and the API the app expects.
+- `docs/test-runs/` — the reports of the five live test rounds.
+- `docs/web-app-exploration.md` — the second read-only exploration of the web app.
 - `docs/web-app-findings.md` — what the agency and sender web app showed (accounts, data, gaps).
 - `docs/web-app-tour.md` — page-by-page tour of the web app and its bugs.
-- `web-tour/` — gitignored: tour screenshots (private data) and the read-only tour scripts.
+- `web-tour/`, `explore-2/`, `test-run*/` — gitignored: screenshots and logs (private data)
+  and the scripts of the tours and live tests.
 - `SynapseDriverApp/` — gitignored reference clone of the backend and Android app. Read only.
 
 ## Commands
 
 - `npx expo start --clear` — run the app (scan the QR code with Expo Go).
 - `npm test` — Jest tests (`__tests__/*.test.ts`).
-- `npm run lint` — ESLint (only covers `app/` and `components/`).
-- `npx tsc --noEmit` — type check.
+- `npm run lint` — ESLint, on the whole project.
+- `npm run typecheck` — type check (`tsc --noEmit`).
+- `npm run format` — Prettier, on the whole project (`npm run format:check` only checks).
 - `npm run probe:login | probe:runsheets | probe:driver-data | probe:history`
   — read-only checks against the live server with the `JIBEX_TEST_*` account.
   They mask personal data and never print the token.

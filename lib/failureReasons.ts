@@ -49,7 +49,14 @@ export const FAILURE_REASONS: readonly FailureReasonInfo[] = [
   { value: 'REFUSED', group: 'customer', icon: 'close-circle-outline', selectable: false, common: false },
   { value: 'PARCEL_POSTPONED', group: 'customer', icon: 'time-outline', selectable: true, common: false },
   { value: 'UNRELIABLE_CLIENT', group: 'customer', icon: 'alert-circle-outline', selectable: true, common: false },
-  { value: 'NOT_INTERESTED_2ND_ATTEMPT', group: 'customer', icon: 'thumbs-down-outline', selectable: false, common: false, fromAttempt: 2 },
+  {
+    value: 'NOT_INTERESTED_2ND_ATTEMPT',
+    group: 'customer',
+    icon: 'thumbs-down-outline',
+    selectable: false,
+    common: false,
+    fromAttempt: 2,
+  },
   // The address
   { value: 'WRONG_ADDRESS', group: 'address', icon: 'location-outline', selectable: true, common: true },
   { value: 'INCOMPLETE_ADDRESS', group: 'address', icon: 'map-outline', selectable: true, common: false },
@@ -64,13 +71,7 @@ export const FAILURE_REASONS: readonly FailureReasonInfo[] = [
   { value: 'OTHER', group: 'other', icon: 'ellipsis-horizontal-circle-outline', selectable: true, common: false },
 ];
 
-export const FAILURE_REASON_GROUPS: readonly FailureReasonGroup[] = [
-  'reach',
-  'customer',
-  'address',
-  'order',
-  'other',
-];
+export const FAILURE_REASON_GROUPS: readonly FailureReasonGroup[] = ['reach', 'customer', 'address', 'order', 'other'];
 
 /**
  * The reasons a driver can pick for this parcel. `deliveryAttempts` is the

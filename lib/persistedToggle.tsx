@@ -30,9 +30,7 @@ export function createPersistedToggle(storageKey: string, defaultValue: boolean)
     const [enabled, setEnabledState] = useState(defaultValue);
 
     useEffect(() => {
-      const read = isWeb
-        ? Promise.resolve(localStorage.getItem(storageKey))
-        : SecureStore.getItemAsync(storageKey);
+      const read = isWeb ? Promise.resolve(localStorage.getItem(storageKey)) : SecureStore.getItemAsync(storageKey);
       read.then((stored) => {
         if (stored !== null) setEnabledState(stored === '1');
       });

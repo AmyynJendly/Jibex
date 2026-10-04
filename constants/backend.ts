@@ -33,7 +33,7 @@ export const API_WRITES: boolean = process.env.EXPO_PUBLIC_API_WRITES === 'on';
  *             applies). No delivery call asks for a verified code.
  *  - `mock` — the code is made up on the phone and shown in a "MODE TEST"
  *             banner, so the flow can be tried with no SMS. Mock data only.
- *  - `real` — the real OTP API (see OTP.md). For when it exists.
+ *  - `real` — the real OTP API (see docs/OTP.md). For when it exists.
  *
  * With nothing set: `mock` on mock data, `off` on the real server — a real
  * delivery is never blocked because the OTP API is missing.

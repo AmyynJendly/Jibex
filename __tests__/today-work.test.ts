@@ -37,11 +37,22 @@ const CLOSED = toRunsheet({
   status: 'COMPLETED',
   scheduledDate: TODAY,
   completedAt: '2026-10-03T17:14:02',
-  items: [item(1, 'DELIVERED'), item(2, 'DELIVERED'), item(3, 'FAILED', { failureReason: 'NOT_AVAILABLE_RESCHEDULED' })],
+  items: [
+    item(1, 'DELIVERED'),
+    item(2, 'DELIVERED'),
+    item(3, 'FAILED', { failureReason: 'NOT_AVAILABLE_RESCHEDULED' }),
+  ],
 })!;
 
 function open(items: ReturnType<typeof item>[], overrides: Record<string, unknown> = {}): Runsheet {
-  return toRunsheet({ id: 80, code: 'RS-20261003-0002', status: 'IN_PROGRESS', scheduledDate: TODAY, items, ...overrides })!;
+  return toRunsheet({
+    id: 80,
+    code: 'RS-20261003-0002',
+    status: 'IN_PROGRESS',
+    scheduledDate: TODAY,
+    items,
+    ...overrides,
+  })!;
 }
 
 describe('Home counts today’s work', () => {
@@ -61,7 +72,13 @@ describe('Home counts today’s work', () => {
   });
 
   it('rate = delivered ÷ (delivered + failed), with two decimals', () => {
-    const run = open([item(1, 'DELIVERED'), item(2, 'DELIVERED'), item(3, 'DELIVERED'), item(4, 'FAILED'), item(5, 'PENDING')]);
+    const run = open([
+      item(1, 'DELIVERED'),
+      item(2, 'DELIVERED'),
+      item(3, 'DELIVERED'),
+      item(4, 'FAILED'),
+      item(5, 'PENDING'),
+    ]);
     expect(formatPercent(todayWork([run], [], TODAY).ratePercent)).toBe('75.00%');
     const perfect = open([item(1, 'DELIVERED')]);
     expect(formatPercent(todayWork([perfect], [], TODAY).ratePercent)).toBe('100.00%');
@@ -70,7 +87,13 @@ describe('Home counts today’s work', () => {
   it('is 0.00% with nothing attempted yet — and never divides by zero', () => {
     expect(formatPercent(todayWork([], [], TODAY).ratePercent)).toBe('0.00%');
     const fresh = open([item(1, 'PENDING'), item(2, 'PENDING')]);
-    expect(todayWork([fresh], [], TODAY)).toMatchObject({ delivered: 0, failed: 0, remaining: 2, total: 2, ratePercent: 0 });
+    expect(todayWork([fresh], [], TODAY)).toMatchObject({
+      delivered: 0,
+      failed: 0,
+      remaining: 2,
+      total: 2,
+      ratePercent: 0,
+    });
   });
 
   it('leaves out a run closed on another day', () => {
@@ -96,7 +119,13 @@ describe('Home counts today’s work', () => {
 });
 
 describe('a failure reason only on a failed parcel', () => {
-  const parcel = { id: 135, trackingNumber: 'TUN-100-6D42D0BF', status: 'EN_COURS', recipientName: 'TEST AMYYN', price: 10 };
+  const parcel = {
+    id: 135,
+    trackingNumber: 'TUN-100-6D42D0BF',
+    status: 'EN_COURS',
+    recipientName: 'TEST AMYYN',
+    price: 10,
+  };
 
   it('ignores the reason the server keeps after "Remettre en attente"', () => {
     // P10 in round 5: PENDING again, but still carrying ABSENT.
@@ -108,7 +137,13 @@ describe('a failure reason only on a failed parcel', () => {
   });
 
   it('ignores a stale reason and note on a delivered parcel', () => {
-    const job = toJob(parcel, { id: 145, status: 'DELIVERED', failureReason: 'ABSENT', notes: 'Client non appelé.', parcel });
+    const job = toJob(parcel, {
+      id: 145,
+      status: 'DELIVERED',
+      failureReason: 'ABSENT',
+      notes: 'Client non appelé.',
+      parcel,
+    });
     expect(job.status).toBe('DELIVERED');
     expect(job.failureReason).toBeUndefined();
     expect(job.failureNote).toBeUndefined();
@@ -116,7 +151,13 @@ describe('a failure reason only on a failed parcel', () => {
   });
 
   it('still shows it on a failed parcel', () => {
-    const job = toJob(parcel, { id: 145, status: 'FAILED', failureReason: 'ABSENT', notes: 'Client non appelé.', parcel });
+    const job = toJob(parcel, {
+      id: 145,
+      status: 'FAILED',
+      failureReason: 'ABSENT',
+      notes: 'Client non appelé.',
+      parcel,
+    });
     expect(job.failureReason).toBe('ABSENT');
     expect(job.failureNote).toBe('Client non appelé.');
     expect(shownFailureReason(job)).toBe('ABSENT');

@@ -31,10 +31,7 @@ export function SkeletonBlock({ width, height = 16, radius = 8, style }: Skeleto
 
   useEffect(() => {
     pulse.value = withRepeat(
-      withSequence(
-        withTiming(0.9, { duration: 650 }),
-        withTiming(0.4, { duration: 650 })
-      ),
+      withSequence(withTiming(0.9, { duration: 650 }), withTiming(0.4, { duration: 650 })),
       -1,
       true
     );
@@ -44,11 +41,7 @@ export function SkeletonBlock({ width, height = 16, radius = 8, style }: Skeleto
 
   return (
     <Animated.View
-      style={[
-        { width, height, borderRadius: radius, backgroundColor: colors.separator },
-        animatedStyle,
-        style,
-      ]}
+      style={[{ width, height, borderRadius: radius, backgroundColor: colors.separator }, animatedStyle, style]}
     />
   );
 }
@@ -58,8 +51,7 @@ export function SkeletonRow({ style }: { style?: StyleProp<ViewStyle> }) {
   const colors = useColors();
 
   return (
-    <Animated.View
-      style={[styles.row, { backgroundColor: colors.bgElevated }, style]}>
+    <Animated.View style={[styles.row, { backgroundColor: colors.bgElevated }, style]}>
       <SkeletonBlock width={30} height={30} radius={9} />
       <Animated.View style={styles.rowText}>
         <SkeletonBlock width="60%" height={14} radius={4} />

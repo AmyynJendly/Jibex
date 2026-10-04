@@ -1,12 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
 interface RollingDigitsProps {
   from: string;

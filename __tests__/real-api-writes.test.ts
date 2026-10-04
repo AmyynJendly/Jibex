@@ -27,12 +27,28 @@ let fetchMock: jest.Mock;
 let calls: { url: string; method: string; body?: string }[];
 
 function json(status: number, body: unknown) {
-  return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
+  return Promise.resolve(
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  );
 }
 
 const NOTIFICATIONS = [
-  { id: 900, title: 'Colis livré', message: 'TRK-1', type: 'PARCEL_DELIVERED', isRead: true, createdAt: '2026-09-26T08:00:00' },
-  { id: 901, title: 'Nouvelle collecte', message: 'Boutique', type: 'PICKUP_ASSIGNED', isRead: false, createdAt: '2026-09-26T09:00:00' },
+  {
+    id: 900,
+    title: 'Colis livré',
+    message: 'TRK-1',
+    type: 'PARCEL_DELIVERED',
+    isRead: true,
+    createdAt: '2026-09-26T08:00:00',
+  },
+  {
+    id: 901,
+    title: 'Nouvelle collecte',
+    message: 'Boutique',
+    type: 'PICKUP_ASSIGNED',
+    isRead: false,
+    createdAt: '2026-09-26T09:00:00',
+  },
 ];
 
 /**
@@ -55,7 +71,14 @@ async function realApp({ writes }: { writes: boolean }): Promise<Api> {
       return json(200, {
         token: 't',
         role: 'DRIVER',
-        user: { id: USER_ID, driverId: DRIVER_ID, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
+        user: {
+          id: USER_ID,
+          driverId: DRIVER_ID,
+          username: 'driver',
+          fullName: 'Driver Test',
+          role: 'DRIVER',
+          active: true,
+        },
       });
     }
     if (url.includes('/api/notifications/user/')) return json(200, NOTIFICATIONS);
@@ -123,7 +146,14 @@ describe('real mode with writes off: no fake success', () => {
     expect(await api.deleteAllNotifications()).toEqual({ success: true });
     expect(await api.getNotifications()).toEqual([]);
 
-    NOTIFICATIONS.push({ id: 902, title: 'Nouveau', message: 'x', type: 'INFO', isRead: false, createdAt: '2026-09-26T10:00:00' });
+    NOTIFICATIONS.push({
+      id: 902,
+      title: 'Nouveau',
+      message: 'x',
+      type: 'INFO',
+      isRead: false,
+      createdAt: '2026-09-26T10:00:00',
+    });
     try {
       expect((await api.getNotifications()).map((n) => n.id)).toEqual(['902']);
     } finally {
@@ -134,7 +164,10 @@ describe('real mode with writes off: no fake success', () => {
 
   it('a scan finds the driver’s parcel without claiming to confirm anything', async () => {
     const api = await realApp({ writes: false });
-    expect(await api.confirmScan('TRK-5DF3697E')).toMatchObject({ success: false, error: 'scanner.errors.notRecognized' });
+    expect(await api.confirmScan('TRK-5DF3697E')).toMatchObject({
+      success: false,
+      error: 'scanner.errors.notRecognized',
+    });
     expect(writesSent()).toEqual([]);
   });
 });
@@ -143,16 +176,42 @@ describe('real mode with writes off: no fake success', () => {
 // Writes switched ON — against a stand-in server, never jibex.cloud.
 // ═══════════════════════════════════════════════════════════════════════════
 
-type Item = { id: number; sequenceOrder: number; status: string; failureReason: string | null; notes: string | null; parcel: Record<string, unknown> };
+type Item = {
+  id: number;
+  sequenceOrder: number;
+  status: string;
+  failureReason: string | null;
+  notes: string | null;
+  parcel: Record<string, unknown>;
+};
 type Run = { id: number; code: string; status: string; items: Item[] };
 
 /** A parcel whose server id is deliberately NOT its item id — so a mix-up can't pass. */
 function parcelOn(parcelId: number, tracking: string, extra: Record<string, unknown> = {}) {
-  return { id: parcelId, trackingNumber: tracking, status: 'EN_COURS', recipientName: 'Client', recipientPhone: '20000000', recipientAddress: 'Rue 1', recipientCity: 'Tunis', amountToCollect: 30, price: 37, deliveryFee: 7, ...extra };
+  return {
+    id: parcelId,
+    trackingNumber: tracking,
+    status: 'EN_COURS',
+    recipientName: 'Client',
+    recipientPhone: '20000000',
+    recipientAddress: 'Rue 1',
+    recipientCity: 'Tunis',
+    amountToCollect: 30,
+    price: 37,
+    deliveryFee: 7,
+    ...extra,
+  };
 }
 
 function line(itemId: number, parcelId: number, tracking: string, status = 'PENDING', seq = 1): Item {
-  return { id: itemId, sequenceOrder: seq, status, failureReason: null, notes: null, parcel: parcelOn(parcelId, tracking) };
+  return {
+    id: itemId,
+    sequenceOrder: seq,
+    status,
+    failureReason: null,
+    notes: null,
+    parcel: parcelOn(parcelId, tracking),
+  };
 }
 
 /**
@@ -168,7 +227,12 @@ function standInServer() {
       status: 'IN_PROGRESS',
       items: [line(811, 9811, 'TRK-B1'), line(812, 9812, 'TRK-B2', 'DELIVERED', 2)],
     },
-    { id: 72, code: 'RS-72', status: 'IN_PROGRESS', items: [line(821, 9821, 'TRK-C1'), line(822, 9822, 'TRK-C2', 'PENDING_DRIVER_CONFIRMATION', 2)] },
+    {
+      id: 72,
+      code: 'RS-72',
+      status: 'IN_PROGRESS',
+      items: [line(821, 9821, 'TRK-C1'), line(822, 9822, 'TRK-C2', 'PENDING_DRIVER_CONFIRMATION', 2)],
+    },
     { id: 73, code: 'RS-73', status: 'DRIVER_CONFIRMED', items: [line(831, 9831, 'TRK-D1')] },
   ];
   const closed: Run = { id: 60, code: 'RS-60', status: 'COMPLETED', items: [line(601, 9601, 'TRK-H1', 'DELIVERED')] };
@@ -188,12 +252,28 @@ function standInServer() {
     let m: RegExpMatchArray | null;
 
     if (u === 'api/auth/login') {
-      return json(200, { token: 't', role: 'DRIVER', user: { id: USER_ID, driverId: DRIVER_ID, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true } });
+      return json(200, {
+        token: 't',
+        role: 'DRIVER',
+        user: {
+          id: USER_ID,
+          driverId: DRIVER_ID,
+          username: 'driver',
+          fullName: 'Driver Test',
+          role: 'DRIVER',
+          active: true,
+        },
+      });
     }
     if (method === 'GET' && u === `api/runsheets/driver/${DRIVER_ID}/active`) return json(200, runs);
     if (method === 'GET' && u === `api/runsheets?driverId=${DRIVER_ID}`) return json(200, [...runs, closed]);
     if (method === 'GET' && (m = u.match(/^api\/runsheets\/(\d+)$/))) return json(200, runOf(m[1]));
-    if (method === 'PUT' && (m = u.match(/^api\/runsheets\/(\d+)\/(driver-confirm|start|confirm-new-parcels|driver-reject|reject-new-parcels)$/))) {
+    if (
+      method === 'PUT' &&
+      (m = u.match(
+        /^api\/runsheets\/(\d+)\/(driver-confirm|start|confirm-new-parcels|driver-reject|reject-new-parcels)$/
+      ))
+    ) {
       const run = runOf(m[1])!;
       switch (m[2]) {
         case 'driver-confirm':
@@ -226,7 +306,8 @@ function standInServer() {
     if (method === 'GET' && u.match(/^api\/pickup-requests\/\d+\/parcels$/)) return json(200, []);
     if (method === 'PUT' && (m = u.match(/^api\/pickup-requests\/(\d+)\/(start|complete)$/))) {
       const pickup = pickups.find((p) => String(p.id) === m![1])!;
-      if (m[2] === 'complete' && pickup.id === 2 && fail.pickupComplete2) return json(409, { error: 'Collecte déjà clôturée' });
+      if (m[2] === 'complete' && pickup.id === 2 && fail.pickupComplete2)
+        return json(409, { error: 'Collecte déjà clôturée' });
       pickup.status = m[2] === 'start' ? 'IN_PROGRESS' : 'COMPLETED';
       return json(200, {});
     }
@@ -237,7 +318,8 @@ function standInServer() {
       loaded.forEach((r) => (r.status = 'EN_TRANSIT_RETOUR'));
       return json(200, loaded);
     }
-    if (method === 'POST' && u.match(/^api\/return-management\/\d+\/confirm-delivered\?driverId=\d+$/)) return json(200, {});
+    if (method === 'POST' && u.match(/^api\/return-management\/\d+\/confirm-delivered\?driverId=\d+$/))
+      return json(200, {});
     if (method === 'GET' && u === `api/notifications/user/${USER_ID}`) return json(200, NOTIFICATIONS);
     if (method === 'PUT' && u.match(/^api\/notifications\/\d+\/read$/)) return json(200, {});
     if (method === 'PUT' && u === `api/notifications/user/${USER_ID}/read-all`) return json(200, {});
@@ -308,8 +390,14 @@ describe('writes on: the runsheet flow', () => {
     expect(await api.rejectRunsheet('70', '   ')).toEqual({ success: false, error: 'runsheets.refuse.reasonRequired' });
     expect(writesSent()).toEqual([]);
 
-    expect(await api.rejectRunsheet('70', 'Véhicule en panne')).toEqual({ success: false, error: 'common.notAvailableYet' });
-    expect(await api.rejectNewParcels('72', 'Plus de place')).toEqual({ success: false, error: 'common.notAvailableYet' });
+    expect(await api.rejectRunsheet('70', 'Véhicule en panne')).toEqual({
+      success: false,
+      error: 'common.notAvailableYet',
+    });
+    expect(await api.rejectNewParcels('72', 'Plus de place')).toEqual({
+      success: false,
+      error: 'common.notAvailableYet',
+    });
 
     server.fail.rejectMissing = false;
     expect(await api.rejectRunsheet('70', 'Véhicule en panne')).toEqual({ success: true });
@@ -338,7 +426,10 @@ describe('writes on: delivered, failed and corrections', () => {
 
     await api.logCallAttempt('TRK-D1');
     expect(await api.confirmDelivery('TRK-D1', 30)).toEqual({ success: false, error: 'statusUpdate.runNotStarted' });
-    expect(await api.markDeliveryFailed('TRK-D1', 'ABSENT')).toEqual({ success: false, error: 'statusUpdate.runNotStarted' });
+    expect(await api.markDeliveryFailed('TRK-D1', 'ABSENT')).toEqual({
+      success: false,
+      error: 'statusUpdate.runNotStarted',
+    });
     expect(writesSent()).toEqual([]);
   });
 
@@ -415,7 +506,15 @@ describe('writes on: pickups, transfers, returns, alerts', () => {
       location: 'A',
       scheduledAt: '',
       awaitingPickupConfirmation: true,
-      server: { transferId: '44', parcelTrackingNumbers: [], scanDeparture: false, scanArrival: false, missingParcels: 0, extraParcels: 0, damagedParcels: 0 },
+      server: {
+        transferId: '44',
+        parcelTrackingNumbers: [],
+        scanDeparture: false,
+        scanArrival: false,
+        missingParcels: 0,
+        extraParcels: 0,
+        damagedParcels: 0,
+      },
     };
     expect(await api.confirmTransferPickup(transfer)).toEqual({ success: true });
     expect(writeLines()).toEqual([`POST api/transfers/44/confirm-pickup?driverId=${DRIVER_ID}`]);
@@ -449,7 +548,15 @@ describe('writes off: the new actions send nothing either', () => {
     const api = await realApp({ writes: false });
     expect(await api.rejectRunsheet('70', 'Panne')).toMatchObject({ success: false, error: 'common.writesOff' });
     expect(await api.rejectNewParcels('72', 'Panne')).toMatchObject({ success: false, error: 'common.writesOff' });
-    const transfer = { id: 'T', status: 'IN_PROGRESS' as const, originAgency: '', destinationAgency: '', parcelCount: 0, location: '', scheduledAt: '' };
+    const transfer = {
+      id: 'T',
+      status: 'IN_PROGRESS' as const,
+      originAgency: '',
+      destinationAgency: '',
+      parcelCount: 0,
+      location: '',
+      scheduledAt: '',
+    };
     expect(await api.confirmTransferPickup(transfer)).toMatchObject({ success: false, error: 'common.writesOff' });
     expect(writesSent()).toEqual([]);
   });

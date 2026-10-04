@@ -641,7 +641,8 @@ function pickupAddressLine(apiPickup: ApiPickup): string {
     text(sender?.gouvernorat) ??
     governorateIn(address) ??
     governorateIn(sender?.address);
-  const alreadySaid = !!city && !!address && governorateIn(address) === governorateIn(city) && governorateIn(city) !== undefined;
+  const alreadySaid =
+    !!city && !!address && governorateIn(address) === governorateIn(city) && governorateIn(city) !== undefined;
   return [address, alreadySaid ? undefined : city].filter(Boolean).join(', ');
 }
 
@@ -661,7 +662,8 @@ export function toPickup(apiPickup: ApiPickup, apiParcels?: ApiParcel[] | null):
   const scheduledAt = text(apiPickup.scheduledAt) ?? text(apiPickup.requestedDate) ?? text(apiPickup.createdAt);
   return {
     id: idString(apiPickup.id) ?? '',
-    businessName: text(apiPickup.sender?.name) ?? text(apiPickup.sender?.senderName) ?? text(apiPickup.contactPerson) ?? '—',
+    businessName:
+      text(apiPickup.sender?.name) ?? text(apiPickup.sender?.senderName) ?? text(apiPickup.contactPerson) ?? '—',
     address: pickupAddressLine(apiPickup),
     // A status we don't know shows in the completed list — read-only, no actions.
     status: toPickupStatus(raw) ?? 'COMPLETED',
@@ -702,8 +704,7 @@ export function toTransfer(apiTransfer: ApiTransfer): Transfer | null {
     parcelTrackingNumbers: parcels,
     // The handover happens where the batch leaves from.
     location: text(from?.city) ?? text(from?.name) ?? '',
-    scheduledAt:
-      text(apiTransfer.validatedAt) ?? text(apiTransfer.confirmedAt) ?? text(apiTransfer.createdAt) ?? '',
+    scheduledAt: text(apiTransfer.validatedAt) ?? text(apiTransfer.confirmedAt) ?? text(apiTransfer.createdAt) ?? '',
     detail: {
       type: toTransferType(rawType),
       driverName: text(apiTransfer.driverName) ?? text(apiTransfer.driver?.fullName),
@@ -961,10 +962,7 @@ function toReturnStatus(status: string | null | undefined): ReturnStatus {
  * that isn't about the driver's work (complaints, system alerts, plain info)
  * or that we don't know becomes INFO.
  */
-function toNotificationType(
-  type: string | null | undefined,
-  referenceType?: string | null
-): NotificationType {
+function toNotificationType(type: string | null | undefined, referenceType?: string | null): NotificationType {
   switch (type) {
     case 'PICKUP_REQUESTED':
     case 'PICKUP_ASSIGNED':
@@ -1233,7 +1231,11 @@ export async function getClosedRunsheetsToday(now: Date = new Date()): Promise<R
   const today = toDateKey(now);
   const past = await loadPastRunsheets().catch(() => [] as ApiRunsheet[]);
   const runs = [...past].sort(newestFirst).map(toRunsheet);
-  return dayRuns([], runs.filter((run): run is Runsheet => !!run), today).closed;
+  return dayRuns(
+    [],
+    runs.filter((run): run is Runsheet => !!run),
+    today
+  ).closed;
 }
 
 /** Newest run first: by the day it was for, then by when it was closed. */
@@ -1331,13 +1333,18 @@ export async function getDispatchContact(): Promise<DispatchContact> {
   const withContact = (agencies: (ApiNamed | null | undefined)[]) =>
     agencies.find((agency) => text(agency?.phone) || text(agency?.managerPhone) || text(agency?.email));
   // Each source on its own: one that fails to load is skipped, not fatal.
-  const current = await loadDriverData().then((data) => data.raw, () => null);
+  const current = await loadDriverData().then(
+    (data) => data.raw,
+    () => null
+  );
   let agency = withContact((current ?? []).map((runsheet) => runsheet.agency));
   const past = agency ? [] : await loadPastRunsheets().catch(() => null);
   if (!agency) agency = withContact([...(past ?? [])].sort(newestFirst).map((runsheet) => runsheet.agency));
   const transfers = agency
     ? []
-    : await request<ApiTransfer[] | null>(`api/transfers/driver/${encodeURIComponent(session.driverId)}`).catch(() => null);
+    : await request<ApiTransfer[] | null>(`api/transfers/driver/${encodeURIComponent(session.driverId)}`).catch(
+        () => null
+      );
   if (!agency) agency = withContact((transfers ?? []).map((transfer) => transfer.fromAgency));
 
   // Nothing could be read at all (offline): keep the last good find.
@@ -1389,9 +1396,7 @@ export async function getNextStopId(currentId: string): Promise<string | null> {
   const { runsheetOf } = await loadDriverData();
   const runsheetId = runsheetOf.get(currentId);
   if (!runsheetId) return null;
-  const next = (await getActiveParcels()).find(
-    (job) => job.id !== currentId && runsheetOf.get(job.id) === runsheetId
-  );
+  const next = (await getActiveParcels()).find((job) => job.id !== currentId && runsheetOf.get(job.id) === runsheetId);
   return next?.id ?? null;
 }
 
@@ -1412,7 +1417,11 @@ export async function getJobDetail(id: string): Promise<Job> {
 // ── Pickups, transfers, returns ───────────────────────────────────────────
 
 /** Open ones first (in the driver's saved order), then the rest as the server listed them. */
-function openFirst<T extends { id: string }>(list: 'pickups' | 'transfers' | 'returns', items: T[], isOpenItem: (item: T) => boolean): T[] {
+function openFirst<T extends { id: string }>(
+  list: 'pickups' | 'transfers' | 'returns',
+  items: T[],
+  isOpenItem: (item: T) => boolean
+): T[] {
   return [...device.applyListOrder(list, items.filter(isOpenItem)), ...items.filter((item) => !isOpenItem(item))];
 }
 
@@ -1590,7 +1599,12 @@ export async function confirmRunsheetReceipt(id: string): Promise<RunsheetWriteR
         await request(path`api/runsheets/${id}/start`, { method: 'PUT' });
       } catch (error) {
         const why = writeFailure(error);
-        return { success: false, error: 'runsheets.confirm.startFailed', errorParams: why.errorParams, confirmedOnly: true };
+        return {
+          success: false,
+          error: 'runsheets.confirm.startFailed',
+          errorParams: why.errorParams,
+          confirmedOnly: true,
+        };
       }
     } else if (raw === 'DRIVER_CONFIRMED') {
       await request(path`api/runsheets/${id}/start`, { method: 'PUT' });
@@ -1739,7 +1753,13 @@ export async function reopenParcel(id: string): Promise<ConfirmDeliveryResult> {
   if (!result.success || !job) return result;
   return {
     success: true,
-    job: { ...copy(job), status: 'PENDING', cashCollected: undefined, failureReason: undefined, failureNote: undefined },
+    job: {
+      ...copy(job),
+      status: 'PENDING',
+      cashCollected: undefined,
+      failureReason: undefined,
+      failureNote: undefined,
+    },
   };
 }
 
@@ -1782,7 +1802,13 @@ export async function completePickups(ids: string[]): Promise<BatchWriteResult> 
       lastFailure = writeFailure(error);
     }
   }
-  return { success: failed.length === 0, error: lastFailure?.error, errorParams: lastFailure?.errorParams, succeeded, failed };
+  return {
+    success: failed.length === 0,
+    error: lastFailure?.error,
+    errorParams: lastFailure?.errorParams,
+    succeeded,
+    failed,
+  };
 }
 
 // ── Transfers ─────────────────────────────────────────────────────────────
@@ -1860,7 +1886,13 @@ export async function confirmReturns(ids: string[]): Promise<BatchWriteResult> {
       lastFailure = writeFailure(error);
     }
   }
-  return { success: failed.length === 0, error: lastFailure?.error, errorParams: lastFailure?.errorParams, succeeded, failed };
+  return {
+    success: failed.length === 0,
+    error: lastFailure?.error,
+    errorParams: lastFailure?.errorParams,
+    succeeded,
+    failed,
+  };
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────
@@ -1923,7 +1955,7 @@ export async function confirmScan(code: string): Promise<ScanResult> {
     getTransfers(),
     getReturns(),
   ]);
-  const value = <T,>(result: PromiseSettledResult<T>) => (result.status === 'fulfilled' ? result.value : null);
+  const value = <T>(result: PromiseSettledResult<T>) => (result.status === 'fulfilled' ? result.value : null);
   const hit = findExact(wanted, {
     active: value(driverData)?.jobs.filter(isOpen),
     history: value(history),
@@ -1935,7 +1967,13 @@ export async function confirmScan(code: string): Promise<ScanResult> {
 
   const target = hit.target;
   const kind: ScanResult['kind'] =
-    hit.source === 'pickup' ? 'pickup' : hit.source === 'transfer' ? 'transfer' : hit.source === 'return' ? 'return' : 'job';
+    hit.source === 'pickup'
+      ? 'pickup'
+      : hit.source === 'transfer'
+        ? 'transfer'
+        : hit.source === 'return'
+          ? 'return'
+          : 'job';
   const id = target.screen === 'job' ? target.jobId : (target.focusId ?? hit.trackingNumber);
   return { success: true, kind, id, label: hit.name ?? hit.context ?? hit.trackingNumber, checkedOnly: true };
 }

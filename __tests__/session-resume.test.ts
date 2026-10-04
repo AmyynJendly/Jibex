@@ -47,7 +47,9 @@ describe('the expiry event', () => {
   let status: number;
 
   const json = (code: number, body: unknown) =>
-    Promise.resolve(new Response(JSON.stringify(body), { status: code, headers: { 'Content-Type': 'application/json' } }));
+    Promise.resolve(
+      new Response(JSON.stringify(body), { status: code, headers: { 'Content-Type': 'application/json' } })
+    );
 
   beforeEach(async () => {
     mockKeychain.clear();
@@ -60,7 +62,9 @@ describe('the expiry event', () => {
     globalThis.fetch = jest.fn((url: string) => {
       if (url.endsWith('/api/auth/login')) {
         return json(200, {
-          token: 't', role: 'DRIVER', portal: '/driver',
+          token: 't',
+          role: 'DRIVER',
+          portal: '/driver',
           user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
         });
       }
@@ -89,7 +93,14 @@ describe('the expiry event', () => {
     status = 200;
     await api.login('driver', 'secret');
     const now = await session.getSession();
-    expect(afterLogin({ resumed: true, canGoBack: true, expiredDriverId: session.lastExpiredDriverId(), driverId: now?.driverId ?? null })).toBe('back');
+    expect(
+      afterLogin({
+        resumed: true,
+        canGoBack: true,
+        expiredDriverId: session.lastExpiredDriverId(),
+        driverId: now?.driverId ?? null,
+      })
+    ).toBe('back');
   });
 
   it('after signing in again, a later expiry asks again', async () => {

@@ -83,7 +83,14 @@ describe('sorting nearest first', () => {
 
   it('puts the nearest governorate first, keeps dispatch’s order inside one, and unknown ones last', () => {
     const sorted = nearestFirstByArea(dispatch, inTunis);
-    expect(sorted.map((job) => job.id)).toEqual(['B-tunis', 'E-tunis', 'D-sousse', 'A-sfax', 'F-medenine', 'C-unknown']);
+    expect(sorted.map((job) => job.id)).toEqual([
+      'B-tunis',
+      'E-tunis',
+      'D-sousse',
+      'A-sfax',
+      'F-medenine',
+      'C-unknown',
+    ]);
   });
 
   it('marks the distance as approximate — measured to the governorate centre', () => {
@@ -114,7 +121,14 @@ describe('"Nearest first" on real data', () => {
     id,
     sequenceOrder: id,
     status: 'PENDING',
-    parcel: { id: id + 1000, trackingNumber: tracking, recipientCity, price: 10, recipientLat: null, recipientLng: null },
+    parcel: {
+      id: id + 1000,
+      trackingNumber: tracking,
+      recipientCity,
+      price: 10,
+      recipientLat: null,
+      recipientLng: null,
+    },
   });
   const RUNSHEETS = [
     {
@@ -140,7 +154,11 @@ describe('"Nearest first" on real data', () => {
     globalThis.fetch = jest.fn((url: string) => {
       urls.push(url);
       const body = url.endsWith('/api/auth/login')
-        ? { token: 't', role: 'DRIVER', user: { id: 7, driverId: DRIVER_ID, fullName: 'Driver', role: 'DRIVER', active: true } }
+        ? {
+            token: 't',
+            role: 'DRIVER',
+            user: { id: 7, driverId: DRIVER_ID, fullName: 'Driver', role: 'DRIVER', active: true },
+          }
         : url.includes('/api/runsheets/driver/')
           ? RUNSHEETS
           : [];

@@ -75,9 +75,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -96,9 +94,7 @@ export default function LoginScreen() {
                 />
               </Animated.View>
             </View>
-            <Text style={[Typography.title1, { color: colors.text, marginTop: Spacing.xs }]}>
-              Jibex
-            </Text>
+            <Text style={[Typography.title1, { color: colors.text, marginTop: Spacing.xs }]}>Jibex</Text>
             <Text style={[monoLabelStyle(12, 0.12), styles.subtitle, { color: colors.textSecondary }]}>
               {t('auth.login.subtitle')}
             </Text>
@@ -128,9 +124,7 @@ export default function LoginScreen() {
                   scaleTo={0.88}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    passwordVisible ? t('auth.login.hide') : t('auth.login.reveal')
-                  }
+                  accessibilityLabel={passwordVisible ? t('auth.login.hide') : t('auth.login.reveal')}
                   style={styles.eyeButton}
                   onPress={() => setPasswordVisible((v) => !v)}>
                   <Icon
@@ -165,9 +159,7 @@ export default function LoginScreen() {
               style={styles.forgotPinRow}
               onPress={() => Linking.openURL(telUrl(dispatchPhone))}>
               <Icon name="call-outline" size={14} color={colors.textSecondary} />
-              <Text style={[styles.forgotPin, { color: colors.textSecondary }]}>
-                {t('auth.login.forgotPassword')}
-              </Text>
+              <Text style={[styles.forgotPin, { color: colors.textSecondary }]}>{t('auth.login.forgotPassword')}</Text>
             </AnimatedPressable>
           </View>
 

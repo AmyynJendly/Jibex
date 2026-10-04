@@ -21,17 +21,13 @@ export function ConfirmDialogView({ options, onResolve }: ConfirmDialogViewProps
             entering={morphIn(0, 14)}
             style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow('light')]}>
             <Text style={[Typography.title3, { color: colors.text }]}>{options.title}</Text>
-            <Text style={[Typography.subhead, styles.message, { color: colors.textSecondary }]}>
-              {options.message}
-            </Text>
+            <Text style={[Typography.subhead, styles.message, { color: colors.textSecondary }]}>{options.message}</Text>
             <View style={styles.actions}>
               <AnimatedPressable
                 scaleTo={0.96}
                 style={[styles.cancelButton, { backgroundColor: colors.bg }]}
                 onPress={() => onResolve(false)}>
-                <Text style={[styles.cancelLabel, { color: colors.textSecondary }]}>
-                  {options.cancelLabel}
-                </Text>
+                <Text style={[styles.cancelLabel, { color: colors.textSecondary }]}>{options.cancelLabel}</Text>
               </AnimatedPressable>
               <PrimaryButton
                 label={options.confirmLabel}

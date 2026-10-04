@@ -18,7 +18,13 @@ interface PromptOptions {
  * Android has no system text prompt in React Native, and Android isn't a
  * target of this app, so there it resolves to null.
  */
-export function promptText({ title, message, confirmLabel, cancelLabel, destructive }: PromptOptions): Promise<string | null> {
+export function promptText({
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  destructive,
+}: PromptOptions): Promise<string | null> {
   if (Platform.OS === 'ios') {
     return new Promise((resolve) => {
       Alert.prompt(

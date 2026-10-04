@@ -78,7 +78,10 @@ describe('local search: found in each source', () => {
 
   it('a history parcel opens runsheet history on it', () => {
     const [hit] = searchParcels('trk-hhhh0002', LOADED);
-    expect(hit).toMatchObject({ source: 'history', target: { screen: 'runsheets', tab: 'history', focusId: 'TRK-HHHH0002' } });
+    expect(hit).toMatchObject({
+      source: 'history',
+      target: { screen: 'runsheets', tab: 'history', focusId: 'TRK-HHHH0002' },
+    });
   });
 
   it('a pickup’s parcel opens that pickup, naming the shop', () => {
@@ -101,7 +104,10 @@ describe('local search: found in each source', () => {
 
   it('a return opens returns history once it has been handed back', () => {
     const [hit] = searchParcels('TRK-RRRR0005', LOADED);
-    expect(hit).toMatchObject({ source: 'return', target: { screen: 'returns', tab: 'history', focusId: 'TRK-RRRR0005' } });
+    expect(hit).toMatchObject({
+      source: 'return',
+      target: { screen: 'returns', tab: 'history', focusId: 'TRK-RRRR0005' },
+    });
   });
 });
 

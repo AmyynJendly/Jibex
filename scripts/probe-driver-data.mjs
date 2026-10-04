@@ -18,9 +18,50 @@ if (!username || !password) {
 }
 
 const EXPECTED = {
-  pickup: ['id', 'requestNumber', 'status', 'pickupAddress', 'pickupCity', 'contactPerson', 'contactPhone', 'scheduledAt', 'estimatedParcelsCount', 'notes', 'sender'],
+  pickup: [
+    'id',
+    'requestNumber',
+    'status',
+    'pickupAddress',
+    'pickupCity',
+    'contactPerson',
+    'contactPhone',
+    'scheduledAt',
+    'estimatedParcelsCount',
+    'notes',
+    'sender',
+  ],
   pickupSender: ['id', 'name', 'senderName', 'phone'],
-  transfer: ['id', 'transferNumber', 'status', 'transferType', 'fromAgency', 'toAgency', 'fromCompany', 'toCompany', 'driver', 'driverName', 'driverPhone', 'vehicleRegistration', 'parcels', 'notes', 'createdAt', 'validatedAt', 'shippedAt', 'receivedAt', 'closedAt', 'cancelledAt', 'confirmedAt', 'completedAt', 'scanDeparture', 'scanArrival', 'missingParcels', 'extraParcels', 'damagedParcels', 'discrepancyNotes'],
+  transfer: [
+    'id',
+    'transferNumber',
+    'status',
+    'transferType',
+    'fromAgency',
+    'toAgency',
+    'fromCompany',
+    'toCompany',
+    'driver',
+    'driverName',
+    'driverPhone',
+    'vehicleRegistration',
+    'parcels',
+    'notes',
+    'createdAt',
+    'validatedAt',
+    'shippedAt',
+    'receivedAt',
+    'closedAt',
+    'cancelledAt',
+    'confirmedAt',
+    'completedAt',
+    'scanDeparture',
+    'scanArrival',
+    'missingParcels',
+    'extraParcels',
+    'damagedParcels',
+    'discrepancyNotes',
+  ],
   notification: ['id', 'title', 'message', 'type', 'isRead', 'createdAt', 'referenceId', 'referenceType'],
 };
 
@@ -53,22 +94,38 @@ function report(label, objects, expected) {
 }
 
 async function call(path, init = {}) {
-  const r = await fetch(`${base}/${path}`, { ...init, headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(init.headers ?? {}) } });
+  const r = await fetch(`${base}/${path}`, {
+    ...init,
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+  });
   const t = await r.text();
   let body = null;
-  try { body = t ? JSON.parse(t) : null; } catch { body = t.slice(0, 200); }
+  try {
+    body = t ? JSON.parse(t) : null;
+  } catch {
+    body = t.slice(0, 200);
+  }
   return { status: r.status, body };
 }
 
 const login = await call('api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-if (login.status !== 200) { console.log(`Login failed: HTTP ${login.status}`); process.exit(1); }
+if (login.status !== 200) {
+  console.log(`Login failed: HTTP ${login.status}`);
+  process.exit(1);
+}
 const auth = { Authorization: `Bearer ${login.body.token}` };
 const { driverId, id: userId } = login.body.user;
 console.log(`Signed in. driverId=${driverId} userId=${userId}\n`);
 
 function outcome(path, r) {
-  const n = Array.isArray(r.body) ? `${r.body.length} item(s)` : r.body && typeof r.body === 'object' ? 'object' : JSON.stringify(r.body);
-  console.log(`GET ${path} → HTTP ${r.status}, ${n}${r.status >= 400 ? ' ' + JSON.stringify(r.body).slice(0, 160) : ''}`);
+  const n = Array.isArray(r.body)
+    ? `${r.body.length} item(s)`
+    : r.body && typeof r.body === 'object'
+      ? 'object'
+      : JSON.stringify(r.body);
+  console.log(
+    `GET ${path} → HTTP ${r.status}, ${n}${r.status >= 400 ? ' ' + JSON.stringify(r.body).slice(0, 160) : ''}`
+  );
 }
 
 // 1–2. Pickups
@@ -80,7 +137,9 @@ if (pickupList.length) {
   const senders = pickupList.map((p) => p.sender).filter((s) => s && typeof s === 'object');
   if (senders.length) report('pickup.sender', senders, EXPECTED.pickupSender);
   for (const p of pickupList) {
-    console.log(`    - id=${p.id} ${p.requestNumber} status=${p.status} scheduledAt=${p.scheduledAt} estimated=${p.estimatedParcelsCount} city=${mask('pickupCity', p.pickupCity)}`);
+    console.log(
+      `    - id=${p.id} ${p.requestNumber} status=${p.status} scheduledAt=${p.scheduledAt} estimated=${p.estimatedParcelsCount} city=${mask('pickupCity', p.pickupCity)}`
+    );
   }
   const allParcels = [];
   for (const p of pickupList) {
@@ -90,7 +149,10 @@ if (pickupList.length) {
   }
   if (allParcels.length) {
     report('pickup parcel', allParcels);
-    for (const x of allParcels.slice(0, 8)) console.log(`    - ${x.trackingNumber} status=${x.status} price=${x.price} amountToCollect=${x.amountToCollect} deliveryFee=${x.deliveryFee}`);
+    for (const x of allParcels.slice(0, 8))
+      console.log(
+        `    - ${x.trackingNumber} status=${x.status} price=${x.price} amountToCollect=${x.amountToCollect} deliveryFee=${x.deliveryFee}`
+      );
   }
 }
 
@@ -102,14 +164,17 @@ const transferList = Array.isArray(transfers.body) ? transfers.body : [];
 if (transferList.length) {
   report('transfer (list)', transferList, EXPECTED.transfer);
   for (const t of transferList) {
-    console.log(`    - id=${t.id} ${t.transferNumber} status=${t.status} type=${t.transferType} parcels=${Array.isArray(t.parcels) ? t.parcels.length : 'absent'} from=${t.fromAgency?.name ?? '-'} to=${t.toAgency?.name ?? '-'}`);
+    console.log(
+      `    - id=${t.id} ${t.transferNumber} status=${t.status} type=${t.transferType} parcels=${Array.isArray(t.parcels) ? t.parcels.length : 'absent'} from=${t.fromAgency?.name ?? '-'} to=${t.toAgency?.name ?? '-'}`
+    );
     const d = await call(`api/transfers/${t.id}`, { headers: auth });
     outcome(`api/transfers/${t.id}`, d);
     if (d.body && typeof d.body === 'object' && !Array.isArray(d.body)) {
       const extra = Object.keys(d.body).filter((k) => !(k in t));
       if (extra.length) console.log(`      fields only in the detail: ${extra.join(', ')}`);
       for (const key of ['fromAgency', 'toAgency', 'fromCompany', 'toCompany', 'driver']) {
-        if (d.body[key] && typeof d.body[key] === 'object') console.log(`      ${key} keys: ${Object.keys(d.body[key]).join(', ')}`);
+        if (d.body[key] && typeof d.body[key] === 'object')
+          console.log(`      ${key} keys: ${Object.keys(d.body[key]).join(', ')}`);
       }
       if (Array.isArray(d.body.parcels) && d.body.parcels.length) report('transfer parcel', d.body.parcels);
     }
@@ -129,7 +194,10 @@ for (const q of ['', '?isRead=false', '?isRead=true']) {
   outcome(`api/notifications/user/${userId}${q}`, r);
   if (q === '' && Array.isArray(r.body) && r.body.length) {
     report('notification', r.body, EXPECTED.notification);
-    for (const n of r.body.slice(0, 10)) console.log(`    - id=${n.id} type=${n.type} ref=${n.referenceType}:${n.referenceId} isRead=${n.isRead} title=${JSON.stringify(n.title)}`);
+    for (const n of r.body.slice(0, 10))
+      console.log(
+        `    - id=${n.id} type=${n.type} ref=${n.referenceType}:${n.referenceId} isRead=${n.isRead} title=${JSON.stringify(n.title)}`
+      );
   }
 }
 const unread = await call(`api/notifications/user/${userId}/unread-count`, { headers: auth });

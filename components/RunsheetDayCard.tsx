@@ -86,7 +86,9 @@ export function RunsheetDayCard({ runsheet, stage, today }: RunsheetDayCardProps
         <View style={styles.counts}>
           <View style={styles.count}>
             <Text style={[styles.countValue, { color: colors.success }]}>{counts.delivered}</Text>
-            <Text style={[styles.countLabel, { color: colors.textSecondary }]}>{t('runsheets.day.counts.delivered')}</Text>
+            <Text style={[styles.countLabel, { color: colors.textSecondary }]}>
+              {t('runsheets.day.counts.delivered')}
+            </Text>
           </View>
           <View style={styles.count}>
             <Text style={[styles.countValue, { color: colors.danger }]}>{counts.failed}</Text>
@@ -94,7 +96,9 @@ export function RunsheetDayCard({ runsheet, stage, today }: RunsheetDayCardProps
           </View>
           <View style={styles.count}>
             <Text style={[styles.countValue, { color: colors.warning }]}>{counts.remaining}</Text>
-            <Text style={[styles.countLabel, { color: colors.textSecondary }]}>{t('runsheets.day.counts.remaining')}</Text>
+            <Text style={[styles.countLabel, { color: colors.textSecondary }]}>
+              {t('runsheets.day.counts.remaining')}
+            </Text>
           </View>
         </View>
       )}
@@ -124,9 +128,7 @@ export function RunsheetDayCard({ runsheet, stage, today }: RunsheetDayCardProps
             // What changed, in numbers: "1 colis ajouté (12 → 13)".
             <View style={[styles.banner, { backgroundColor: colors.warningSoft }]}>
               <Icon name="alert-circle-outline" size={17} color={colors.warning} />
-              <Text style={[styles.bannerText, { color: colors.text }]}>
-                {runChangeText(t, runChange(runsheet))}
-              </Text>
+              <Text style={[styles.bannerText, { color: colors.text }]}>{runChangeText(t, runChange(runsheet))}</Text>
             </View>
           ) : (
             <View style={styles.noteText}>

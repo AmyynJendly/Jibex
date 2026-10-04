@@ -28,13 +28,9 @@ export function FaqList({ header, sectionTitle, faqs }: FaqListProps) {
   const { width } = useWindowDimensions();
   return (
     <Host style={styles.fill}>
-      <Form
-        modifiers={[scrollContentBackground('hidden'), background(colors.bg), tint(colors.accent)]}>
+      <Form modifiers={[scrollContentBackground('hidden'), background(colors.bg), tint(colors.accent)]}>
         <Section
-          modifiers={[
-            listRowBackground('transparent'),
-            listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 }),
-          ]}>
+          modifiers={[listRowBackground('transparent'), listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 })]}>
           <RNHostView matchContents>
             <View style={{ width: width - SECTION_MARGIN * 2 }}>{header as ReactElement}</View>
           </RNHostView>

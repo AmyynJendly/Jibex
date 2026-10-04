@@ -89,11 +89,7 @@ const ALIASES: Record<string, Governorate> = {
   nabel: 'Nabeul',
 };
 
-const fold = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 const NAMES: [string, Governorate][] = [
   ...GOVERNORATES.map((name) => [fold(name), name] as [string, Governorate]),

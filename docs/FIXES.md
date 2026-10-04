@@ -1,6 +1,6 @@
 # Fixes after the live tests
 
-These fixes come from the four live test reports (`test-run/` to `test-run-4/`).
+These fixes come from the four live test reports (`docs/test-runs/round-1.md` to `round-4.md`).
 
 - Writes stayed **off** (`EXPO_PUBLIC_API_WRITES=off`) the whole time.
 - No write was sent to the live server. Everything was tested with mock data and Jest.
@@ -136,7 +136,7 @@ With no run at all, the tab says "Aucune tournée pour le moment".
 
 ### 10. Failure reasons
 
-The labels are the web's exact French ones (`test-run/failure-reasons.md`).
+The labels are the web's exact French ones (`test-run/failure-reasons.md`, a local file that is not in git).
 
 Follow-up, now like Android:
 
@@ -506,7 +506,7 @@ photo link were gone), so restoring it and adapting it had to go together.
   API is missing.** This settles point 1 of "Things to know" above.
 - One function decides, `otpNeeded()` in `services/otp.ts`. The parcel screen, the status sheet, the list card
   and both delivery calls all ask it, so they cannot disagree.
-- Documented in `OTP.md` and in the new `README.md`.
+- Documented in `OTP.md` and in the new `README.md` (at the root).
 
 **2. The list card.** For a parcel that needs a code, with the switch not `off`:
 - "Payé" is replaced by a small "CODE CLIENT" badge;

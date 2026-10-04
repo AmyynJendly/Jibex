@@ -37,11 +37,7 @@ const SLIDE_MS = 220;
  * mid-slide and put up a new one already on the other side, so the slide
  * never played. Rebuilding a list in the same frame also made it stutter.
  */
-export function SegmentedControl<T extends string>({
-  segments,
-  value,
-  onChange,
-}: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({ segments, value, onChange }: SegmentedControlProps<T>) {
   const colors = useColors();
   const { enabled: hapticsEnabled } = useHapticsEnabled();
   const [shown, setShown] = useState(value);

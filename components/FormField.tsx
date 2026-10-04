@@ -1,12 +1,5 @@
 import type { ReactNode } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  useColorScheme,
-  View,
-  type TextInputProps,
-} from 'react-native';
+import { StyleSheet, Text, TextInput, useColorScheme, View, type TextInputProps } from 'react-native';
 
 import { Radii, Spacing, monoLabelStyle, useColors, Typography } from '../constants';
 
@@ -22,13 +15,7 @@ interface FormFieldProps extends TextInputProps {
 }
 
 /** Labeled 52pt input box — the field style repeated for every credential/form input in the design. */
-export function FormField({
-  label,
-  labelRight,
-  inputAccessory,
-  style,
-  ...inputProps
-}: FormFieldProps) {
+export function FormField({ label, labelRight, inputAccessory, style, ...inputProps }: FormFieldProps) {
   const colors = useColors();
   // Left to itself the iOS keyboard guesses its color and can flip between
   // light and dark as it opens; matching the app's theme settles it.
@@ -37,9 +24,7 @@ export function FormField({
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
-        <Text
-          numberOfLines={1}
-          style={[monoLabelStyle(11, 0.08), styles.label, { color: colors.textSecondary }]}>
+        <Text numberOfLines={1} style={[monoLabelStyle(11, 0.08), styles.label, { color: colors.textSecondary }]}>
           {label}
         </Text>
         {labelRight}

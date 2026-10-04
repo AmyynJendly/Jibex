@@ -30,13 +30,9 @@ export function useNextStop(): { nextStop: Job | null; index: number } {
 
   return useMemo(() => {
     const byId = new Map((jobs ?? []).map((job) => [job.id, job] as const));
-    const ordered = (orderedIds ?? [])
-      .map((id) => byId.get(id))
-      .filter((job): job is Job => !!job);
+    const ordered = (orderedIds ?? []).map((id) => byId.get(id)).filter((job): job is Job => !!job);
     const nextStop =
-      ordered.find((job) => job.status === 'IN_TRANSIT') ??
-      ordered.find((job) => job.status === 'PENDING') ??
-      null;
+      ordered.find((job) => job.status === 'IN_TRANSIT') ?? ordered.find((job) => job.status === 'PENDING') ?? null;
     return { nextStop, index: nextStop ? (orderedIds ?? []).indexOf(nextStop.id) + 1 : 0 };
   }, [jobs, orderedIds]);
 }

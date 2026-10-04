@@ -30,7 +30,6 @@ export const setPickupOrder = mock.setPickupOrder;
 export const setTransferOrder = mock.setTransferOrder;
 export const setReturnOrder = mock.setReturnOrder;
 
-
 const useReal = API_MODE === 'real';
 
 // ── Connected to the real server ──────────────────────────────────────────

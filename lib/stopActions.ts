@@ -38,9 +38,7 @@ export type Destination = { lat: number; lng: number } | { address: string };
  */
 export async function openDirections(destination: Destination) {
   const target =
-    'address' in destination
-      ? encodeURIComponent(destination.address)
-      : `${destination.lat},${destination.lng}`;
+    'address' in destination ? encodeURIComponent(destination.address) : `${destination.lat},${destination.lng}`;
   const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${target}&travelmode=driving`;
   const appUrl = Platform.select({
     ios: `comgooglemaps://?daddr=${target}&directionsmode=driving`,

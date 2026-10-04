@@ -117,7 +117,14 @@ describe('where the run code and day come from', () => {
       code: 'RS-20261002-0002',
       status: 'COMPLETED',
       scheduledDate: '2026-10-02',
-      items: [{ id: 1, sequenceOrder: 1, status: 'FAILED', parcel: { id: 126, trackingNumber: 'TUN-100-78CF079C', status: 'A_VERIFIER' } }],
+      items: [
+        {
+          id: 1,
+          sequenceOrder: 1,
+          status: 'FAILED',
+          parcel: { id: 126, trackingNumber: 'TUN-100-78CF079C', status: 'A_VERIFIER' },
+        },
+      ],
     });
     expect(jobs[0].run).toEqual({ code: 'RS-20261002-0002', date: '2026-10-02' });
     expect(jobs[0].server).toMatchObject({ runsheetId: '73', parcelId: '126' });

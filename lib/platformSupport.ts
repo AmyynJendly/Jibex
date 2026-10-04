@@ -1,8 +1,7 @@
 import { Platform } from 'react-native';
 
 /** Major iOS version (e.g. 18), or 0 when not on iOS. */
-const iosMajorVersion =
-  Platform.OS === 'ios' ? parseInt(String(Platform.Version), 10) || 0 : 0;
+const iosMajorVersion = Platform.OS === 'ios' ? parseInt(String(Platform.Version), 10) || 0 : 0;
 
 /**
  * Features newer than the app's floor (iOS 16.4, set by Expo SDK 57). Each is

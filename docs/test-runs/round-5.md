@@ -5,7 +5,7 @@ Web side: Playwright driving a visible Microsoft Edge window, sender account (mo
 (agency head of Tun-100). Driver side: our iOS app (Expo Go) as mourad (driver 3), done by hand by the user.
 
 Only this report is in git. Screenshots (`shots/`), `test-log.md`, `writes.json`, `blocked.json` and
-`approvals.json` stay local. No app code was changed.
+`approvals.json` stay local, in the gitignored `test-run-5/` folder. No app code was changed.
 
 Same safety rules as round 3: a write allow-list in the browser, an approval gate (not needed this round),
 test data only, nothing deleted. **No write was blocked. No transfer was touched.**

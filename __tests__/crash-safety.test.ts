@@ -6,7 +6,10 @@ import { ERROR_LOG_SIZE, clearErrorLog, describeError, logError, readErrorLog } 
 import fr from '../lib/i18n/fr';
 
 // Node's own modules, without pulling Node's types into the app's type check.
-interface Entry { name: string; isDirectory(): boolean }
+interface Entry {
+  name: string;
+  isDirectory(): boolean;
+}
 const fs = require('fs') as {
   readdirSync(dir: string, options: { withFileTypes: true }): Entry[];
   readFileSync(file: string, encoding: 'utf8'): string;

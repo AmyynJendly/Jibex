@@ -7,8 +7,8 @@
  * next, so restart behaviour can be tested for real; `resetDeviceStorage`
  * wipes it between tests.
  */
-const store: Map<string, string> = ((globalThis as { __deviceStorage?: Map<string, string> })
-  .__deviceStorage ??= new Map());
+const store: Map<string, string> = ((globalThis as { __deviceStorage?: Map<string, string> }).__deviceStorage ??=
+  new Map());
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   const shared = (globalThis as unknown as { __deviceStorage: Map<string, string> }).__deviceStorage;

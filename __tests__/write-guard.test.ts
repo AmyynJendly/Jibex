@@ -110,7 +110,9 @@ describe('real server: a slow answer is not "no connection"', () => {
   const json = (status: number, body: unknown) =>
     Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
   const LOGIN = {
-    token: 't', role: 'DRIVER', portal: '/driver',
+    token: 't',
+    role: 'DRIVER',
+    portal: '/driver',
     user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
   };
   /** A server that never answers: the request only ends when the app gives up on it. */
@@ -159,11 +161,17 @@ describe('real server: a slow answer is not "no connection"', () => {
 
   it('a write that times out is reported as slow — never as done', async () => {
     const api = load('on');
-    const item = { id: 1, sequenceOrder: 1, status: 'PENDING', parcel: { id: 1, trackingNumber: 'TUN-100-00000001', status: 'EN_COURS', recipientName: 'TEST', price: 10 } };
+    const item = {
+      id: 1,
+      sequenceOrder: 1,
+      status: 'PENDING',
+      parcel: { id: 1, trackingNumber: 'TUN-100-00000001', status: 'EN_COURS', recipientName: 'TEST', price: 10 },
+    };
     globalThis.fetch = jest.fn((url: string, init?: RequestInit) => {
       calls.push((init?.method ?? 'GET') + ' ' + url);
       if (url.endsWith('/api/auth/login')) return json(200, LOGIN);
-      if (url.includes('/api/runsheets/driver/')) return json(200, [{ id: 60, code: 'RS-1', status: 'IN_PROGRESS', items: [item] }]);
+      if (url.includes('/api/runsheets/driver/'))
+        return json(200, [{ id: 60, code: 'RS-1', status: 'IN_PROGRESS', items: [item] }]);
       if (init?.method === 'PUT') return hang(init);
       return json(404, {});
     }) as unknown as typeof fetch;

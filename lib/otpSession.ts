@@ -140,7 +140,13 @@ export interface OtpScreenState {
 }
 
 export function otpScreenState(
-  status: { expiresAt: number; resendAvailableAt: number; resendsLeft: number; attemptsLeft: number; verified: boolean },
+  status: {
+    expiresAt: number;
+    resendAvailableAt: number;
+    resendsLeft: number;
+    attemptsLeft: number;
+    verified: boolean;
+  },
   now: number
 ): OtpScreenState {
   const blocked = status.attemptsLeft <= 0;

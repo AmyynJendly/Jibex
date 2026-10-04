@@ -16,7 +16,10 @@ jest.mock('expo-location', () => mockLocation);
 import { cameraOn } from '../lib/cameraState';
 
 // Node's own modules, without pulling Node's types into the app's type check.
-interface Entry { name: string; isDirectory(): boolean }
+interface Entry {
+  name: string;
+  isDirectory(): boolean;
+}
 const fs = require('fs') as {
   readdirSync(dir: string, options: { withFileTypes: true }): Entry[];
   readFileSync(file: string, encoding: 'utf8'): string;
@@ -84,7 +87,8 @@ describe('GPS', () => {
 
   it('is never asked for in the background, and never watched continuously', () => {
     const root = process.cwd();
-    const banned = /requestBackgroundPermissionsAsync|startLocationUpdatesAsync|watchPositionAsync|watchHeadingAsync|TaskManager/;
+    const banned =
+      /requestBackgroundPermissionsAsync|startLocationUpdatesAsync|watchPositionAsync|watchHeadingAsync|TaskManager/;
     const offenders = ['app', 'components', 'lib', 'services']
       .flatMap((dir) => sources(path.join(root, dir)))
       .filter((file) => banned.test(fs.readFileSync(file, 'utf8')));

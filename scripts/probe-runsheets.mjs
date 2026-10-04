@@ -17,7 +17,18 @@ if (!username || !password) {
   process.exit(1);
 }
 
-const PERSONAL = new Set(['recipientName', 'recipientPhone', 'recipientAddress', 'senderPhone', 'senderAddress', 'phone', 'email', 'fullName', 'driverName', 'driverPhone']);
+const PERSONAL = new Set([
+  'recipientName',
+  'recipientPhone',
+  'recipientAddress',
+  'senderPhone',
+  'senderAddress',
+  'phone',
+  'email',
+  'fullName',
+  'driverName',
+  'driverPhone',
+]);
 const mask = (v) => (typeof v !== 'string' || v.length < 3 ? v : `${v.slice(0, 1)}…(${v.length})`);
 const show = (key, value) => (PERSONAL.has(key) ? mask(value) : value);
 
@@ -67,7 +78,9 @@ console.log(`  ${runsheets.length} runsheet(s)`);
 if (runsheets.length) {
   console.log(`  runsheet fields:\n    ${fieldReport(runsheets)}`);
   for (const r of runsheets) {
-    console.log(`  - id=${r.id} code=${r.code} status=${r.status} scheduledDate=${r.scheduledDate} totalParcels=${r.totalParcels} items=${Array.isArray(r.items) ? r.items.length : 'absent'} agency=${r.agency?.name ?? '-'}`);
+    console.log(
+      `  - id=${r.id} code=${r.code} status=${r.status} scheduledDate=${r.scheduledDate} totalParcels=${r.totalParcels} items=${Array.isArray(r.items) ? r.items.length : 'absent'} agency=${r.agency?.name ?? '-'}`
+    );
   }
 } else if (!Array.isArray(active.body)) {
   console.log('  body:', JSON.stringify(active.body).slice(0, 300));
@@ -81,7 +94,8 @@ if (!toInspect.length) {
   toInspect = (Array.isArray(all.body) ? all.body : []).slice(0, 6);
   console.log(`
 Nothing active; inspecting ${toInspect.length} recent runsheet(s): ${toInspect.map((r) => `${r.id}(${r.status})`).join(', ')}`);
-  if (toInspect.length) console.log(`  runsheet fields:
+  if (toInspect.length)
+    console.log(`  runsheet fields:
     ${fieldReport(toInspect)}`);
 }
 const allItems = [];
@@ -116,11 +130,15 @@ if (tracking) {
   if (found.body && typeof found.body === 'object') {
     console.log(`  fields:\n    ${fieldReport([found.body])}`);
     const b = found.body;
-    console.log(`  price=${b.price} amountToCollect=${b.amountToCollect} deliveryFee=${b.deliveryFee} status=${b.status}`);
+    console.log(
+      `  price=${b.price} amountToCollect=${b.amountToCollect} deliveryFee=${b.deliveryFee} status=${b.status}`
+    );
     for (const key of ['recipientName', 'recipientCity', 'senderName', 'agencyName', 'destinationAgencyName']) {
       if (key in b) console.log(`  ${key} = ${JSON.stringify(show(key, b[key]))}`);
     }
   }
   const missing = await call('api/parcels/tracking/NO-SUCH-TRACKING-0000', { headers: auth });
-  console.log(`\nGET api/parcels/tracking/<unknown number> → HTTP ${missing.status} ${JSON.stringify(missing.body).slice(0, 200)}`);
+  console.log(
+    `\nGET api/parcels/tracking/<unknown number> → HTTP ${missing.status} ${JSON.stringify(missing.body).slice(0, 200)}`
+  );
 }

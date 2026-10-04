@@ -35,11 +35,7 @@ import type { DeliveryFailureReason } from '../../../types';
 
 /** Case- and accent-insensitive, so "reporte" finds "reporté". */
 function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
 /**
@@ -104,9 +100,7 @@ export default function CantDeliverScreen() {
     // lets the failure go unlogged over it though — a denied permission or a
     // fix that never resolves falls back to `null`, not a blocked submit.
     const location = await captureCurrentCoords().catch(() => null);
-    const result = await safely(() =>
-      markDeliveryFailed(id, reason, note.trim() || undefined, location ?? undefined)
-    );
+    const result = await safely(() => markDeliveryFailed(id, reason, note.trim() || undefined, location ?? undefined));
     write.end();
 
     if (result.success) {
@@ -124,21 +118,18 @@ export default function CantDeliverScreen() {
   const common = commonReasonsFor(deliveryAttempts);
 
   const searching = normalize(query).length > 0;
-  const matches = searching
-    ? offered.filter((r) => normalize(labelOf(r.value)).includes(normalize(query)))
-    : [];
+  const matches = searching ? offered.filter((r) => normalize(labelOf(r.value)).includes(normalize(query))) : [];
 
-  const sections: { key: string; title: string; reasons: readonly FailureReasonInfo[] }[] =
-    searching
-      ? [{ key: 'results', title: '', reasons: matches }]
-      : [
-          { key: 'common', title: t('enums.failureReasonGroup.common'), reasons: common },
-          ...FAILURE_REASON_GROUPS.map((group) => ({
-            key: group,
-            title: t(`enums.failureReasonGroup.${group}`),
-            reasons: offered.filter((r) => r.group === group && !r.common),
-          })).filter((section) => section.reasons.length > 0),
-        ];
+  const sections: { key: string; title: string; reasons: readonly FailureReasonInfo[] }[] = searching
+    ? [{ key: 'results', title: '', reasons: matches }]
+    : [
+        { key: 'common', title: t('enums.failureReasonGroup.common'), reasons: common },
+        ...FAILURE_REASON_GROUPS.map((group) => ({
+          key: group,
+          title: t(`enums.failureReasonGroup.${group}`),
+          reasons: offered.filter((r) => r.group === group && !r.common),
+        })).filter((section) => section.reasons.length > 0),
+      ];
 
   const renderRow = (option: FailureReasonInfo) => {
     const selected = reason === option.value;
@@ -190,8 +181,7 @@ export default function CantDeliverScreen() {
           {t('cantDeliver.subtitle')}
         </Text>
 
-        <View
-          style={[styles.search, { backgroundColor: colors.bgElevated, borderColor: colors.separator }]}>
+        <View style={[styles.search, { backgroundColor: colors.bgElevated, borderColor: colors.separator }]}>
           <Icon name="search-outline" size={16} color={colors.textTertiary} />
           <TextInput
             value={query}
@@ -235,9 +225,7 @@ export default function CantDeliverScreen() {
             in the pinned footer instead, next to Confirm. */}
         {!needsNote && (
           <View style={styles.noteBlock}>
-            <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>
-              {t('cantDeliver.noteLabel')}
-            </Text>
+            <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>{t('cantDeliver.noteLabel')}</Text>
             <TextInput
               value={note}
               onChangeText={setNote}
@@ -279,9 +267,7 @@ export default function CantDeliverScreen() {
               ]}
             />
             {!note.trim() && (
-              <Text style={[Typography.footnote, { color: colors.danger }]}>
-                {t('cantDeliver.noteRequired')}
-              </Text>
+              <Text style={[Typography.footnote, { color: colors.danger }]}>{t('cantDeliver.noteRequired')}</Text>
             )}
           </View>
         )}

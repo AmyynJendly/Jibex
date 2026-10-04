@@ -35,9 +35,7 @@ export function LanguageToggle({ style }: { style?: StyleProp<ViewStyle> }) {
           pointerEvents="none"
           style={[styles.menuPill, { backgroundColor: colors.bgElevated, borderColor: colors.separator }]}>
           <Icon name="globe-outline" size={15} color={colors.accent} />
-          <Text style={[styles.label, { color: colors.text }]}>
-            {t(`settings.languages.${language}`)}
-          </Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t(`settings.languages.${language}`)}</Text>
           <Icon name="chevron-down" size={13} color={colors.textTertiary} />
         </View>
       </MenuView>

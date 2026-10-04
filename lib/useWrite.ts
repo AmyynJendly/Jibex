@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useToast } from '../components/Toast';
@@ -26,7 +26,8 @@ export function useWrite() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [sending, setSending] = useState(false);
-  const guard = useRef(createWriteGuard(setSending)).current;
+  // One guard for the life of the component (state, not a ref: it is read during render).
+  const [guard] = useState(() => createWriteGuard(setSending));
 
   function fail(result: Pick<WriteResult, 'error' | 'errorParams'>, retry?: () => void) {
     if (mayHaveReachedServer(result)) refreshVisible().catch(() => {});

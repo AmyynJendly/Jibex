@@ -32,7 +32,9 @@ describe('exchange parcels', () => {
 
   it('still asks for the call first, exchange or not', () => {
     expect(deliveryBlocker({ callAttempts: 0, exchangeCollected: false })).toBe('statusUpdate.callRequired');
-    expect(deliveryBlocker({ callAttempts: 0, exchange: true, exchangeCollected: true })).toBe('statusUpdate.callRequired');
+    expect(deliveryBlocker({ callAttempts: 0, exchange: true, exchangeCollected: true })).toBe(
+      'statusUpdate.callRequired'
+    );
   });
 
   it('says it in the agency’s French', () => {

@@ -1,12 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, type SFSymbolEffect } from 'expo-image';
-import {
-  Platform,
-  type ColorValue,
-  type ImageStyle,
-  type StyleProp,
-  type TextStyle,
-} from 'react-native';
+import { Platform, type ColorValue, type ImageStyle, type StyleProp, type TextStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { supports } from '../lib/platformSupport';
 import type {

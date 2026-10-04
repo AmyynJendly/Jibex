@@ -40,21 +40,13 @@ export function EmptyState({ icon, illustration, title, subtitle }: EmptyStatePr
 
   return (
     <Animated.View entering={morphIn()} style={styles.container}>
-      <View
-        style={[
-          styles.iconTile,
-          { backgroundColor: colors.neutralSoft, borderColor: colors.separator },
-        ]}>
+      <View style={[styles.iconTile, { backgroundColor: colors.neutralSoft, borderColor: colors.separator }]}>
         {illustration ?? <Icon name={icon ?? 'ellipse-outline'} size={26} color={colors.textTertiary} />}
       </View>
       <View style={styles.copy}>
-        <Text style={[Typography.callout, styles.title, { color: colors.textSecondary }]}>
-          {title}
-        </Text>
+        <Text style={[Typography.callout, styles.title, { color: colors.textSecondary }]}>{title}</Text>
         {subtitle && (
-          <Text style={[Typography.footnote, styles.subtitle, { color: colors.textTertiary }]}>
-            {subtitle}
-          </Text>
+          <Text style={[Typography.footnote, styles.subtitle, { color: colors.textTertiary }]}>{subtitle}</Text>
         )}
       </View>
     </Animated.View>

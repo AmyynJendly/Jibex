@@ -48,12 +48,7 @@ const MIN_NAME = 2;
 const MAX_HITS = 30;
 
 const normalizeTracking = (value: string) => value.replace(/\s+/g, '').toUpperCase();
-const normalizeName = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
+const normalizeName = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 interface Candidate {
   trackingNumber: string;
@@ -67,7 +62,12 @@ function candidates(data: LoadedParcels): Candidate[] {
   const out: Candidate[] = [];
 
   for (const job of data.active ?? []) {
-    out.push({ trackingNumber: job.id, name: job.customerName, source: 'runsheet', target: { screen: 'job', jobId: job.id } });
+    out.push({
+      trackingNumber: job.id,
+      name: job.customerName,
+      source: 'runsheet',
+      target: { screen: 'job', jobId: job.id },
+    });
   }
   for (const job of data.history ?? []) {
     out.push({
@@ -80,7 +80,13 @@ function candidates(data: LoadedParcels): Candidate[] {
   for (const pickup of data.pickups ?? []) {
     const target: NotificationTarget = { screen: 'pickups', tab: pickup.status, focusId: pickup.id };
     for (const parcel of pickup.parcels) {
-      out.push({ trackingNumber: parcel.trackingNumber, name: parcel.contactName, source: 'pickup', context: pickup.businessName, target });
+      out.push({
+        trackingNumber: parcel.trackingNumber,
+        name: parcel.contactName,
+        source: 'pickup',
+        context: pickup.businessName,
+        target,
+      });
     }
   }
   for (const transfer of data.transfers ?? []) {
@@ -120,7 +126,10 @@ export function searchParcels(query: string, data: LoadedParcels): SearchHit[] {
     const exact = candidateTracking === tracking;
     const partial = !exact && tracking.length >= MIN_PARTIAL_TRACKING && candidateTracking.includes(tracking);
     const byName =
-      !!candidate.name && name.length >= MIN_NAME && /\p{L}/u.test(name) && normalizeName(candidate.name).includes(name);
+      !!candidate.name &&
+      name.length >= MIN_NAME &&
+      /\p{L}/u.test(name) &&
+      normalizeName(candidate.name).includes(name);
     if (!exact && !partial && !byName) continue;
 
     const key = `${candidate.source}:${candidateTracking}:${candidate.target.screen === 'job' ? '' : (candidate.target.focusId ?? '')}`;

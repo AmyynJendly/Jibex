@@ -137,7 +137,11 @@ export default function TransferDetailScreen() {
                 color={step.done ? (step.key === 'cancelled' ? colors.danger : colors.success) : colors.textTertiary}
               />
               <View style={styles.placeText}>
-                <Text style={[step.done ? styles.strong : styles.pending, { color: step.done ? colors.text : colors.textTertiary }]}>
+                <Text
+                  style={[
+                    step.done ? styles.strong : styles.pending,
+                    { color: step.done ? colors.text : colors.textTertiary },
+                  ]}>
                   {t('transfers.detail.steps.' + step.key)}
                 </Text>
                 {formatStamp(step.at) && (
@@ -169,7 +173,10 @@ export default function TransferDetailScreen() {
             parcels.map((parcel, index) => (
               <View
                 key={parcel.trackingNumber}
-                style={[styles.parcel, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator }]}>
+                style={[
+                  styles.parcel,
+                  index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
+                ]}>
                 <View style={styles.parcelHead}>
                   <Text style={[styles.tracking, { color: colors.text }]} numberOfLines={1}>
                     {parcel.trackingNumber}

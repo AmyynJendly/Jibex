@@ -31,7 +31,11 @@ const run = (overrides: Partial<Runsheet>): Runsheet => ({
 
 describe('Livrés / Échoués / Restants', () => {
   it('counts what is done and what is left', () => {
-    expect(runCounts(run({ stopCount: 12, deliveredCount: 7, failedCount: 2 }))).toEqual({ delivered: 7, failed: 2, remaining: 3 });
+    expect(runCounts(run({ stopCount: 12, deliveredCount: 7, failedCount: 2 }))).toEqual({
+      delivered: 7,
+      failed: 2,
+      remaining: 3,
+    });
   });
 
   it('treats a missing failed count as zero, and never goes below zero', () => {
@@ -78,6 +82,8 @@ describe('the run named on Home', () => {
   });
 
   it('reads "Tournée en cours · 3 restants sur 12"', () => {
-    expect(i18next.getFixedT('fr')('home.currentRun', { remaining: 3, total: 12 })).toBe('Tournée en cours · 3 restants sur 12');
+    expect(i18next.getFixedT('fr')('home.currentRun', { remaining: 3, total: 12 })).toBe(
+      'Tournée en cours · 3 restants sur 12'
+    );
   });
 });

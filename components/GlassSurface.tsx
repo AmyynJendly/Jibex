@@ -1,10 +1,5 @@
 import { BlurView, type BlurTint } from 'expo-blur';
-import {
-  GlassView,
-  isLiquidGlassAvailable,
-  type GlassColorScheme,
-  type GlassStyle,
-} from 'expo-glass-effect';
+import { GlassView, isLiquidGlassAvailable, type GlassColorScheme, type GlassStyle } from 'expo-glass-effect';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 
 type GlassSurfaceProps = ViewProps & {
@@ -69,18 +64,10 @@ export function GlassSurface({
   }
 
   return (
-    <BlurView
-      tint={tint}
-      intensity={intensity}
-      blurMethod="dimezisBlurView"
-      style={style}
-      {...props}>
+    <BlurView tint={tint} intensity={intensity} blurMethod="dimezisBlurView" style={style} {...props}>
       {tintColor && (
         <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: tintColor, opacity: tintOpacity, pointerEvents: 'none' },
-          ]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: tintColor, opacity: tintOpacity, pointerEvents: 'none' }]}
         />
       )}
       {children}

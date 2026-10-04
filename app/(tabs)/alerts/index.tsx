@@ -130,9 +130,7 @@ export default function AlertsScreen() {
    * the moment a row is swiped read / unread, or as the "Read all" wave
    * reaches it, and dropped once the refetch agrees.
    */
-  const [readOverrides, setReadOverrides] = useState<ReadonlyMap<string, boolean>>(
-    () => new Map()
-  );
+  const [readOverrides, setReadOverrides] = useState<ReadonlyMap<string, boolean>>(() => new Map());
   const isRead = (n: Notification) => readOverrides.get(n.id) ?? n.read;
   function setReadOverride(id: string, read: boolean | null) {
     setReadOverrides((current) => {
@@ -243,9 +241,7 @@ export default function AlertsScreen() {
    */
   async function handleToggleRead(id: string, currentlyUnread: boolean) {
     if (!currentlyUnread) setReadOverride(id, false);
-    const result = await safely(() =>
-      currentlyUnread ? markNotificationRead(id) : markNotificationUnread(id)
-    );
+    const result = await safely(() => (currentlyUnread ? markNotificationRead(id) : markNotificationUnread(id)));
     if (!result.success) {
       setReadOverride(id, null);
       showToast(writeErrorText(t, result));
@@ -306,14 +302,17 @@ export default function AlertsScreen() {
       const ids = notifications.map((n) => n.id);
       const step = reduceMotion ? 0 : CASCADE_STEP_MS;
       ids.forEach((id, i) => setTimeout(() => setHidden(id, true), i * step));
-      setTimeout(async () => {
-        pendingDeletes.current.forEach(clearTimeout);
-        pendingDeletes.current.clear();
-        const result = await safely(() => deleteAllNotifications());
-        if (!result.success) showToast(writeErrorText(t, result));
-        await invalidateNotifications();
-        setHiddenIds(new Set());
-      }, ids.length * step + 400);
+      setTimeout(
+        async () => {
+          pendingDeletes.current.forEach(clearTimeout);
+          pendingDeletes.current.clear();
+          const result = await safely(() => deleteAllNotifications());
+          if (!result.success) showToast(writeErrorText(t, result));
+          await invalidateNotifications();
+          setHiddenIds(new Set());
+        },
+        ids.length * step + 400
+      );
       return;
     }
 
@@ -443,18 +442,12 @@ export default function AlertsScreen() {
           </View>
           <View style={styles.textBlock}>
             <Text style={[styles.title, { color: colors.text }]}>{notification.title}</Text>
-            <Text style={[styles.message, { color: colors.textSecondary }]}>
-              {notification.message}
-            </Text>
+            <Text style={[styles.message, { color: colors.textSecondary }]}>{notification.message}</Text>
           </View>
-          <Text style={[styles.time, { color: colors.textTertiary }]}>
-            {formatTime(notification.timestamp)}
-          </Text>
+          <Text style={[styles.time, { color: colors.textTertiary }]}>{formatTime(notification.timestamp)}</Text>
           {/* Only alerts that actually lead somewhere get a chevron —
               otherwise every row promises a destination and some do nothing. */}
-          {notification.target && (
-            <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
-          )}
+          {notification.target && <Icon name="chevron-forward" size={16} color={colors.textTertiary} />}
         </AnimatedPressable>
       </Animated.View>
     );
@@ -498,9 +491,7 @@ export default function AlertsScreen() {
   if (nativeList && visible && visible.length > 0) {
     return (
       <View style={[styles.fill, { backgroundColor: colors.bg }]}>
-        <Stack.Screen
-          options={{ title: t('alerts.headerTitle'), headerLargeTitleEnabled: false }}
-        />
+        <Stack.Screen options={{ title: t('alerts.headerTitle'), headerLargeTitleEnabled: false }} />
         {barActions}
         <NativeAlertsList
           sections={[
@@ -538,9 +529,7 @@ export default function AlertsScreen() {
 
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[sectionLabelStyle, styles.eyebrow, { color: colors.textTertiary }]}>
-            {t('alerts.eyebrow')}
-          </Text>
+          <Text style={[sectionLabelStyle, styles.eyebrow, { color: colors.textTertiary }]}>{t('alerts.eyebrow')}</Text>
           {unreadCount > 0 && (
             <View style={[styles.badge, { backgroundColor: colors.accent }]}>
               <Text style={[styles.badgeText, { color: colors.onAccent }]}>{unreadCount}</Text>
@@ -555,9 +544,7 @@ export default function AlertsScreen() {
                 hitSlop={MARK_ALL_HIT_SLOP}
                 accessibilityRole="button"
                 onPress={handleMarkAllRead}>
-                <Text style={[styles.markAllRead, { color: colors.accent }]}>
-                  {t('alerts.markAllRead')}
-                </Text>
+                <Text style={[styles.markAllRead, { color: colors.accent }]}>{t('alerts.markAllRead')}</Text>
               </AnimatedPressable>
             )}
             {hasAlerts && (
@@ -567,9 +554,7 @@ export default function AlertsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('alerts.deleteAll')}
                 onPress={handleDeleteAll}>
-                <Text style={[styles.markAllRead, { color: colors.danger }]}>
-                  {t('alerts.deleteAll')}
-                </Text>
+                <Text style={[styles.markAllRead, { color: colors.danger }]}>{t('alerts.deleteAll')}</Text>
               </AnimatedPressable>
             )}
           </View>
@@ -606,9 +591,7 @@ export default function AlertsScreen() {
               <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
                 {t('alerts.earlier')}
               </Text>
-              <View style={styles.list}>
-                {earlier.map((n, i) => renderCard(n, today.length + i, true))}
-              </View>
+              <View style={styles.list}>{earlier.map((n, i) => renderCard(n, today.length + i, true))}</View>
             </Animated.View>
           )}
 

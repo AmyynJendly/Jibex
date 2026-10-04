@@ -46,15 +46,10 @@ function fireHaptic(style: HapticStyle) {
     Haptics.selectionAsync();
     return;
   }
-  Haptics.impactAsync(
-    style === 'medium' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light
-  );
+  Haptics.impactAsync(style === 'medium' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
 }
 
-type EntryOrExitLayoutType =
-  | BaseAnimationBuilder
-  | typeof BaseAnimationBuilder
-  | EntryExitAnimationFunction;
+type EntryOrExitLayoutType = BaseAnimationBuilder | typeof BaseAnimationBuilder | EntryExitAnimationFunction;
 
 /** Intensity of the tap that fires under the finger. `false` for silence. */
 type HapticStyle = 'selection' | 'light' | 'medium' | false;

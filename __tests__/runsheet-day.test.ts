@@ -55,7 +55,8 @@ describe('where a run stands', () => {
   });
 
   it('says each stage in plain French', () => {
-    const label = (key: string) => key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)[part], fr);
+    const label = (key: string) =>
+      key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)[part], fr);
     expect(label(runStatusKey('toConfirm'))).toBe('En attente de votre confirmation');
     expect(label(runStatusKey('modified'))).toBe('En attente de votre confirmation');
     expect(label(runStatusKey('inProgress'))).toBe('En cours');
@@ -84,7 +85,12 @@ describe('the runs of the day', () => {
 
   it('shows the run closed today — but not an older one', () => {
     const closedToday = run({ id: '72', status: 'VALIDE', closedAt: '2026-10-02T20:47:31' });
-    const closedBefore = run({ id: '70', status: 'VALIDE', scheduledDate: '2026-09-30', closedAt: '2026-09-30T21:36:02' });
+    const closedBefore = run({
+      id: '70',
+      status: 'VALIDE',
+      scheduledDate: '2026-09-30',
+      closedAt: '2026-09-30T21:36:02',
+    });
     const day = dayRuns([], [closedToday, closedBefore], TODAY);
     expect(day.open).toEqual([]);
     expect(day.closed.map((r) => r.id)).toEqual(['72']);
@@ -107,7 +113,13 @@ describe('real server: the run the agency closed today', () => {
   const NOW = new Date(2026, 9, 2, 21, 0, 0);
   let urls: string[];
 
-  const parcel = (tracking: string) => ({ id: 1, trackingNumber: tracking, status: 'LIVRE', recipientName: 'TEST', price: 10 });
+  const parcel = (tracking: string) => ({
+    id: 1,
+    trackingNumber: tracking,
+    status: 'LIVRE',
+    recipientName: 'TEST',
+    price: 10,
+  });
   /** `GET /api/runsheets?driverId=` after "Valider la tournée", as the live server sent it. */
   const ALL = [
     {
@@ -140,7 +152,9 @@ describe('real server: the run the agency closed today', () => {
       urls.push(`${init?.method ?? 'GET'} ${url}`);
       if (url.endsWith('/api/auth/login')) {
         return json(200, {
-          token: 't', role: 'DRIVER', portal: '/driver',
+          token: 't',
+          role: 'DRIVER',
+          portal: '/driver',
           user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
         });
       }
@@ -223,7 +237,9 @@ describe('confirming the run', () => {
     expect(fr.runsheets.day.newBody).toBe('En confirmant, vous acceptez cette tournée et vous en devenez responsable.');
     expect(fr.runsheets.day.confirm).toBe('Confirmer la tournée');
     expect(fr.runsheets.day.confirmModified).toBe('Confirmer la tournée modifiée');
-    expect(t('runsheets.day.confirmDialogTitle', { code: 'RS-20261002-0001' })).toBe('Confirmer la tournée RS-20261002-0001 ?');
+    expect(t('runsheets.day.confirmDialogTitle', { code: 'RS-20261002-0001' })).toBe(
+      'Confirmer la tournée RS-20261002-0001 ?'
+    );
   });
 
   it('spells out a parcel added after the start: "1 colis ajouté (12 → 13)"', () => {
@@ -306,10 +322,23 @@ describe('confirming the run', () => {
     globalThis.fetch = jest.fn((url: string, init?: RequestInit) => {
       calls.push(`${init?.method ?? 'GET'} ${url}`);
       if (url.endsWith('/api/auth/login')) {
-        return json(200, { token: 't', role: 'DRIVER', portal: '/driver', user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true } });
+        return json(200, {
+          token: 't',
+          role: 'DRIVER',
+          portal: '/driver',
+          user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
+        });
       }
       if (url.includes('/api/runsheets/driver/')) {
-        return json(200, [{ id: 69, code: 'RS-20260929-0004', status: 'IN_PROGRESS', scheduledDate: '2026-09-29', items: [item(1, 'PENDING'), item(2, 'PENDING'), item(4, 'PENDING_DRIVER_CONFIRMATION')] }]);
+        return json(200, [
+          {
+            id: 69,
+            code: 'RS-20260929-0004',
+            status: 'IN_PROGRESS',
+            scheduledDate: '2026-09-29',
+            items: [item(1, 'PENDING'), item(2, 'PENDING'), item(4, 'PENDING_DRIVER_CONFIRMATION')],
+          },
+        ]);
       }
       return json(404, { error: 'not found' });
     }) as unknown as typeof fetch;
@@ -320,7 +349,11 @@ describe('confirming the run', () => {
     const [runsheet] = await api.getRunsheets();
     expect(lockedStopIdsOf(runsheet)).toEqual(['TUN-100-00000004']);
     // Workable first, the locked one last.
-    expect((await api.getActiveParcels()).map((p) => p.id)).toEqual(['TUN-100-00000001', 'TUN-100-00000002', 'TUN-100-00000004']);
+    expect((await api.getActiveParcels()).map((p) => p.id)).toEqual([
+      'TUN-100-00000001',
+      'TUN-100-00000002',
+      'TUN-100-00000004',
+    ]);
     // Nothing was written: only reads so far.
     expect(calls.filter((c) => !c.startsWith('GET ') && !c.includes('/api/auth/login'))).toEqual([]);
   });
@@ -342,7 +375,10 @@ describe('confirming the run', () => {
     expect(active.map((p) => p.id)).toContain(added);
 
     await api.logCallAttempt(added);
-    expect(await api.confirmDelivery(added, 0)).toMatchObject({ success: false, error: 'runsheets.confirm.blockedError' });
+    expect(await api.confirmDelivery(added, 0)).toMatchObject({
+      success: false,
+      error: 'runsheets.confirm.blockedError',
+    });
 
     const old = active.find((p) => changed.stopIds.slice(0, 4).includes(p.id))!;
     // Not blocked by the run: the only thing asked is the call first.
@@ -373,8 +409,18 @@ describe('a closed run shows no parcel in the active view', () => {
       scheduledDate: '2026-10-02',
       completedAt: '2026-10-02T20:47:31',
       items: [
-        { id: 1, sequenceOrder: 1, status: 'DELIVERED', parcel: { id: 1, trackingNumber: 'TUN-100-AAAA0001', status: 'LIVRE', recipientName: 'TEST' } },
-        { id: 2, sequenceOrder: 2, status: 'PENDING', parcel: { id: 2, trackingNumber: 'TUN-100-AAAA0002', status: 'EN_COURS', recipientName: 'TEST' } },
+        {
+          id: 1,
+          sequenceOrder: 1,
+          status: 'DELIVERED',
+          parcel: { id: 1, trackingNumber: 'TUN-100-AAAA0001', status: 'LIVRE', recipientName: 'TEST' },
+        },
+        {
+          id: 2,
+          sequenceOrder: 2,
+          status: 'PENDING',
+          parcel: { id: 2, trackingNumber: 'TUN-100-AAAA0002', status: 'EN_COURS', recipientName: 'TEST' },
+        },
       ],
     };
     let api!: RealApi;
@@ -385,7 +431,12 @@ describe('a closed run shows no parcel in the active view', () => {
       Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
     globalThis.fetch = jest.fn((url: string) => {
       if (url.endsWith('/api/auth/login')) {
-        return json(200, { token: 't', role: 'DRIVER', portal: '/driver', user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true } });
+        return json(200, {
+          token: 't',
+          role: 'DRIVER',
+          portal: '/driver',
+          user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
+        });
       }
       if (url.includes('/api/runsheets/driver/')) return json(200, []);
       if (url.includes('/api/runsheets?driverId=')) return json(200, [closedWithPending]);
@@ -412,7 +463,9 @@ describe('a closed run shows no parcel in the active view', () => {
       api = require('../services/mock-api');
     });
     (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
-    const closedIds = new Set((await api.getRunsheets()).filter((r) => r.status === 'VALIDE').flatMap((r) => r.stopIds));
+    const closedIds = new Set(
+      (await api.getRunsheets()).filter((r) => r.status === 'VALIDE').flatMap((r) => r.stopIds)
+    );
     expect(closedIds.size).toBeGreaterThan(0);
     expect((await api.getActiveParcels()).filter((job) => closedIds.has(job.id))).toEqual([]);
   });

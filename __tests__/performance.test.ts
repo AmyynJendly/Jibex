@@ -1,5 +1,5 @@
 /**
- * Numbers for OPTIMIZATION.md, and the rule behind them:
+ * Numbers for docs/OPTIMIZATION.md, and the rule behind them:
  *
  *  - one request at a time per resource: when the 60 s timer, a tab getting
  *    focus and a pull-to-refresh all ask at the same moment, the server is
@@ -24,7 +24,9 @@ type RealApi = typeof import('../services/real-api');
 const json = (status: number, body: unknown) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
 const LOGIN = {
-  token: 't', role: 'DRIVER', portal: '/driver',
+  token: 't',
+  role: 'DRIVER',
+  portal: '/driver',
   user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
 };
 
@@ -62,7 +64,7 @@ async function signedIn(all: unknown[] = [], delayMs = 0): Promise<RealApi> {
   jest.isolateModules(() => {
     api = require('../services/real-api');
   });
-  const slow = <T,>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(value), delayMs));
+  const slow = <T>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(value), delayMs));
   globalThis.fetch = jest.fn(async (url: string) => {
     urls.push(url.replace('https://jibex.cloud', ''));
     if (url.endsWith('/api/auth/login')) return json(200, LOGIN);
@@ -136,7 +138,13 @@ describe('a long History', () => {
     const lines = history.map((job, index) => historyRecordLine(job, 'Tentative ' + attempts[index]));
     const t2 = performance.now();
 
-    report('History, 2,000 rows: fetch + map ' + (t1 - t0).toFixed(1) + ' ms, attempts + keys + lines ' + (t2 - t1).toFixed(1) + ' ms');
+    report(
+      'History, 2,000 rows: fetch + map ' +
+        (t1 - t0).toFixed(1) +
+        ' ms, attempts + keys + lines ' +
+        (t2 - t1).toFixed(1) +
+        ' ms'
+    );
     expect(history).toHaveLength(2000);
     expect(new Set(keys).size).toBe(2000);
     expect(lines).toHaveLength(2000);

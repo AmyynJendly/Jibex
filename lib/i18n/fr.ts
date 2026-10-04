@@ -137,9 +137,10 @@ const fr: TranslationResource = {
     call: 'Appeler',
     update: 'Maj',
     reorderedToast: 'Ordre enregistré',
-    nearestFirst: 'Plus proche d\'abord',
+    nearestFirst: "Plus proche d'abord",
     nearestFirstFallback: {
-      denied: 'La localisation est désactivée pour Jibex : voici l’ordre du dispatch. Autorisez-la pour trier au plus proche.',
+      denied:
+        'La localisation est désactivée pour Jibex : voici l’ordre du dispatch. Autorisez-la pour trier au plus proche.',
       unavailable: 'Position introuvable : voici l’ordre du dispatch.',
     },
     distanceApprox: '≈ {{km}} km',
@@ -275,10 +276,10 @@ const fr: TranslationResource = {
   },
 
   jobDetail: {
-      markDelivered: 'Livré',
-      parcelCount: '{{count}} colis',
-      parcelCount_other: '{{count}} colis',
-      callDetail: 'Appelé {{count}}x · dernier appel à {{time}}',
+    markDelivered: 'Livré',
+    parcelCount: '{{count}} colis',
+    parcelCount_other: '{{count}} colis',
+    callDetail: 'Appelé {{count}}x · dernier appel à {{time}}',
     a11yMore: "Plus d'options",
     stopChip: 'ARRÊT {{index}} / {{total}}',
     etaLabel: 'ETA {{time}}',
@@ -403,10 +404,12 @@ const fr: TranslationResource = {
     placeholder: 'TRK-… ou le nom d’un client',
     loading: 'Chargement de vos colis…',
     notFoundTitle: 'Introuvable dans vos colis',
-    notFoundSubtitle: 'Rien dans vos tournées, votre historique, vos ramassages, transferts ou retours ne correspond à « {{code}} ».',
+    notFoundSubtitle:
+      'Rien dans vos tournées, votre historique, vos ramassages, transferts ou retours ne correspond à « {{code}} ».',
     someNotLoaded: 'Certaines listes n’ont pas pu se charger — actualisez-les et réessayez.',
     instructions: 'Retrouver un de vos colis',
-    scope: 'Par numéro de suivi ou nom du client, dans vos tournées, votre historique, vos ramassages, transferts et retours.',
+    scope:
+      'Par numéro de suivi ou nom du client, dans vos tournées, votre historique, vos ramassages, transferts et retours.',
     a11yOpens: 'Ouvre l’écran qui montre ce colis',
     recentTitle: 'Récents',
     removeRecent: 'Retirer {{code}} des recherches récentes',
@@ -453,7 +456,8 @@ const fr: TranslationResource = {
       finishHint: 'Scannez ou cochez chaque colis pour terminer le ramassage.',
       noList: 'Aucun colis listé pour ce ramassage : vérifiez avec l’expéditeur avant de terminer.',
       noListConfirmTitle: 'Terminer ce ramassage ?',
-      noListConfirmMessage: 'La liste des colis de {{name}} n’est pas disponible. Confirmez que vous avez récupéré tous les colis.',
+      noListConfirmMessage:
+        'La liste des colis de {{name}} n’est pas disponible. Confirmez que vous avez récupéré tous les colis.',
       doneToast: 'Ramassage terminé',
     },
     empty: {
@@ -624,7 +628,7 @@ const fr: TranslationResource = {
       {
         question: 'Quand suis-je payé ?',
         answer:
-          "Les espèces collectées à la livraison sont à remettre en fin de journée — voir Résumé de journée. Votre salaire de base hebdomadaire et vos primes sont déposés sur le compte bancaire enregistré chaque vendredi.",
+          'Les espèces collectées à la livraison sont à remettre en fin de journée — voir Résumé de journée. Votre salaire de base hebdomadaire et vos primes sont déposés sur le compte bancaire enregistré chaque vendredi.',
       },
       {
         question: 'Que faire si un client refuse un colis ?',
@@ -634,7 +638,7 @@ const fr: TranslationResource = {
       {
         question: 'Mon scanner ne lit pas un code-barres',
         answer:
-          'Vérifiez que l\'accès à la caméra est activé et que le code-barres est bien éclairé. S\'il ne se scanne toujours pas, utilisez "Saisir le code manuellement" sur l\'écran du scanner.',
+          "Vérifiez que l'accès à la caméra est activé et que le code-barres est bien éclairé. S'il ne se scanne toujours pas, utilisez \"Saisir le code manuellement\" sur l'écran du scanner.",
       },
       {
         question: "Comment je change l'ordre de mes colis ?",

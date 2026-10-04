@@ -48,8 +48,7 @@ export default function ProfileScreen() {
   // Saved, and read by the start-up gate: off means no Face ID lock.
   const { enabled: biometricLogin, setEnabled: setBiometricLogin } = useBiometricLock();
   const { enabled: hapticsEnabled, setEnabled: setHapticsEnabled } = useHapticsEnabled();
-  const { enabled: nextStopBarEnabled, setEnabled: setNextStopBarEnabled } =
-    useNextStopBarEnabled();
+  const { enabled: nextStopBarEnabled, setEnabled: setNextStopBarEnabled } = useNextStopBarEnabled();
 
   async function handleLogOut() {
     await logout();
@@ -58,88 +57,67 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   }
 
-
   const driverSummary =
     user && stats ? (
       <View style={styles.summary}>
-      <View style={[styles.profileCard, getCardShadow(scheme)]}>
-        {/* Fixed warm gradient, not theme-adaptive — same treatment as the
+        <View style={[styles.profileCard, getCardShadow(scheme)]}>
+          {/* Fixed warm gradient, not theme-adaptive — same treatment as the
             design's driver card, which never switches to a neutral surface. */}
-        <LinearGradient
-          colors={['#F2A516', '#D99A45', colors.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.profileCardTopRow}>
-          <View style={styles.avatar}>
-            <Icon name="person-outline" size={30} color="#8C5A2B" />
+          <LinearGradient
+            colors={['#F2A516', '#D99A45', colors.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.profileCardTopRow}>
+            <View style={styles.avatar}>
+              <Icon name="person-outline" size={30} color="#8C5A2B" />
+            </View>
+            <View style={styles.nameBlock}>
+              <Text style={styles.name}>{user.name}</Text>
+              {/* The agency only when a runsheet names it — never a made-up one. */}
+              <Text style={styles.handle}>{hub ? `${user.driverCode} · ${hub}` : user.driverCode}</Text>
+            </View>
           </View>
-          <View style={styles.nameBlock}>
-            <Text style={styles.name}>{user.name}</Text>
-            {/* The agency only when a runsheet names it — never a made-up one. */}
-            <Text style={styles.handle}>
-              {hub ? `${user.driverCode} · ${hub}` : user.driverCode}
+
+          {vehicle && (
+            <View style={styles.plateRow}>
+              <Barcode seed={user.id + vehicle.plate} color="rgba(30,34,38,0.55)" width={150} height={20} />
+              <Text style={styles.plateText}>{vehicle.plate}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.statsCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.lifetimeDeliveries}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+              {t('profile.stats.lifetimeDeliveries')}
             </Text>
           </View>
-        </View>
-
-        {vehicle && (
-          <View style={styles.plateRow}>
-            <Barcode
-              seed={user.id + vehicle.plate}
-              color="rgba(30,34,38,0.55)"
-              width={150}
-              height={20}
-            />
-            <Text style={styles.plateText}>{vehicle.plate}</Text>
+          <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: colors.success }]}>{formatPercent(stats.deliveryRate)}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.stats.deliveryRate')}</Text>
           </View>
-        )}
-      </View>
-
-      <View
-        style={[
-          styles.statsCard,
-          { backgroundColor: colors.bgElevated },
-          getCardShadow(scheme),
-        ]}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {stats.lifetimeDeliveries}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-            {t('profile.stats.lifetimeDeliveries')}
-          </Text>
-        </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.success }]}>
-            {formatPercent(stats.deliveryRate)}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-            {t('profile.stats.deliveryRate')}
-          </Text>
-        </View>
-        {/* Only with an honest figure: the real server keeps no weekly total,
+          {/* Only with an honest figure: the real server keeps no weekly total,
             so there it isn't shown. */}
-        {stats.weeklyCashCollected !== undefined && (
-          <>
-            <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
-            <View style={styles.statItem}>
-              {/* The number alone — the label right below it already says
+          {stats.weeklyCashCollected !== undefined && (
+            <>
+              <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
+              <View style={styles.statItem}>
+                {/* The number alone — the label right below it already says
                   "DT / Week", so `formatCurrency`'s own "TND" suffix would
                   name the same currency twice, in two different
                   abbreviations, on one stat. */}
-              <Text style={[styles.statValueSmall, { color: colors.accent }]}>
-                {formatDecimal(stats.weeklyCashCollected, CURRENCY_DECIMALS)}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.stats.weeklyCash')}
-              </Text>
-            </View>
-          </>
-        )}
-      </View>
+                <Text style={[styles.statValueSmall, { color: colors.accent }]}>
+                  {formatDecimal(stats.weeklyCashCollected, CURRENCY_DECIMALS)}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.stats.weeklyCash')}</Text>
+              </View>
+            </>
+          )}
+        </View>
       </View>
     ) : null;
 
@@ -207,8 +185,7 @@ export default function ProfileScreen() {
             <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
               {t('settings.sectionLanguage')}
             </Text>
-            <View
-              style={[styles.listCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+            <View style={[styles.listCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
               {SUPPORTED_LANGUAGES.map((code: SupportedLanguage, i) => {
                 const selected = language === code;
                 return (
@@ -236,8 +213,7 @@ export default function ProfileScreen() {
             <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
               {t('settings.sectionSecurity')}
             </Text>
-            <View
-              style={[styles.listCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+            <View style={[styles.listCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
               <View
                 style={[
                   styles.row,
@@ -249,10 +225,7 @@ export default function ProfileScreen() {
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.biometricLogin')}
                 </Text>
-                <NativeSwitch
-                  value={biometricLogin}
-                  onValueChange={setBiometricLogin}
-                />
+                <NativeSwitch value={biometricLogin} onValueChange={setBiometricLogin} />
               </View>
               <View
                 style={[
@@ -269,10 +242,7 @@ export default function ProfileScreen() {
                 <Text style={[Typography.body, styles.rowLabel, { color: colors.text }]}>
                   {t('settings.hapticFeedback')}
                 </Text>
-                <NativeSwitch
-                  value={hapticsEnabled}
-                  onValueChange={setHapticsEnabled}
-                />
+                <NativeSwitch value={hapticsEnabled} onValueChange={setHapticsEnabled} />
               </View>
               {/* Only on iPhones that can show the bar — a switch for
                   something that can't appear would just be noise. */}
@@ -294,12 +264,7 @@ export default function ProfileScreen() {
             <Text style={[sectionLabelStyle, styles.sectionLabel, { color: colors.textTertiary }]}>
               {t('profile.sectionSupport')}
             </Text>
-            <View
-              style={[
-                styles.listCard,
-                { backgroundColor: colors.bgElevated },
-                getCardShadow(scheme),
-              ]}>
+            <View style={[styles.listCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
               <AnimatedPressable
                 onPress={() => router.push('/help-center')}
                 style={[
@@ -339,13 +304,7 @@ export default function ProfileScreen() {
                 <View style={[styles.rowIcon, { backgroundColor: colors.dangerSoft }]}>
                   <Icon name="log-out-outline" size={15} color={colors.danger} />
                 </View>
-                <Text
-                  style={[
-                    Typography.body,
-                    styles.rowLabel,
-                    styles.logOutLabel,
-                    { color: colors.danger },
-                  ]}>
+                <Text style={[Typography.body, styles.rowLabel, styles.logOutLabel, { color: colors.danger }]}>
                   {t('profile.rows.logOut')}
                 </Text>
               </AnimatedPressable>

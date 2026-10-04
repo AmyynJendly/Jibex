@@ -14,13 +14,7 @@ import { Radii, Spacing, Typography, monoLabelStyle, useColors } from '../consta
 import * as device from '../lib/deviceStore';
 import { goToTarget } from '../lib/goToTarget';
 import { findExact, searchParcels, type SearchHit, type SearchSource } from '../lib/parcelSearch';
-import {
-  useActiveParcels,
-  useHistoryParcels,
-  usePickups,
-  useReturns,
-  useTransfers,
-} from '../lib/query';
+import { useActiveParcels, useHistoryParcels, usePickups, useReturns, useTransfers } from '../lib/query';
 
 /**
  * iOS gets Apple's own search bar, built into the navigation bar: it
@@ -222,7 +216,9 @@ export default function SearchScreen() {
                 <View style={styles.whereRow}>
                   <MetaChip icon={SOURCE_ICON[hit.source]} label={sourceLabel(hit)} tone="accent" />
                   {hit.context ? (
-                    <Text style={[Typography.footnote, styles.context, { color: colors.textSecondary }]} numberOfLines={1}>
+                    <Text
+                      style={[Typography.footnote, styles.context, { color: colors.textSecondary }]}
+                      numberOfLines={1}>
                       {hit.context}
                     </Text>
                   ) : null}

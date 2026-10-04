@@ -20,14 +20,7 @@ import { ScrollToTopButton, useScrollToTop } from '../components/ScrollToTopButt
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
-import {
-  Fonts,
-  Radii,
-  Spacing,
-  monoLabelStyle,
-  monoStyle,
-  useColors,
-} from '../constants';
+import { Fonts, Radii, Spacing, monoLabelStyle, monoStyle, useColors } from '../constants';
 import { checklistKey, clearChecklist } from '../lib/checklist';
 import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
@@ -197,11 +190,7 @@ export default function TransfersScreen() {
         )}
 
         <View style={styles.metaRow}>
-          <MetaChip
-            icon="cube-outline"
-            tone="accent"
-            label={t('common.package', { count: transfer.parcelCount })}
-          />
+          <MetaChip icon="cube-outline" tone="accent" label={t('common.package', { count: transfer.parcelCount })} />
           <MetaChip icon="business-outline" label={transfer.location} />
           <MetaChip icon="time-outline" label={formatTime(transfer.scheduledAt)} />
         </View>
@@ -236,9 +225,7 @@ export default function TransfersScreen() {
   }
 
   return (
-    <SafeAreaView
-      edges={['bottom', 'left', 'right']}
-      style={[styles.screen, { backgroundColor: colors.bg }]}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('transfers.headerTitle') }} />
 
       {/* The list and its back-to-top arrow share one area, so the arrow
@@ -254,9 +241,7 @@ export default function TransfersScreen() {
           contentContainerStyle={styles.content}>
           <View style={styles.header}>
             <View>
-              <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-                {t('transfers.eyebrow')}
-              </Text>
+              <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>{t('transfers.eyebrow')}</Text>
             </View>
             <View style={styles.headerCount}>
               <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{parcelsMoving}</Text>
@@ -307,7 +292,6 @@ export default function TransfersScreen() {
           onPress={() => scrollRef.current?.scrollTo({ y: toTop.topOffset, animated: true })}
         />
       </View>
-
     </SafeAreaView>
   );
 }

@@ -260,12 +260,18 @@ describe('no delivery without a correct code', () => {
     if (!parcel) throw new Error('seed data has no fee-only parcel on a confirmed run');
     await api.logCallAttempt(parcel.id);
 
-    expect(await api.confirmDelivery(parcel.id, parcel.cashToCollect)).toMatchObject({ success: false, error: 'otp.errors.required' });
+    expect(await api.confirmDelivery(parcel.id, parcel.cashToCollect)).toMatchObject({
+      success: false,
+      error: 'otp.errors.required',
+    });
 
     const sent = await otp.otpService.sendOtp(otpItemId(parcel));
     if (!sent.success) throw new Error('mock did not send a code');
     expect((await otp.otpService.verifyOtp(otpItemId(parcel), 'x')).success).toBe(false);
-    expect(await api.confirmDelivery(parcel.id, parcel.cashToCollect)).toMatchObject({ success: false, error: 'otp.errors.required' });
+    expect(await api.confirmDelivery(parcel.id, parcel.cashToCollect)).toMatchObject({
+      success: false,
+      error: 'otp.errors.required',
+    });
 
     expect((await otp.otpService.verifyOtp(otpItemId(parcel), sent.status.testCode!)).success).toBe(true);
     const delivered = await api.confirmDelivery(parcel.id, parcel.cashToCollect);
@@ -280,7 +286,10 @@ describe('no delivery without a correct code', () => {
     if (!sent.success) throw new Error('mock did not send a code');
     await otp.otpService.verifyOtp(otpItemId(parcel), sent.status.testCode!);
     // A correct code, but the customer was never called.
-    expect(await api.confirmDelivery(parcel.id, 0)).toMatchObject({ success: false, error: 'statusUpdate.callRequired' });
+    expect(await api.confirmDelivery(parcel.id, 0)).toMatchObject({
+      success: false,
+      error: 'statusUpdate.callRequired',
+    });
   });
 
   it('a normal parcel is delivered with no code at all', async () => {
@@ -301,7 +310,15 @@ describe('no delivery without a correct code', () => {
 
 describe('the real OTP service', () => {
   it('never shows the test banner, whatever the status carries', () => {
-    const leaked = { sentAt: 0, expiresAt: 1, resendAvailableAt: 1, resendsLeft: 3, attemptsLeft: 5, verified: false, testCode: '123456' };
+    const leaked = {
+      sentAt: 0,
+      expiresAt: 1,
+      resendAvailableAt: 1,
+      resendsLeft: 3,
+      attemptsLeft: 5,
+      verified: false,
+      testCode: '123456',
+    };
     expect(testBannerCode('real', leaked)).toBeNull();
     expect(testBannerCode('real', null)).toBeNull();
     // Mock mode shows it, so the flow can be tested with no SMS.
@@ -343,12 +360,24 @@ describe('the real OTP service', () => {
       id,
       sequenceOrder: id,
       status: 'PENDING',
-      parcel: { id, trackingNumber: 'TUN-100-0000000' + id, status: 'EN_COURS', recipientName: 'TEST', price, deliveryFee },
+      parcel: {
+        id,
+        trackingNumber: 'TUN-100-0000000' + id,
+        status: 'EN_COURS',
+        recipientName: 'TEST',
+        price,
+        deliveryFee,
+      },
     });
     globalThis.fetch = jest.fn((url: string, init?: RequestInit) => {
       calls.push((init?.method ?? 'GET') + ' ' + url.replace('https://jibex.cloud', ''));
       if (url.endsWith('/api/auth/login')) {
-        return json(200, { token: 't', role: 'DRIVER', portal: '/driver', user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true } });
+        return json(200, {
+          token: 't',
+          role: 'DRIVER',
+          portal: '/driver',
+          user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
+        });
       }
       if (url.includes('/api/runsheets/driver/')) {
         return json(200, [{ id: 60, code: 'RS-1', status: 'IN_PROGRESS', items: [item(1, 10, 10), item(2, 950, 10)] }]);
@@ -362,7 +391,10 @@ describe('the real OTP service', () => {
       calls.length = 0;
 
       // Price 10, fee 10: needs the code. Nothing is written.
-      expect(await api.confirmDelivery('TUN-100-00000001', 10)).toMatchObject({ success: false, error: 'otp.errors.required' });
+      expect(await api.confirmDelivery('TUN-100-00000001', 10)).toMatchObject({
+        success: false,
+        error: 'otp.errors.required',
+      });
       expect(calls.filter((call) => call.startsWith('PUT '))).toEqual([]);
 
       // Price 950, fee 10: a normal delivery goes through.
@@ -391,7 +423,12 @@ describe('what the code screen shows', () => {
 
   it('"Livré" is only ever on after a correct code', () => {
     expect(otpScreenState(base, 0).verified).toBe(false);
-    expect(otpScreenState({ ...base, verified: true }, 0)).toMatchObject({ verified: true, canType: false, canResend: false, exhausted: false });
+    expect(otpScreenState({ ...base, verified: true }, 0)).toMatchObject({
+      verified: true,
+      canType: false,
+      canResend: false,
+      exhausted: false,
+    });
   });
 
   it('a blocked or expired code cannot be typed', () => {

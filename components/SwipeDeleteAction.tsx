@@ -1,10 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, {
-  useAnimatedReaction,
-  useAnimatedStyle,
-  type SharedValue,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedReaction, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { Icon } from './Icon';
@@ -71,8 +67,7 @@ export function SwipeDeleteAction({
 
   return (
     <View style={styles.slot}>
-      <Animated.View
-        style={[styles.fill, { backgroundColor: color, borderRadius: radius }, fillStyle]}>
+      <Animated.View style={[styles.fill, { backgroundColor: color, borderRadius: radius }, fillStyle]}>
         <Pressable
           style={styles.press}
           accessibilityRole="button"

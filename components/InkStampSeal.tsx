@@ -44,10 +44,7 @@ export function InkStampSeal({ topText, bottomText }: InkStampSealProps) {
 
   const stampStyle = useAnimatedStyle(() => ({
     opacity: stampIn.value,
-    transform: [
-      { scale: 1.5 - stampIn.value * 0.5 },
-      { rotate: `${-14 + stampIn.value * 7}deg` },
-    ],
+    transform: [{ scale: 1.5 - stampIn.value * 0.5 }, { rotate: `${-14 + stampIn.value * 7}deg` }],
   }));
 
   const checkProps = useAnimatedProps(() => ({

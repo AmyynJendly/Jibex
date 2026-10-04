@@ -62,7 +62,17 @@ function parcel(tracking: string, overrides: Record<string, unknown> = {}) {
 }
 
 function item(id: number, seq: number, status: string, p: ReturnType<typeof parcel>, extra = {}) {
-  return { id, sequenceOrder: seq, status, failureReason: null, notes: null, deliveredAt: null, scannedAt: '2026-09-26T07:00:00', parcel: p, ...extra };
+  return {
+    id,
+    sequenceOrder: seq,
+    status,
+    failureReason: null,
+    notes: null,
+    deliveredAt: null,
+    scannedAt: '2026-09-26T07:00:00',
+    parcel: p,
+    ...extra,
+  };
 }
 
 const ACTIVE = [
@@ -78,7 +88,9 @@ const ACTIVE = [
       // Listed out of order on purpose: sequenceOrder decides.
       item(502, 2, 'PENDING', parcel('TRK-00000502')),
       item(501, 1, 'PENDING', parcel('TRK-00000501')),
-      item(503, 3, 'DELIVERED', parcel('TRK-00000503', { status: 'LIVRE_PAYE', price: 120, amountToCollect: 110 }), { deliveredAt: '2026-09-26T09:00:00' }),
+      item(503, 3, 'DELIVERED', parcel('TRK-00000503', { status: 'LIVRE_PAYE', price: 120, amountToCollect: 110 }), {
+        deliveredAt: '2026-09-26T09:00:00',
+      }),
       item(504, 4, 'FAILED', parcel('TRK-00000504', { status: 'RTN_DEPOT' }), { failureReason: 'NON_COMPLIANT_ORDER' }),
       item(505, 5, 'SOMETHING_NEW', parcel('TRK-00000505')),
     ],
@@ -119,7 +131,9 @@ let fetchMock: jest.Mock;
 let urls: string[];
 
 function json(status: number, body: unknown) {
-  return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
+  return Promise.resolve(
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  );
 }
 
 async function signedIn(): Promise<RealApi> {
@@ -131,14 +145,29 @@ async function signedIn(): Promise<RealApi> {
     urls.push(url);
     if (url.endsWith('/api/auth/login')) {
       return json(200, {
-        token: 't', role: 'DRIVER', portal: '/driver',
-        user: { id: USER_ID, driverId: DRIVER_ID, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
+        token: 't',
+        role: 'DRIVER',
+        portal: '/driver',
+        user: {
+          id: USER_ID,
+          driverId: DRIVER_ID,
+          username: 'driver',
+          fullName: 'Driver Test',
+          role: 'DRIVER',
+          active: true,
+        },
       });
     }
     if (url.includes('/api/runsheets/driver/')) return json(200, ACTIVE);
     if (url.includes('/api/runsheets?driverId=')) return json(200, ALL);
     if (url.includes('/api/parcels/tracking/')) {
-      return json(403, { timestamp: 'x', status: 403, error: 'Forbidden', message: 'Forbidden', path: '/api/parcels/tracking/x' });
+      return json(403, {
+        timestamp: 'x',
+        status: 403,
+        error: 'Forbidden',
+        message: 'Forbidden',
+        path: '/api/parcels/tracking/x',
+      });
     }
     return json(404, { error: 'not found' });
   });
@@ -183,18 +212,27 @@ describe('real runsheets', () => {
     const api = await signedIn();
     const [first] = await api.getActiveParcels();
     expect(first.cashToCollect).toBe(950);
-    expect(first.server).toMatchObject({ price: 950, amountToCollect: 940, deliveryFee: 10, itemId: '501', runsheetId: '60' });
+    expect(first.server).toMatchObject({
+      price: 950,
+      amountToCollect: 940,
+      deliveryFee: 10,
+      itemId: '501',
+      runsheetId: '60',
+    });
   });
 
   it('shows 12.000 TND to collect on the real parcel with price 12, fee 10, amountToCollect 2', async () => {
     const { toJob } = require('../services/real-api') as RealApi;
     const { formatCurrency } = require('../lib/currency') as typeof import('../lib/currency');
     // TRK-4B1B6A44 exactly as jibex.cloud sends it (people anonymized).
-    const job = toJob(parcel('TRK-4B1B6A44', { price: 12, deliveryFee: 10, amountToCollect: 2, status: 'LIVRE_PAYE' }), {
-      id: 1,
-      status: 'DELIVERED',
-      parcel: null,
-    });
+    const job = toJob(
+      parcel('TRK-4B1B6A44', { price: 12, deliveryFee: 10, amountToCollect: 2, status: 'LIVRE_PAYE' }),
+      {
+        id: 1,
+        status: 'DELIVERED',
+        parcel: null,
+      }
+    );
     expect(formatCurrency(job.cashToCollect)).toBe('12.000 TND');
     expect(job.cashCollected).toBe(12);
   });

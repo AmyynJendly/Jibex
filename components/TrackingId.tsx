@@ -28,19 +28,9 @@ export function TrackingId({ value, size = 'lead', style }: TrackingIdProps) {
   const lead = size === 'lead';
 
   return (
-    <View
-      style={[
-        styles.chip,
-        lead ? styles.chipLead : styles.chipInline,
-        { backgroundColor: colors.bg },
-        style,
-      ]}>
+    <View style={[styles.chip, lead ? styles.chipLead : styles.chipInline, { backgroundColor: colors.bg }, style]}>
       <Text
-        style={[
-          monoStyle(lead ? 17 : 14, 'medium'),
-          styles.text,
-          { color: colors.text },
-        ]}
+        style={[monoStyle(lead ? 17 : 14, 'medium'), styles.text, { color: colors.text }]}
         numberOfLines={1}
         // Read aloud a character at a time; "TRK" is not a word.
         accessibilityLabel={value.split('').join(' ')}>

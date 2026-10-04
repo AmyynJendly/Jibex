@@ -146,11 +146,7 @@ function ParcelCard({
   const body = (
     <>
       <CornerRibbon
-        label={
-          job.status === 'IN_TRANSIT'
-            ? t('runsheets.inTransit')
-            : enumLabel(t, 'jobStatus', job.status)
-        }
+        label={job.status === 'IN_TRANSIT' ? t('runsheets.inTransit') : enumLabel(t, 'jobStatus', job.status)}
         color={accent}
       />
       <View style={styles.cardHead}>
@@ -162,9 +158,7 @@ function ParcelCard({
         )}
         {stopNumber !== undefined && (
           <View style={[styles.stopBadge, { backgroundColor: colors.bg }]}>
-            <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]}>
-              {stopNumber}
-            </Text>
+            <Text style={[monoStyle(12, 'medium'), { color: colors.textSecondary }]}>{stopNumber}</Text>
           </View>
         )}
         {/* The tracking number leads: it is the one field the driver reads
@@ -185,9 +179,7 @@ function ParcelCard({
 
       <View style={styles.addressRow}>
         <Icon name="location-outline" size={15} color={colors.textSecondary} />
-        <Text
-          style={[Typography.footnote, styles.addressText, { color: colors.textSecondary }]}
-          numberOfLines={1}>
+        <Text style={[Typography.footnote, styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
           {job.address}
         </Text>
         {/* Only while "Nearest first" sorted the list. Measured to the
@@ -253,9 +245,7 @@ function ParcelCard({
         {locked || closedLabel ? (
           <View style={styles.lockedRow}>
             <Icon name="lock-closed-outline" size={13} color={colors.textTertiary} />
-            <Text style={[styles.lockedText, { color: colors.textTertiary }]}>
-              {closedLabel ?? lockedLabel}
-            </Text>
+            <Text style={[styles.lockedText, { color: colors.textTertiary }]}>{closedLabel ?? lockedLabel}</Text>
           </View>
         ) : (
           <View style={styles.cardActions}>
@@ -346,10 +336,7 @@ export default function RunsheetsScreen() {
   // Never in the middle of a drag: a reload would re-lay the list under the
   // driver's finger.
   const draggingRef = useRef(false);
-  const refreshUnlessDragging = useCallback(
-    () => (draggingRef.current ? undefined : refreshDeliveryData()),
-    []
-  );
+  const refreshUnlessDragging = useCallback(() => (draggingRef.current ? undefined : refreshDeliveryData()), []);
   useAutoRefresh(refreshUnlessDragging, toggle === 'current');
   const refresh = usePullToRefresh(refreshDeliveryData);
   const highlightedId = useFocusHighlight();
@@ -389,8 +376,7 @@ export default function RunsheetsScreen() {
   const lockedParcels = [...lockedAll.filter((j) => newIds.has(j.id)), ...lockedAll.filter((j) => !newIds.has(j.id))];
   const activeIds = active ? new Set(active.map((j) => j.id)) : null;
   /** How many of a run's parcels are still to deliver — unknown until the list is in. */
-  const openCountOf = (stopIds: string[]) =>
-    activeIds ? stopIds.filter((id) => activeIds.has(id)).length : undefined;
+  const openCountOf = (stopIds: string[]) => (activeIds ? stopIds.filter((id) => activeIds.has(id)).length : undefined);
 
   async function handleReorder(orderedIds: string[]) {
     // Deliberately no reload: the list already shows the new order, and the
@@ -428,9 +414,7 @@ export default function RunsheetsScreen() {
     await invalidateDeliveryData();
   }
 
-  const filteredHistory = (history ?? []).filter((j) =>
-    filter === 'all' ? true : j.status === filter
-  );
+  const filteredHistory = (history ?? []).filter((j) => (filter === 'all' ? true : j.status === filter));
   // One parcel can be on several runs (one per failed attempt), so a row is
   // keyed by runsheet + parcel, not by tracking number alone.
   const historyKeys = parcelRowKeys(filteredHistory);
@@ -530,9 +514,7 @@ export default function RunsheetsScreen() {
                 <View style={[styles.historyNote, { backgroundColor: colors.accentSoft }]}>
                   <Icon name="information-circle-outline" size={16} color={colors.accent} />
                   <Text style={[styles.historyNoteText, { color: colors.text }]}>
-                    {anyCorrectable
-                      ? t('runsheets.history.correctableNote')
-                      : t('runsheets.history.allClosedNote')}
+                    {anyCorrectable ? t('runsheets.history.correctableNote') : t('runsheets.history.allClosedNote')}
                   </Text>
                 </View>
               )}
@@ -617,8 +599,7 @@ export default function RunsheetsScreen() {
 
           {currentCount > 0 && (
             <View style={styles.summaryRow}>
-              <View
-                style={[styles.summaryCell, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+              <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
                 <View style={styles.summaryHead}>
                   <View style={[styles.summaryIcon, { backgroundColor: colors.accentSoft }]}>
                     <Icon name="cube-outline" size={15} color={colors.accent} />
@@ -635,8 +616,7 @@ export default function RunsheetsScreen() {
               </View>
               {/* A fixed size, no shrink-to-fit: letting the amount scale
                   itself made it jump between sizes as the row re-laid out. */}
-              <View
-                style={[styles.summaryCell, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+              <View style={[styles.summaryCell, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
                 <View style={styles.summaryHead}>
                   <View style={[styles.summaryIcon, { backgroundColor: colors.successSoft }]}>
                     <Icon name="cash-outline" size={15} color={colors.success} />
@@ -661,14 +641,9 @@ export default function RunsheetsScreen() {
             <View style={[styles.nearestFirstRow, { backgroundColor: colors.bgElevated }]}>
               <View style={styles.nearestFirstText}>
                 <Icon name="navigate-outline" size={15} color={colors.textSecondary} />
-                <Text style={[Typography.footnote, { color: colors.text }]}>
-                  {t('runsheets.nearestFirst')}
-                </Text>
+                <Text style={[Typography.footnote, { color: colors.text }]}>{t('runsheets.nearestFirst')}</Text>
               </View>
-              <NativeSwitch
-                value={nearestFirst}
-                onValueChange={handleToggleNearestFirst}
-              />
+              <NativeSwitch value={nearestFirst} onValueChange={handleToggleNearestFirst} />
             </View>
           )}
           {workable.length > 1 && nearestFirst && positionProblem && (

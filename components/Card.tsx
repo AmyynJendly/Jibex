@@ -27,15 +27,7 @@ interface CardProps {
  * place. The rail has to be clipped by the card's own corner radius, which
  * is easy to get subtly wrong when it's rewritten per screen.
  */
-export function Card({
-  children,
-  accent,
-  padding = 'roomy',
-  gap,
-  borderColor,
-  dimmed = false,
-  style,
-}: CardProps) {
+export function Card({ children, accent, padding = 'roomy', gap, borderColor, dimmed = false, style }: CardProps) {
   const colors = useColors();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 

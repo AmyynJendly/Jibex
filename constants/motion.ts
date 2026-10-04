@@ -1,11 +1,5 @@
 import { Platform } from 'react-native';
-import {
-  Easing,
-  FadeInDown,
-  FadeInUp,
-  FadeOutUp,
-  Keyframe,
-} from 'react-native-reanimated';
+import { Easing, FadeInDown, FadeInUp, FadeOutUp, Keyframe } from 'react-native-reanimated';
 
 /**
  * Motion tokens: the shared curves, and below them the shared entrances.

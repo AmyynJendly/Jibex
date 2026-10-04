@@ -88,7 +88,10 @@ describe('off: the rule is disabled', () => {
     const parcel = (await api.getActiveParcels()).find((p) => p.id === 'TRK-0F33A1C2')!;
     expect(parcel).toMatchObject({ cashToCollect: 8, deliveryFee: 8 });
 
-    expect(await api.confirmDelivery(parcel.id, 8)).toMatchObject({ success: false, error: 'statusUpdate.callRequired' });
+    expect(await api.confirmDelivery(parcel.id, 8)).toMatchObject({
+      success: false,
+      error: 'statusUpdate.callRequired',
+    });
     await api.logCallAttempt(parcel.id);
     expect((await api.confirmDelivery(parcel.id, 8)).success).toBe(true);
   });
@@ -105,17 +108,27 @@ describe('off: the rule is disabled', () => {
       id: 1,
       sequenceOrder: 1,
       status: 'PENDING',
-      parcel: { id: 1, trackingNumber: 'TUN-100-00000001', status: 'EN_COURS', recipientName: 'TEST', price: 10, deliveryFee: 10 },
+      parcel: {
+        id: 1,
+        trackingNumber: 'TUN-100-00000001',
+        status: 'EN_COURS',
+        recipientName: 'TEST',
+        price: 10,
+        deliveryFee: 10,
+      },
     };
     globalThis.fetch = jest.fn((url: string, init?: RequestInit) => {
       calls.push((init?.method ?? 'GET') + ' ' + url.replace('https://jibex.cloud', ''));
       if (url.endsWith('/api/auth/login')) {
         return json(200, {
-          token: 't', role: 'DRIVER', portal: '/driver',
+          token: 't',
+          role: 'DRIVER',
+          portal: '/driver',
           user: { id: 7, driverId: 31, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true },
         });
       }
-      if (url.includes('/api/runsheets/driver/')) return json(200, [{ id: 60, code: 'RS-1', status: 'IN_PROGRESS', items: [item] }]);
+      if (url.includes('/api/runsheets/driver/'))
+        return json(200, [{ id: 60, code: 'RS-1', status: 'IN_PROGRESS', items: [item] }]);
       return json(200, {});
     }) as unknown as typeof fetch;
 
@@ -155,16 +168,30 @@ describe('mock: the code is made up on the phone', () => {
 
 describe('real: the real service', () => {
   it('needs a code, uses the real service, and never shows the banner', () => {
-    const otp = withEnv({ EXPO_PUBLIC_API_MODE: 'real', EXPO_PUBLIC_OTP: 'real' }, () => require('../services/otp') as OtpModule);
+    const otp = withEnv(
+      { EXPO_PUBLIC_API_MODE: 'real', EXPO_PUBLIC_OTP: 'real' },
+      () => require('../services/otp') as OtpModule
+    );
     expect(otp.otpNeeded(FEE_ONLY)).toBe(true);
     expect(otp.otpService).toBe(otp.realOtpService);
-    const leaked = { sentAt: 0, expiresAt: 1, resendAvailableAt: 1, resendsLeft: 3, attemptsLeft: 5, verified: false, testCode: '123456' };
+    const leaked = {
+      sentAt: 0,
+      expiresAt: 1,
+      resendAvailableAt: 1,
+      resendsLeft: 3,
+      attemptsLeft: 5,
+      verified: false,
+      testCode: '123456',
+    };
     expect(otp.testBannerCode('real', leaked)).toBeNull();
     expect(otp.testBannerCode('off', leaked)).toBeNull();
   });
 
   it('EXPO_PUBLIC_OTP=mock on the real server is read as off: no banner, no block', () => {
-    const otp = withEnv({ EXPO_PUBLIC_API_MODE: 'real', EXPO_PUBLIC_OTP: 'mock' }, () => require('../services/otp') as OtpModule);
+    const otp = withEnv(
+      { EXPO_PUBLIC_API_MODE: 'real', EXPO_PUBLIC_OTP: 'mock' },
+      () => require('../services/otp') as OtpModule
+    );
     expect(otp.otpNeeded(FEE_ONLY)).toBe(false);
     expect(otp.otpService).toBe(otp.realOtpService);
   });

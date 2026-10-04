@@ -3,13 +3,7 @@ import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../components/Icon';
@@ -102,11 +96,7 @@ export default function ScannerScreen() {
   const allDone = batchComplete || (isCheckMode && checkState.complete);
 
   useEffect(() => {
-    sweep.value = withRepeat(
-      withTiming(SWEEP_RANGE, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true
-    );
+    sweep.value = withRepeat(withTiming(SWEEP_RANGE, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, [sweep]);
 
   useEffect(() => {
@@ -155,9 +145,7 @@ export default function ScannerScreen() {
     setSubmitting(true);
 
     // A lookup that can't reach the server is an error to show, not a crash.
-    const result = await confirmScan(code).catch(
-      (error): ScanResult => ({ success: false, error: errorKeyOf(error) })
-    );
+    const result = await confirmScan(code).catch((error): ScanResult => ({ success: false, error: errorKeyOf(error) }));
     setSubmitting(false);
     scanLockedRef.current = false;
 
@@ -223,24 +211,14 @@ export default function ScannerScreen() {
       )}
 
       <View style={styles.header}>
-        <GlassIconButton
-          forceDark
-          accessibilityLabel={t('common.close')}
-          onPress={() => router.back()}>
+        <GlassIconButton forceDark accessibilityLabel={t('common.close')} onPress={() => router.back()}>
           <Icon name="close" size={20} color="#fff" />
         </GlassIconButton>
         <Text style={[Typography.headline, styles.title]}>
           {t(isCheckMode ? 'scanner.check.title' : isBatchMode ? 'scanner.batchTitle' : 'scanner.title')}
         </Text>
-        <GlassIconButton
-          forceDark
-          accessibilityLabel={t('scanner.a11yTorch')}
-          onPress={() => setTorchOn((v) => !v)}>
-          <Icon
-            name={torchOn ? 'flashlight' : 'flashlight-outline'}
-            size={20}
-            color="#fff"
-          />
+        <GlassIconButton forceDark accessibilityLabel={t('scanner.a11yTorch')} onPress={() => setTorchOn((v) => !v)}>
+          <Icon name={torchOn ? 'flashlight' : 'flashlight-outline'} size={20} color="#fff" />
         </GlassIconButton>
       </View>
 
@@ -299,66 +277,59 @@ export default function ScannerScreen() {
       )}
 
       {!allDone && (
-      <View style={styles.footer}>
-        {manualEntry ? (
-          <View style={styles.manualEntryRow}>
-            <TextInput
-              value={manualCode}
-              onChangeText={setManualCode}
-              placeholder={t('scanner.manualPlaceholder')}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              keyboardAppearance="dark"
-              autoCapitalize="characters"
-              autoFocus
-              style={styles.manualInput}
-              onSubmitEditing={handleManualSubmit}
-              returnKeyType="done"
-            />
+        <View style={styles.footer}>
+          {manualEntry ? (
+            <View style={styles.manualEntryRow}>
+              <TextInput
+                value={manualCode}
+                onChangeText={setManualCode}
+                placeholder={t('scanner.manualPlaceholder')}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                keyboardAppearance="dark"
+                autoCapitalize="characters"
+                autoFocus
+                style={styles.manualInput}
+                onSubmitEditing={handleManualSubmit}
+                returnKeyType="done"
+              />
+              <AnimatedPressable scaleTo={0.92} style={styles.manualSubmit} onPress={handleManualSubmit}>
+                <Icon name="checkmark" size={20} color="#fff" />
+              </AnimatedPressable>
+            </View>
+          ) : (
+            <GlassSurface tint="dark" colorScheme="dark" style={styles.hintCard}>
+              <View style={styles.hintIcon}>
+                {/* A slow pulse while it waits for a code — the scanner is live. */}
+                <Icon name="scan-outline" size={18} color={ACCENT} effect={{ effect: 'pulse', repeat: -1 }} />
+              </View>
+              <View style={styles.hintTextStack}>
+                <Text style={styles.hintTitle}>{submitting ? t('scanner.hintChecking') : t('scanner.hintTitle')}</Text>
+                {!submitting && <Text style={styles.hintSubtitle}>{t('scanner.hintSubtitle')}</Text>}
+              </View>
+            </GlassSurface>
+          )}
+
+          <View style={styles.actionRow}>
             <AnimatedPressable
-              scaleTo={0.92}
-              style={styles.manualSubmit}
-              onPress={handleManualSubmit}>
-              <Icon name="checkmark" size={20} color="#fff" />
+              scaleTo={0.95}
+              style={[styles.actionButton, styles.actionButtonDark]}
+              onPress={() => setManualEntry((v) => !v)}>
+              <Text style={styles.actionButtonTextLight}>
+                {manualEntry ? t('scanner.title') : t('scanner.enterCode')}
+              </Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              scaleTo={0.95}
+              style={[styles.actionButton, styles.actionButtonAccent]}
+              onPress={() => setManualEntry(false)}>
+              <Text style={styles.actionButtonTextDark}>{t('scanner.burstScan')}</Text>
             </AnimatedPressable>
           </View>
-        ) : (
-          <GlassSurface tint="dark" colorScheme="dark" style={styles.hintCard}>
-            <View style={styles.hintIcon}>
-              {/* A slow pulse while it waits for a code — the scanner is live. */}
-              <Icon name="scan-outline" size={18} color={ACCENT} effect={{ effect: 'pulse', repeat: -1 }} />
-            </View>
-            <View style={styles.hintTextStack}>
-              <Text style={styles.hintTitle}>
-                {submitting ? t('scanner.hintChecking') : t('scanner.hintTitle')}
-              </Text>
-              {!submitting && <Text style={styles.hintSubtitle}>{t('scanner.hintSubtitle')}</Text>}
-            </View>
-          </GlassSurface>
-        )}
 
-        <View style={styles.actionRow}>
-          <AnimatedPressable
-            scaleTo={0.95}
-            style={[styles.actionButton, styles.actionButtonDark]}
-            onPress={() => setManualEntry((v) => !v)}>
-            <Text style={styles.actionButtonTextLight}>
-              {manualEntry ? t('scanner.title') : t('scanner.enterCode')}
-            </Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            scaleTo={0.95}
-            style={[styles.actionButton, styles.actionButtonAccent]}
-            onPress={() => setManualEntry(false)}>
-            <Text style={styles.actionButtonTextDark}>{t('scanner.burstScan')}</Text>
-          </AnimatedPressable>
+          {!isBatchMode && !isCheckMode && scannedCount > 0 && (
+            <Text style={styles.scannedCount}>{t('scanner.scannedCount', { count: scannedCount })}</Text>
+          )}
         </View>
-
-        {!isBatchMode && !isCheckMode && scannedCount > 0 && (
-          <Text style={styles.scannedCount}>
-            {t('scanner.scannedCount', { count: scannedCount })}
-          </Text>
-        )}
-      </View>
       )}
     </KeyboardAvoidingView>
   );

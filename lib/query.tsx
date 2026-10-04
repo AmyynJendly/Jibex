@@ -113,9 +113,16 @@ export function clearQueryCache() {
 export function invalidateDeliveryData() {
   return queryClient.invalidateQueries({
     predicate: ({ queryKey }) =>
-      ['parcels', 'jobs', 'runsheets', 'stats', 'notifications', 'routeOrder', 'nearestFirst', 'driverPosition'].includes(
-        queryKey[0] as string
-      ),
+      [
+        'parcels',
+        'jobs',
+        'runsheets',
+        'stats',
+        'notifications',
+        'routeOrder',
+        'nearestFirst',
+        'driverPosition',
+      ].includes(queryKey[0] as string),
   });
 }
 
@@ -139,11 +146,23 @@ export function invalidateNotifications() {
 
 // ── Passive refreshes: one request at a time per list ─────────────────────
 
-const DELIVERY_KEYS = ['parcels', 'jobs', 'runsheets', 'stats', 'notifications', 'routeOrder', 'nearestFirst', 'driverPosition'];
+const DELIVERY_KEYS = [
+  'parcels',
+  'jobs',
+  'runsheets',
+  'stats',
+  'notifications',
+  'routeOrder',
+  'nearestFirst',
+  'driverPosition',
+];
 
 /** The runs, their parcels and the numbers built from them. */
 export function refreshDeliveryData() {
-  return queryClient.invalidateQueries({ predicate: ({ queryKey }) => DELIVERY_KEYS.includes(queryKey[0] as string) }, JOIN);
+  return queryClient.invalidateQueries(
+    { predicate: ({ queryKey }) => DELIVERY_KEYS.includes(queryKey[0] as string) },
+    JOIN
+  );
 }
 
 export function refreshPickups() {
@@ -177,12 +196,9 @@ export const useRunsheets = () => useQuery({ queryKey: keys.runsheets, queryFn: 
 /** Runs the agency closed today — what the Current tab shows once nothing is open. */
 export const useClosedRunsheetsToday = () =>
   useQuery({ queryKey: keys.closedRunsheetsToday, queryFn: () => getClosedRunsheetsToday() });
-export const useActiveParcels = () =>
-  useQuery({ queryKey: keys.activeParcels, queryFn: getActiveParcels });
-export const useHistoryParcels = () =>
-  useQuery({ queryKey: keys.historyParcels, queryFn: getHistoryParcels });
-export const useNotifications = () =>
-  useQuery({ queryKey: keys.notifications, queryFn: getNotifications });
+export const useActiveParcels = () => useQuery({ queryKey: keys.activeParcels, queryFn: getActiveParcels });
+export const useHistoryParcels = () => useQuery({ queryKey: keys.historyParcels, queryFn: getHistoryParcels });
+export const useNotifications = () => useQuery({ queryKey: keys.notifications, queryFn: getNotifications });
 export const usePickups = () => useQuery({ queryKey: keys.pickups, queryFn: getPickups });
 export const useTransfers = () => useQuery({ queryKey: keys.transfers, queryFn: getTransfers });
 export const useReturns = () => useQuery({ queryKey: keys.returns, queryFn: getReturns });
@@ -195,8 +211,7 @@ export const useReturns = () => useQuery({ queryKey: keys.returns, queryFn: getR
 export const useDriverPosition = (enabled: boolean) =>
   useQuery({ queryKey: keys.driverPosition, queryFn: driverPosition, enabled, staleTime: 60_000 });
 
-export const useNearestFirst = () =>
-  useQuery({ queryKey: keys.nearestFirst, queryFn: getNearestFirst });
+export const useNearestFirst = () => useQuery({ queryKey: keys.nearestFirst, queryFn: getNearestFirst });
 
 export const useRouteOrder = (ids: string[]) =>
   useQuery({
@@ -217,9 +232,7 @@ export const useJobsByIds = (ids: string[]) =>
  * is anything still arriving for the first time, did anything fail, and how
  * do I try again. Keeps every screen's loading/error branch identical.
  */
-export function useScreenState(
-  queries: { isPending: boolean; isError: boolean; refetch: () => unknown }[]
-) {
+export function useScreenState(queries: { isPending: boolean; isError: boolean; refetch: () => unknown }[]) {
   const [retrying, setRetrying] = useState(false);
 
   return {

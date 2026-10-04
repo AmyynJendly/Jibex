@@ -29,8 +29,7 @@ export default function TabsLayout() {
   // The next-stop bar lives on the Alerts tab only, on iPhones whose tab bar
   // has the accessory slot (iOS 26+), and only while the driver has it on in
   // Profile. Anywhere else it simply isn't there — no stand-in to break.
-  const showNextStopBar =
-    supports.tabBarAccessory && barEnabled && pathname.startsWith('/alerts') && !!nextStop;
+  const showNextStopBar = supports.tabBarAccessory && barEnabled && pathname.startsWith('/alerts') && !!nextStop;
 
   return (
     <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.accent}>
@@ -42,10 +41,7 @@ export default function TabsLayout() {
 
       <NativeTabs.Trigger name="home">
         <NativeTabs.Trigger.Label>{t('tabs.home')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'house', selected: 'house.fill' }}
-          drawable="ic_home"
-        />
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} drawable="ic_home" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="runsheets">
@@ -58,10 +54,7 @@ export default function TabsLayout() {
 
       <NativeTabs.Trigger name="alerts">
         <NativeTabs.Trigger.Label>{t('tabs.alerts')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'bell', selected: 'bell.fill' }}
-          drawable="ic_alerts"
-        />
+        <NativeTabs.Trigger.Icon sf={{ default: 'bell', selected: 'bell.fill' }} drawable="ic_alerts" />
         {/* No text means no badge — passing "0" with `hidden` still drew one. */}
         <NativeTabs.Trigger.Badge hidden={unread === 0}>
           {unread === 0 ? undefined : unread > 99 ? '99+' : String(unread)}

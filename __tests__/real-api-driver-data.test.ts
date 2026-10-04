@@ -23,40 +23,109 @@ const DRIVER_ID = 31;
 // What the server really nests inside a pickup: the whole merchant record,
 // bank details and national id included. None of it may come out the other side.
 const SENDER = {
-  id: 4, name: 'Boutique Test', code: 'EXP-004', phone: '71000000', email: 'shop@example.tn',
-  address: 'Rue du Commerce', contactPerson: 'M. Test', cin: 'CIN-SECRET-123', rib: 'RIB-SECRET-456',
-  bankName: 'Banque X', patenteFiscale: 'PF-SECRET', ville: 'Tunis', gouvernorat: 'Tunis',
-  fixDeliveryPrice: 7, active: true, username: 'shop-login', hasAccount: true,
+  id: 4,
+  name: 'Boutique Test',
+  code: 'EXP-004',
+  phone: '71000000',
+  email: 'shop@example.tn',
+  address: 'Rue du Commerce',
+  contactPerson: 'M. Test',
+  cin: 'CIN-SECRET-123',
+  rib: 'RIB-SECRET-456',
+  bankName: 'Banque X',
+  patenteFiscale: 'PF-SECRET',
+  ville: 'Tunis',
+  gouvernorat: 'Tunis',
+  fixDeliveryPrice: 7,
+  active: true,
+  username: 'shop-login',
+  hasAccount: true,
 };
-const DRIVER_RECORD = { id: DRIVER_ID, fullName: 'Driver Test', cin: 'DRIVER-CIN-SECRET', licenseNumber: 'LIC-SECRET', salary: 1234.5 };
+const DRIVER_RECORD = {
+  id: DRIVER_ID,
+  fullName: 'Driver Test',
+  cin: 'DRIVER-CIN-SECRET',
+  licenseNumber: 'LIC-SECRET',
+  salary: 1234.5,
+};
 
 const PICKUPS = [
-  { id: 1, requestNumber: 'PU-3-20260926-0001', status: 'SCHEDULED', pickupAddress: 'Zone Industrielle', pickupCity: null,
-    contactPerson: 'Contact Un', contactPhone: '22000000', scheduledAt: '2026-09-26T14:30:00', requestedDate: '2026-09-26',
-    timeSlot: null, estimatedParcelsCount: 3, notes: null, sender: SENDER, assignedDriver: DRIVER_RECORD, company: { id: 3, name: 'test' } },
-  { id: 2, requestNumber: 'PU-3-20260925-0001', status: 'COMPLETED', pickupAddress: 'Avenue Test', pickupCity: 'Sousse',
-    contactPerson: 'Contact Deux', contactPhone: '23000000', scheduledAt: '2026-09-25T09:00:00', timeSlot: '09:00–10:00',
-    estimatedParcelsCount: 1, sender: SENDER },
+  {
+    id: 1,
+    requestNumber: 'PU-3-20260926-0001',
+    status: 'SCHEDULED',
+    pickupAddress: 'Zone Industrielle',
+    pickupCity: null,
+    contactPerson: 'Contact Un',
+    contactPhone: '22000000',
+    scheduledAt: '2026-09-26T14:30:00',
+    requestedDate: '2026-09-26',
+    timeSlot: null,
+    estimatedParcelsCount: 3,
+    notes: null,
+    sender: SENDER,
+    assignedDriver: DRIVER_RECORD,
+    company: { id: 3, name: 'test' },
+  },
+  {
+    id: 2,
+    requestNumber: 'PU-3-20260925-0001',
+    status: 'COMPLETED',
+    pickupAddress: 'Avenue Test',
+    pickupCity: 'Sousse',
+    contactPerson: 'Contact Deux',
+    contactPhone: '23000000',
+    scheduledAt: '2026-09-25T09:00:00',
+    timeSlot: '09:00–10:00',
+    estimatedParcelsCount: 1,
+    sender: SENDER,
+  },
   { id: 3, requestNumber: 'PU-3-20260924-0001', status: 'CANCELLED', sender: SENDER },
   { id: 4, requestNumber: 'PU-3-20260923-0001', status: 'SOMETHING_NEW', sender: SENDER },
 ];
 const PICKUP_PARCELS: Record<string, unknown[]> = {
   '1': [
-    { id: 71, trackingNumber: 'TRK-00000071', recipientName: 'Client A', recipientAddress: 'Rue A', recipientCity: 'Tunis',
-      price: 120, amountToCollect: 110, deliveryFee: 10, sender: SENDER, driver: DRIVER_RECORD },
+    {
+      id: 71,
+      trackingNumber: 'TRK-00000071',
+      recipientName: 'Client A',
+      recipientAddress: 'Rue A',
+      recipientCity: 'Tunis',
+      price: 120,
+      amountToCollect: 110,
+      deliveryFee: 10,
+      sender: SENDER,
+      driver: DRIVER_RECORD,
+    },
   ],
 };
 
 const TRANSFER = {
-  id: 1, transferNumber: 'TRF-7093829A', status: 'READY_FOR_PICKUP', transferType: 'HUB_RELAY',
+  id: 1,
+  transferNumber: 'TRF-7093829A',
+  status: 'READY_FOR_PICKUP',
+  transferType: 'HUB_RELAY',
   fromAgency: { id: 1, name: 'Agence Sousse', city: 'Sousse', code: 'AG1', phone: '73000000' },
   toAgency: { id: 2, name: 'Agence Sfax', city: 'Sfax' },
-  fromCompany: { id: 3, name: 'test' }, toCompany: { id: 3, name: 'test' },
-  driver: null, driverName: 'Driver Test', driverPhone: '24000000', vehicleRegistration: '123 TU 4567',
+  fromCompany: { id: 3, name: 'test' },
+  toCompany: { id: 3, name: 'test' },
+  driver: null,
+  driverName: 'Driver Test',
+  driverPhone: '24000000',
+  vehicleRegistration: '123 TU 4567',
   parcels: [{ trackingNumber: 'TRK-00000081' }, { trackingNumber: 'TRK-00000082' }],
-  notes: 'Fragile en haut', scannedCount: 2, scanDeparture: true, scanArrival: false,
-  missingParcels: 0, extraParcels: 0, damagedParcels: 1, discrepancyNotes: null,
-  createdAt: '2026-09-26T08:00:00', validatedAt: '2026-09-26T09:00:00', acceptedAt: null, updatedAt: '2026-09-26T09:00:00',
+  notes: 'Fragile en haut',
+  scannedCount: 2,
+  scanDeparture: true,
+  scanArrival: false,
+  missingParcels: 0,
+  extraParcels: 0,
+  damagedParcels: 1,
+  discrepancyNotes: null,
+  createdAt: '2026-09-26T08:00:00',
+  validatedAt: '2026-09-26T09:00:00',
+  acceptedAt: null,
+  updatedAt: '2026-09-26T09:00:00',
 };
 const TRANSFERS = [
   TRANSFER,
@@ -66,31 +135,78 @@ const TRANSFERS = [
 ];
 
 const RETURNS = [
-  { id: 91, trackingNumber: 'TRK-00000091', status: 'RETOUR_A_CHARGER', senderName: 'Boutique Test', senderPhone: '71000000',
-    senderAddress: 'Rue du Commerce', senderAgencyName: 'Agence Tunis', returnType: 'TO_SENDER', lastScanTime: '2026-09-26T07:00:00', sender: SENDER },
+  {
+    id: 91,
+    trackingNumber: 'TRK-00000091',
+    status: 'RETOUR_A_CHARGER',
+    senderName: 'Boutique Test',
+    senderPhone: '71000000',
+    senderAddress: 'Rue du Commerce',
+    senderAgencyName: 'Agence Tunis',
+    returnType: 'TO_SENDER',
+    lastScanTime: '2026-09-26T07:00:00',
+    sender: SENDER,
+  },
   { id: 92, trackingNumber: 'TRK-00000092', status: 'RETOUR_RECU', senderName: 'Autre Boutique' },
 ];
 
 const NOTIFICATIONS = [
-  { id: 11, title: 'Nouveau colis', message: 'Un colis a été ajouté', type: 'PARCEL_STATUS_CHANGE', isRead: false,
-    createdAt: '2026-09-26T10:00:00', referenceId: 501, referenceType: 'PARCEL' },
-  { id: 12, title: 'Pickup assigné', message: 'Chez Boutique Test', type: 'PICKUP_ASSIGNED', isRead: true,
-    createdAt: '2026-09-26T11:00:00', referenceId: 1, referenceType: 'PICKUP_REQUEST' },
-  { id: 13, title: 'Réclamation', message: 'Traitée', type: 'COMPLAINT_RESOLVED', isRead: false,
-    createdAt: '2026-09-25T09:00:00', referenceId: null, referenceType: null },
+  {
+    id: 11,
+    title: 'Nouveau colis',
+    message: 'Un colis a été ajouté',
+    type: 'PARCEL_STATUS_CHANGE',
+    isRead: false,
+    createdAt: '2026-09-26T10:00:00',
+    referenceId: 501,
+    referenceType: 'PARCEL',
+  },
+  {
+    id: 12,
+    title: 'Pickup assigné',
+    message: 'Chez Boutique Test',
+    type: 'PICKUP_ASSIGNED',
+    isRead: true,
+    createdAt: '2026-09-26T11:00:00',
+    referenceId: 1,
+    referenceType: 'PICKUP_REQUEST',
+  },
+  {
+    id: 13,
+    title: 'Réclamation',
+    message: 'Traitée',
+    type: 'COMPLAINT_RESOLVED',
+    isRead: false,
+    createdAt: '2026-09-25T09:00:00',
+    referenceId: null,
+    referenceType: null,
+  },
   { id: 14, title: '?', message: '?', type: 'BRAND_NEW_KIND', isRead: false, createdAt: '2026-09-24T09:00:00' },
 ];
 
 const ACTIVE_RUNSHEETS = [
-  { id: 60, code: 'RS-1', status: 'IN_PROGRESS',
-    items: [{ id: 5001, sequenceOrder: 1, status: 'PENDING', parcel: { id: 501, trackingNumber: 'TRK-00000501', amountToCollect: 10 } }] },
+  {
+    id: 60,
+    code: 'RS-1',
+    status: 'IN_PROGRESS',
+    items: [
+      {
+        id: 5001,
+        sequenceOrder: 1,
+        status: 'PENDING',
+        parcel: { id: 501, trackingNumber: 'TRK-00000501', amountToCollect: 10 },
+      },
+    ],
+  },
 ];
 
 let fetchMock: jest.Mock;
 let urls: string[];
 
 function json(status: number, body: unknown) {
-  return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
+  return Promise.resolve(
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  );
 }
 
 async function signedIn(): Promise<RealApi> {
@@ -102,8 +218,19 @@ async function signedIn(): Promise<RealApi> {
     urls.push(url);
     const path = url.replace('https://jibex.cloud/', '');
     if (path === 'api/auth/login') {
-      return json(200, { token: 't', role: 'DRIVER', portal: '/driver',
-        user: { id: USER_ID, driverId: DRIVER_ID, username: 'driver', fullName: 'Driver Test', role: 'DRIVER', active: true } });
+      return json(200, {
+        token: 't',
+        role: 'DRIVER',
+        portal: '/driver',
+        user: {
+          id: USER_ID,
+          driverId: DRIVER_ID,
+          username: 'driver',
+          fullName: 'Driver Test',
+          role: 'DRIVER',
+          active: true,
+        },
+      });
     }
     if (path === `api/pickup-requests/driver/${DRIVER_ID}`) return json(200, PICKUPS);
     const pickupParcels = path.match(/^api\/pickup-requests\/(\d+)\/parcels$/);
@@ -164,14 +291,24 @@ describe('real pickups', () => {
       packageCount: 1,
       server: { pickupId: '1', requestNumber: 'PU-3-20260926-0001', status: 'SCHEDULED', estimatedParcelsCount: 3 },
     });
-    expect(open.parcels).toEqual([{ trackingNumber: 'TRK-00000071', contactName: 'Client A', address: 'Rue A, Tunis', codAmount: 120 }]);
+    expect(open.parcels).toEqual([
+      { trackingNumber: 'TRK-00000071', contactName: 'Client A', address: 'Rue A, Tunis', codAmount: 120 },
+    ]);
     expect(pickups[1].timeWindow).toBe('09:00–10:00');
   });
 
   it('never carries the merchant’s or driver’s private details', async () => {
     const api = await signedIn();
     const everything = JSON.stringify([await api.getPickups(), await api.getReturns()]);
-    for (const secret of ['CIN-SECRET-123', 'RIB-SECRET-456', 'PF-SECRET', 'shop-login', 'DRIVER-CIN-SECRET', 'LIC-SECRET', '1234.5']) {
+    for (const secret of [
+      'CIN-SECRET-123',
+      'RIB-SECRET-456',
+      'PF-SECRET',
+      'shop-login',
+      'DRIVER-CIN-SECRET',
+      'LIC-SECRET',
+      '1234.5',
+    ]) {
       expect(everything).not.toContain(secret);
     }
   });
@@ -192,12 +329,17 @@ describe('real transfers', () => {
       parcelCount: 2,
       location: 'Sousse',
       scheduledAt: '2026-09-26T09:00:00',
-      server: { transferId: '1', transferType: 'HUB_RELAY', scanDeparture: true, damagedParcels: 1, vehicleRegistration: '123 TU 4567' },
+      server: {
+        transferId: '1',
+        transferType: 'HUB_RELAY',
+        scanDeparture: true,
+        damagedParcels: 1,
+        vehicleRegistration: '123 TU 4567',
+      },
     });
     // A type we don't know is kept raw rather than guessed.
     expect(transfers[1].server).toMatchObject({ rawType: 'SOMETHING_NEW', transferType: undefined });
   });
-
 });
 
 describe('real returns', () => {
@@ -244,10 +386,28 @@ describe('real notifications', () => {
 describe('real scanner: a local lookup, never the tracking endpoint', () => {
   it('finds a parcel in each of the driver’s lists, and says where', async () => {
     const api = await signedIn();
-    expect(await api.confirmScan('trk-00000501')).toMatchObject({ success: true, kind: 'job', id: 'TRK-00000501', checkedOnly: true });
-    expect(await api.confirmScan('TRK-00000071')).toMatchObject({ success: true, kind: 'pickup', id: '1', label: 'Client A' });
-    expect(await api.confirmScan('TRK-00000082')).toMatchObject({ success: true, kind: 'transfer', id: 'TRF-7093829A' });
-    expect(await api.confirmScan('TRF-7093829A')).toMatchObject({ success: true, kind: 'transfer', id: 'TRF-7093829A' });
+    expect(await api.confirmScan('trk-00000501')).toMatchObject({
+      success: true,
+      kind: 'job',
+      id: 'TRK-00000501',
+      checkedOnly: true,
+    });
+    expect(await api.confirmScan('TRK-00000071')).toMatchObject({
+      success: true,
+      kind: 'pickup',
+      id: '1',
+      label: 'Client A',
+    });
+    expect(await api.confirmScan('TRK-00000082')).toMatchObject({
+      success: true,
+      kind: 'transfer',
+      id: 'TRF-7093829A',
+    });
+    expect(await api.confirmScan('TRF-7093829A')).toMatchObject({
+      success: true,
+      kind: 'transfer',
+      id: 'TRF-7093829A',
+    });
     // A transfer handover QR payload is not a tracking number: it is an unknown code.
     expect(await api.confirmScan('JIBEX-TRANSFER:TRF-7093829A')).toMatchObject({ success: false });
     expect(await api.confirmScan('TRK-00000091')).toMatchObject({ success: true, kind: 'return', id: 'TRK-00000091' });
@@ -265,7 +425,11 @@ describe('dispatch contact from the agency data already loaded', () => {
   it('takes the driver’s own agency (the one transfers leave from), never the receiving one', async () => {
     const api = await signedIn();
     // The runsheets here carry no agency contact; the transfer's sending agency has a phone.
-    expect(await api.getDispatchContact()).toEqual({ phone: '73000000', email: undefined, agencyName: 'Agence Sousse' });
+    expect(await api.getDispatchContact()).toEqual({
+      phone: '73000000',
+      email: undefined,
+      agencyName: 'Agence Sousse',
+    });
   });
 
   it('is remembered on the phone, so the login screen can offer it signed out — with no request', async () => {
@@ -281,13 +445,25 @@ describe('dispatch contact from the agency data already loaded', () => {
 describe('pickup city from the addresses', () => {
   it('finds the governorate in the sender’s address when the server gives no city', () => {
     const { toPickup } = require('../services/real-api') as RealApi;
-    const pickup = toPickup({ id: 9, status: 'SCHEDULED', pickupAddress: 'Zone Industrielle', pickupCity: null, sender: { address: 'Route de Gabès km 4, Sfax' } });
+    const pickup = toPickup({
+      id: 9,
+      status: 'SCHEDULED',
+      pickupAddress: 'Zone Industrielle',
+      pickupCity: null,
+      sender: { address: 'Route de Gabès km 4, Sfax' },
+    });
     expect(pickup?.address).toBe('Zone Industrielle, Sfax');
   });
 
   it('doesn’t repeat a city the pickup address already names', () => {
     const { toPickup } = require('../services/real-api') as RealApi;
-    const pickup = toPickup({ id: 9, status: 'SCHEDULED', pickupAddress: 'Rue X, Sousse', pickupCity: null, sender: { address: 'Sousse' } });
+    const pickup = toPickup({
+      id: 9,
+      status: 'SCHEDULED',
+      pickupAddress: 'Rue X, Sousse',
+      pickupCity: null,
+      sender: { address: 'Sousse' },
+    });
     expect(pickup?.address).toBe('Rue X, Sousse');
   });
 });
@@ -298,7 +474,11 @@ describe('dispatch contact: the manager’s phone before the placeholder', () =>
     run.agency = { id: 2, name: 'jihed agence', phone: '', email: '', managerPhone: '98000000' };
     try {
       const api = await signedIn();
-      expect(await api.getDispatchContact()).toEqual({ phone: '98000000', email: undefined, agencyName: 'jihed agence' });
+      expect(await api.getDispatchContact()).toEqual({
+        phone: '98000000',
+        email: undefined,
+        agencyName: 'jihed agence',
+      });
     } finally {
       delete run.agency;
     }

@@ -57,7 +57,8 @@ describe('finish all pickups', () => {
     const texts: string[] = [];
     const walk = (node: unknown, path: string) => {
       if (typeof node === 'string') texts.push(`${path}=${node}`);
-      else if (node && typeof node === 'object') for (const [key, value] of Object.entries(node)) walk(value, `${path}.${key}`);
+      else if (node && typeof node === 'object')
+        for (const [key, value] of Object.entries(node)) walk(value, `${path}.${key}`);
     };
     walk(fr, 'fr');
     const stray = texts.filter((line) => /collecte|pickup/i.test(line.split('=').slice(1).join('=')));
@@ -70,7 +71,9 @@ describe('finish all pickups', () => {
 
   it('shows the agency’s reference and the day on a card', () => {
     // The agency's own reference, as the Android app shows it.
-    expect(pickupReference({ id: '41', server: { pickupId: '41', requestNumber: 'PU-3-20261002-0001' } })).toBe('PU-3-20261002-0001');
+    expect(pickupReference({ id: '41', server: { pickupId: '41', requestNumber: 'PU-3-20261002-0001' } })).toBe(
+      'PU-3-20261002-0001'
+    );
     expect(pickupReference({ id: 'PU-3-20261002-0002' })).toBe('PU-3-20261002-0002');
     // A bare server id is not a reference.
     expect(pickupReference({ id: '41' })).toBeUndefined();

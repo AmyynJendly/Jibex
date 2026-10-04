@@ -1,15 +1,5 @@
 import { Host } from '@expo/ui';
-import {
-  Button,
-  HStack,
-  Image,
-  List,
-  Section,
-  Spacer,
-  SwipeActions,
-  Text,
-  VStack,
-} from '@expo/ui/swift-ui';
+import { Button, HStack, Image, List, Section, Spacer, SwipeActions, Text, VStack } from '@expo/ui/swift-ui';
 import {
   Animation,
   animation,
@@ -64,9 +54,7 @@ export function NativeAlertsList({
 
   const row = (item: NativeAlertRow) => (
     <SwipeActions key={item.id}>
-      <Button
-        onPress={() => onOpen(item.id)}
-        modifiers={[listRowBackground(colors.bgElevated)]}>
+      <Button onPress={() => onOpen(item.id)} modifiers={[listRowBackground(colors.bgElevated)]}>
         <HStack spacing={12} alignment="top">
           <Image
             systemName="circle.fill"
@@ -98,12 +86,7 @@ export function NativeAlertsList({
               ]}>
               {item.title}
             </Text>
-            <Text
-              modifiers={[
-                font({ textStyle: 'footnote' }),
-                foregroundStyle(colors.textSecondary),
-                lineLimit(2),
-              ]}>
+            <Text modifiers={[font({ textStyle: 'footnote' }), foregroundStyle(colors.textSecondary), lineLimit(2)]}>
               {item.message}
             </Text>
           </VStack>
@@ -116,20 +99,13 @@ export function NativeAlertsList({
               ]}>
               {item.time}
             </Text>
-            {item.opens ? (
-              <Image systemName="chevron.right" size={11} color={colors.textTertiary} />
-            ) : null}
+            {item.opens ? <Image systemName="chevron.right" size={11} color={colors.textTertiary} /> : null}
           </VStack>
         </HStack>
       </Button>
 
       <SwipeActions.Actions edge="trailing" allowsFullSwipe>
-        <Button
-          role="destructive"
-          label={labels.delete}
-          systemImage="trash.fill"
-          onPress={() => onDelete(item.id)}
-        />
+        <Button role="destructive" label={labels.delete} systemImage="trash.fill" onPress={() => onDelete(item.id)} />
       </SwipeActions.Actions>
       <SwipeActions.Actions edge="leading" allowsFullSwipe>
         <Button

@@ -74,7 +74,9 @@ describe('the cash line on the delivery screen', () => {
   });
 
   it('10 / 10: "À encaisser : 10.000 TND (frais de livraison)"', () => {
-    expect(cashDueLine(t, cashDue({ price: 10, deliveryFee: 10 }))).toBe('À encaisser : 10.000 TND (frais de livraison)');
+    expect(cashDueLine(t, cashDue({ price: 10, deliveryFee: 10 }))).toBe(
+      'À encaisser : 10.000 TND (frais de livraison)'
+    );
   });
 
   it('otherwise: the full price, three decimals', () => {

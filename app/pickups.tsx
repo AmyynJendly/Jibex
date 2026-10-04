@@ -110,10 +110,7 @@ function PickupCard({
     <Card
       accent={accent}
       padding="tight"
-      borderColor={
-        !readOnly && progress.complete ? colors.success : highlighted ? colors.accent : undefined
-      }>
-
+      borderColor={!readOnly && progress.complete ? colors.success : highlighted ? colors.accent : undefined}>
       <View style={styles.headRow}>
         {drag && <DragHandle drag={drag} />}
         <AnimatedPressable
@@ -139,21 +136,14 @@ function PickupCard({
           </View>
 
           <View style={[styles.chevronWell, { backgroundColor: colors.bg }]}>
-            <Icon
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={17}
-              color={colors.textSecondary}
-            />
+            <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textSecondary} />
           </View>
         </AnimatedPressable>
       </View>
 
       <View style={styles.metaRow}>
         <MetaChip icon="time-outline" label={pickupWhen(pickup)} />
-        <MetaChip
-          icon="cube-outline"
-          label={t('common.package', { count: pickup.packageCount })}
-        />
+        <MetaChip icon="cube-outline" label={t('common.package', { count: pickup.packageCount })} />
         <MetaChip icon="cash-outline" label={formatCurrency(codTotal)} tone="accent" />
       </View>
 
@@ -161,9 +151,7 @@ function PickupCard({
         {readOnly ? (
           <View style={styles.collectedRow}>
             <Icon name="checkmark-circle" size={17} color={colors.success} />
-            <Text style={[styles.collectedText, { color: colors.success }]}>
-              {t('pickups.collected')}
-            </Text>
+            <Text style={[styles.collectedText, { color: colors.success }]}>{t('pickups.collected')}</Text>
           </View>
         ) : (
           <>
@@ -174,9 +162,7 @@ function PickupCard({
               style={[styles.actionButton, { backgroundColor: colors.accentSoft }]}
               onPress={() => Linking.openURL(telUrl(pickup.contactPhone)).catch(() => {})}>
               <Icon name="call-outline" size={17} color={colors.accent} />
-              <Text style={[styles.actionButtonText, { color: colors.accent }]}>
-                {t('pickups.call')}
-              </Text>
+              <Text style={[styles.actionButtonText, { color: colors.accent }]}>{t('pickups.call')}</Text>
             </AnimatedPressable>
             <AnimatedPressable
               scaleTo={0.95}
@@ -185,9 +171,7 @@ function PickupCard({
               style={[styles.actionButton, styles.actionButtonWide, { backgroundColor: colors.accent }]}
               onPress={() => openDirections({ address: pickup.address })}>
               <Icon name="navigate" size={16} color="#fff" />
-              <Text style={[styles.actionButtonText, styles.actionButtonTextOn]}>
-                {t('pickups.navigate')}
-              </Text>
+              <Text style={[styles.actionButtonText, styles.actionButtonTextOn]}>{t('pickups.navigate')}</Text>
             </AnimatedPressable>
           </>
         )}
@@ -204,11 +188,7 @@ function PickupCard({
                 size={17}
                 color={progress.complete ? colors.success : colors.textSecondary}
               />
-              <Text
-                style={[
-                  monoStyle(15, 'medium'),
-                  { color: progress.complete ? colors.success : colors.text },
-                ]}>
+              <Text style={[monoStyle(15, 'medium'), { color: progress.complete ? colors.success : colors.text }]}>
                 {t('pickups.check.progress', { done: progress.done, total: progress.total })}
               </Text>
             </View>
@@ -225,9 +205,7 @@ function PickupCard({
                     })
                   }>
                   <Icon name="scan-outline" size={15} color={colors.accent} />
-                  <Text style={[styles.checkActionText, { color: colors.accent }]}>
-                    {t('pickups.check.scan')}
-                  </Text>
+                  <Text style={[styles.checkActionText, { color: colors.accent }]}>{t('pickups.check.scan')}</Text>
                 </AnimatedPressable>
                 <AnimatedPressable
                   scaleTo={0.95}
@@ -243,14 +221,10 @@ function PickupCard({
           </View>
 
           {!canFinish && (
-            <Text style={[styles.checkHint, { color: colors.textSecondary }]}>
-              {t('pickups.check.finishHint')}
-            </Text>
+            <Text style={[styles.checkHint, { color: colors.textSecondary }]}>{t('pickups.check.finishHint')}</Text>
           )}
           {noList && (
-            <Text style={[styles.checkHint, { color: colors.textSecondary }]}>
-              {t('pickups.check.noList')}
-            </Text>
+            <Text style={[styles.checkHint, { color: colors.textSecondary }]}>{t('pickups.check.noList')}</Text>
           )}
 
           <AnimatedPressable
@@ -264,9 +238,7 @@ function PickupCard({
             ]}
             onPress={onFinish}>
             <Icon name="checkmark-done" size={17} color="#fff" />
-            <Text style={styles.finishButtonText}>
-              {finishing ? t('common.sending') : t('pickups.check.finish')}
-            </Text>
+            <Text style={styles.finishButtonText}>{finishing ? t('common.sending') : t('pickups.check.finish')}</Text>
           </AnimatedPressable>
         </View>
       )}
@@ -300,9 +272,7 @@ function PickupCard({
               </>
             );
             return readOnly ? (
-              <View
-                key={parcel.trackingNumber}
-                style={[styles.parcelRow, { borderTopColor: colors.separator }]}>
+              <View key={parcel.trackingNumber} style={[styles.parcelRow, { borderTopColor: colors.separator }]}>
                 {row}
               </View>
             ) : (
@@ -369,9 +339,7 @@ export default function PickupsScreen() {
   // History, by when it was collected (or was due, when the server has no time for it).
   const completed =
     pickups?.filter(
-      (p) =>
-        p.status === 'COMPLETED' &&
-        matchesDateFilter(p.server?.completedAt ?? p.requestedByDate, dateFilter)
+      (p) => p.status === 'COMPLETED' && matchesDateFilter(p.server?.completedAt ?? p.requestedByDate, dateFilter)
     ) ?? [];
   const displayed = segment === 'SCHEDULED' ? scheduled : completed;
 
@@ -481,22 +449,16 @@ export default function PickupsScreen() {
   // Sits at the top of whichever list is showing, under Apple's large title.
   const summary = (
     <View style={styles.header}>
-      <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-        {t('pickups.eyebrow')}
-      </Text>
+      <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>{t('pickups.eyebrow')}</Text>
       <View style={styles.headerCount}>
         <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{totalPackages}</Text>
-        <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>
-          {t('pickups.parcelCountLabel')}
-        </Text>
+        <Text style={[monoLabelStyle(10, 0.06), { color: colors.textTertiary }]}>{t('pickups.parcelCountLabel')}</Text>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView
-      edges={['bottom', 'left', 'right']}
-      style={[styles.screen, { backgroundColor: colors.bg }]}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('pickups.headerTitle') }} />
 
       {/* The list and its back-to-top arrow share one area, so the arrow
@@ -583,10 +545,7 @@ export default function PickupsScreen() {
                 <SkeletonRow />
               </View>
             ) : scheduled.length === 0 ? (
-              <EmptyState
-                illustration={<PackageCube size={34} />}
-                title={t('pickups.empty.scheduled')}
-              />
+              <EmptyState illustration={<PackageCube size={34} />} title={t('pickups.empty.scheduled')} />
             ) : (
               <DraggableList
                 data={scheduled}

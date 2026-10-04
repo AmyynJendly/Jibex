@@ -19,14 +19,8 @@ import { UnreachableButton } from './UnreachableButton';
 import { captureCurrentCoords } from '../lib/useLiveCoords';
 import { useWrite } from '../lib/useWrite';
 import { safely } from '../lib/writeResult';
-import {
-  confirmDelivery,
-  getDriverStats,
-  markDeliveryFailed,
-  reopenParcel,
-} from '../services/api';
+import { confirmDelivery, getDriverStats, markDeliveryFailed, reopenParcel } from '../services/api';
 import type { DeliveryFailureReason, Job } from '../types';
-
 
 interface StatusUpdateSheetProps {
   /** The sheet is visible whenever this is non-null. */
@@ -87,8 +81,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
     if (measured > 0 && measured !== contentHeight) setContentHeight(measured);
   }
 
-  const hosted = (content: ReactElement) =>
-    isNative ? <RNHostView>{content}</RNHostView> : content;
+  const hosted = (content: ReactElement) => (isNative ? <RNHostView>{content}</RNHostView> : content);
 
   // The sheet offers only the reasons drivers pick most, as one tap each; the
   // others (and "Other", which needs a note) are one tap further, on the full
@@ -160,9 +153,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
     // Same capture as the full-screen Can't Deliver flow — this sheet is the
     // other place a failure reason gets set, so it needs the same proof.
     const location = await captureCurrentCoords().catch(() => null);
-    const result = await safely(() =>
-      markDeliveryFailed(job.id, reason, undefined, location ?? undefined)
-    );
+    const result = await safely(() => markDeliveryFailed(job.id, reason, undefined, location ?? undefined));
     write.end();
     if (!result.success) {
       // The reason stays picked, so trying again is one tap.
@@ -221,10 +212,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
             ) : (
               <>
                 {job.exchange && (
-                  <ExchangeCheck
-                    checked={exchangeCollected}
-                    onToggle={() => setExchangeCollected((v) => !v)}
-                  />
+                  <ExchangeCheck checked={exchangeCollected} onToggle={() => setExchangeCollected((v) => !v)} />
                 )}
                 <AnimatedPressable
                   scaleTo={0.97}
@@ -242,9 +230,7 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
                 {!called && (
                   <View style={styles.callHintRow}>
                     <Icon name="call-outline" size={14} color={colors.warning} />
-                    <Text style={[styles.callHintText, { color: colors.warning }]}>
-                      {t('statusUpdate.callHint')}
-                    </Text>
+                    <Text style={[styles.callHintText, { color: colors.warning }]}>{t('statusUpdate.callHint')}</Text>
                   </View>
                 )}
                 {job && <UnreachableButton parcelId={job.id} callAttempts={job.callAttempts} />}

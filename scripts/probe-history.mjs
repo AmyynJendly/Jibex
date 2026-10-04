@@ -36,18 +36,29 @@ async function call(path, init = {}) {
   });
   const t = await r.text();
   let body = null;
-  try { body = t ? JSON.parse(t) : null; } catch { body = t.slice(0, 200); }
+  try {
+    body = t ? JSON.parse(t) : null;
+  } catch {
+    body = t.slice(0, 200);
+  }
   return { status: r.status, body };
 }
 
 const login = await call('api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-if (login.status !== 200) { console.log(`Login failed: HTTP ${login.status}`); process.exit(1); }
+if (login.status !== 200) {
+  console.log(`Login failed: HTTP ${login.status}`);
+  process.exit(1);
+}
 const auth = { Authorization: `Bearer ${login.body.token}` };
 const { driverId } = login.body.user;
 console.log(`Signed in. driverId=${driverId}\n`);
 
 const r = await call(`api/runsheets?driverId=${driverId}`, { headers: auth });
-const shape = Array.isArray(r.body) ? `array of ${r.body.length}` : r.body && typeof r.body === 'object' ? `object with keys ${Object.keys(r.body).join(', ')}` : JSON.stringify(r.body);
+const shape = Array.isArray(r.body)
+  ? `array of ${r.body.length}`
+  : r.body && typeof r.body === 'object'
+    ? `object with keys ${Object.keys(r.body).join(', ')}`
+    : JSON.stringify(r.body);
 console.log(`GET api/runsheets?driverId=${driverId} → HTTP ${r.status}, ${shape}`);
 
 // Spring pages put the list under `content`.

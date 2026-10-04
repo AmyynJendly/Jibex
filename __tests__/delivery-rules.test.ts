@@ -81,7 +81,7 @@ describe('the doorstep Delivered button', () => {
   });
 });
 
-describe('a failure reason can carry the driver\'s location', () => {
+describe("a failure reason can carry the driver's location", () => {
   it('attaches the fix passed at the moment the reason was logged', async () => {
     const api = freshApi();
     const parcel = await workableParcel(api);
@@ -271,9 +271,7 @@ describe('re-confirmation when the count changes', () => {
     const api = freshApi();
     const runsheets = await api.getRunsheets();
     // Seeded mid-day: signed for four, holding five.
-    const recount = runsheets.find(
-      (r) => r.needsConfirmation && r.status === 'EN_COURS'
-    );
+    const recount = runsheets.find((r) => r.needsConfirmation && r.status === 'EN_COURS');
     if (!recount) throw new Error('seed data has no run needing a recount');
 
     expect(recount.needsConfirmation).toBe(true);

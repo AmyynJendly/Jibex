@@ -1,15 +1,7 @@
 import * as Location from 'expo-location';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-  type ColorValue,
-} from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, useColorScheme, View, type ColorValue } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Icon, type IconName } from '../../../components/Icon';
@@ -24,15 +16,7 @@ import { SkeletonBlock } from '../../../components/Skeleton';
 import { SunArcGauge } from '../../../components/SunArcGauge';
 import { useToast } from '../../../components/Toast';
 import { WalletChip } from '../../../components/WalletChip';
-import {
-  Fonts,
-  Radii,
-  Spacing,
-  Typography,
-  getCardShadow,
-  monoStyle,
-  useColors,
-} from '../../../constants';
+import { Fonts, Radii, Spacing, Typography, getCardShadow, monoStyle, useColors } from '../../../constants';
 import { formatCurrency, formatDecimal } from '../../../lib/currency';
 import { localeTag, toDateKey } from '../../../lib/date';
 import { runCounts, runsInProgress } from '../../../lib/runsheetDay';
@@ -231,9 +215,7 @@ export default function HomeScreen() {
   if (!data) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.content}>
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
           <View style={styles.topRow}>
             <SkeletonBlock width={128} height={40} radius={20} />
             <View style={styles.topActions}>
@@ -264,9 +246,7 @@ export default function HomeScreen() {
   const firstName = user.name.split(' ')[0];
   // Only a stop with coordinates has a distance; the others show no figure
   // rather than a made-up one.
-  const nextStopDistanceKm = nextStop?.location
-    ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, nextStop.location)
-    : null;
+  const nextStopDistanceKm = nextStop?.location ? haversineKm(liveCoords ?? FALLBACK_ORIGIN, nextStop.location) : null;
   const todayLabel = new Date()
     .toLocaleDateString(localeTag(i18n.language), { weekday: 'short', day: 'numeric', month: 'short' })
     .replace(/\./g, '');
@@ -364,262 +344,233 @@ export default function HomeScreen() {
               onPress={() => router.push('/search')}>
               <Icon name="search-outline" size={20} color={colors.text} />
             </GlassIconButton>
-            <GlassIconButton
-              size={40}
-              accessibilityLabel={t('home.a11y.scan')}
-              onPress={() => router.push('/scanner')}>
+            <GlassIconButton size={40} accessibilityLabel={t('home.a11y.scan')} onPress={() => router.push('/scanner')}>
               <Icon name="scan-outline" size={20} color={colors.text} />
             </GlassIconButton>
           </View>
         </View>
 
-      {/* The greeting, dressed as a shipping label: a strip of tape holding
+        {/* The greeting, dressed as a shipping label: a strip of tape holding
           it down, a barcode, and a perforated stub with the driver's code. */}
-      <View
-        style={[
-          styles.greeting,
-          { backgroundColor: colors.bgElevated, borderColor: colors.separator },
-          getCardShadow(scheme),
-        ]}>
-        <View style={[styles.labelTape, { backgroundColor: colors.warning }]} />
-        <View style={styles.labelTopRow}>
-          <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>
-            {todayLabel}
-          </Text>
-          <Barcode seed={user.id + user.driverCode} color={colors.text} width={58} height={20} />
-        </View>
-        <Text style={[Typography.largeTitle, styles.name, { color: colors.text }]}>
-          {t(getGreetingKey())}, {firstName}
-        </Text>
-        {locationLabel && (
-          <View style={styles.locationRow}>
-            <Icon name="location-outline" size={13} color={colors.accent} />
-            <Text style={[Typography.subhead, { color: colors.textSecondary }]}>
-              {locationLabel}
-            </Text>
+        <View
+          style={[
+            styles.greeting,
+            { backgroundColor: colors.bgElevated, borderColor: colors.separator },
+            getCardShadow(scheme),
+          ]}>
+          <View style={[styles.labelTape, { backgroundColor: colors.warning }]} />
+          <View style={styles.labelTopRow}>
+            <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>{todayLabel}</Text>
+            <Barcode seed={user.id + user.driverCode} color={colors.text} width={58} height={20} />
           </View>
-        )}
-        <View style={[styles.labelStub, { borderTopColor: colors.separator }]}>
-          <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>
-            JIBEX
+          <Text style={[Typography.largeTitle, styles.name, { color: colors.text }]}>
+            {t(getGreetingKey())}, {firstName}
           </Text>
-          <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>
-            {user.driverCode}
-          </Text>
+          {locationLabel && (
+            <View style={styles.locationRow}>
+              <Icon name="location-outline" size={13} color={colors.accent} />
+              <Text style={[Typography.subhead, { color: colors.textSecondary }]}>{locationLabel}</Text>
+            </View>
+          )}
+          <View style={[styles.labelStub, { borderTopColor: colors.separator }]}>
+            <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>JIBEX</Text>
+            <Text style={[monoStyle(10), styles.labelEyebrow, { color: colors.textTertiary }]}>{user.driverCode}</Text>
+          </View>
         </View>
-      </View>
 
-      {/* The run being delivered, named on Home like on the Android
+        {/* The run being delivered, named on Home like on the Android
           dashboard. A run still to confirm has its own card below. */}
-      {currentRuns.map((runsheet) => {
-        const counts = runCounts(runsheet);
-        return (
-          <AnimatedPressable
-            key={runsheet.id}
-            scaleTo={0.98}
-            accessibilityRole="button"
-            onPress={() => router.push('/runsheets')}
-            style={[styles.currentRun, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
-            <View style={[styles.toConfirmIcon, { backgroundColor: colors.accentSoft }]}>
-              <Icon name="clipboard-outline" size={16} color={colors.accent} />
-            </View>
-            <View style={styles.toConfirmText}>
-              <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
-                {runsheet.code ?? runsheet.id}
-              </Text>
-              <Text style={[Typography.caption2, { color: colors.textSecondary }]} numberOfLines={1}>
-                {t('home.currentRun', {
-                  remaining: counts.remaining,
-                  total: runsheet.stopCount,
-                })}
-              </Text>
-            </View>
-            <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
-          </AnimatedPressable>
-        );
-      })}
-
-      {unconfirmedRunsheets.length > 0 && (
-        <View style={styles.toConfirmSection}>
-          <Text style={[monoStyle(11), styles.toConfirmTitle, { color: colors.warning }]}>
-            {t('home.toConfirmTitle', { count: unconfirmedRunsheets.length })}
-          </Text>
-          {unconfirmedRunsheets.map((runsheet) => (
-            <View
+        {currentRuns.map((runsheet) => {
+          const counts = runCounts(runsheet);
+          return (
+            <AnimatedPressable
               key={runsheet.id}
-              style={[
-                styles.toConfirmCard,
-                { backgroundColor: colors.bgElevated, borderColor: colors.warning },
-                getCardShadow(scheme),
-              ]}>
-              <View style={[styles.toConfirmIcon, { backgroundColor: colors.warningSoft }]}>
-                <Icon name="lock-closed" size={16} color={colors.warning} />
+              scaleTo={0.98}
+              accessibilityRole="button"
+              onPress={() => router.push('/runsheets')}
+              style={[styles.currentRun, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+              <View style={[styles.toConfirmIcon, { backgroundColor: colors.accentSoft }]}>
+                <Icon name="clipboard-outline" size={16} color={colors.accent} />
               </View>
               <View style={styles.toConfirmText}>
-                {/* The run is what gets confirmed: name it, then its size. */}
                 <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
-                  {runsheetConfirm.title(runsheet)}
+                  {runsheet.code ?? runsheet.id}
                 </Text>
                 <Text style={[Typography.caption2, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {runsheet.code ?? runsheet.id} · {t('common.package', { count: runsheet.stopCount })}
+                  {t('home.currentRun', {
+                    remaining: counts.remaining,
+                    total: runsheet.stopCount,
+                  })}
                 </Text>
               </View>
+              <Icon name="chevron-forward" size={16} color={colors.textTertiary} />
+            </AnimatedPressable>
+          );
+        })}
+
+        {unconfirmedRunsheets.length > 0 && (
+          <View style={styles.toConfirmSection}>
+            <Text style={[monoStyle(11), styles.toConfirmTitle, { color: colors.warning }]}>
+              {t('home.toConfirmTitle', { count: unconfirmedRunsheets.length })}
+            </Text>
+            {unconfirmedRunsheets.map((runsheet) => (
+              <View
+                key={runsheet.id}
+                style={[
+                  styles.toConfirmCard,
+                  { backgroundColor: colors.bgElevated, borderColor: colors.warning },
+                  getCardShadow(scheme),
+                ]}>
+                <View style={[styles.toConfirmIcon, { backgroundColor: colors.warningSoft }]}>
+                  <Icon name="lock-closed" size={16} color={colors.warning} />
+                </View>
+                <View style={styles.toConfirmText}>
+                  {/* The run is what gets confirmed: name it, then its size. */}
+                  <Text style={[Typography.title3, { color: colors.text }]} numberOfLines={1}>
+                    {runsheetConfirm.title(runsheet)}
+                  </Text>
+                  <Text style={[Typography.caption2, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {runsheet.code ?? runsheet.id} · {t('common.package', { count: runsheet.stopCount })}
+                  </Text>
+                </View>
+                <AnimatedPressable
+                  scaleTo={0.95}
+                  disabled={runsheetConfirm.sending}
+                  style={[
+                    styles.toConfirmButton,
+                    { backgroundColor: colors.warning, opacity: runsheetConfirm.sending ? 0.5 : 1 },
+                  ]}
+                  onPress={() => runsheetConfirm.confirmReceipt(runsheet)}>
+                  <Text style={[styles.toConfirmButtonText, { color: colors.onWarning }]}>
+                    {runsheetConfirm.sending ? t('common.sending') : runsheetConfirm.shortActionLabel(runsheet)}
+                  </Text>
+                </AnimatedPressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.bgElevated, borderRadius: Radii.card },
+            getCardShadow(scheme),
+          ]}>
+          <Text style={[Typography.cardTitle, { color: colors.text }]}>{t('home.deliveriesCardTitle')}</Text>
+          <SunArcGauge
+            percent={stats.completionPercent}
+            caption={t('home.stopsCaption', { delivered: stats.delivered, total: totalStops })}
+            style={styles.arcGauge}
+            scale={0.78}
+          />
+          {/* Only when there's an honest estimate — the real server gives none. */}
+          {stats.onPaceFinishTime && (
+            <View style={[styles.paceRow, { backgroundColor: colors.bg }]}>
+              <Icon name="time-outline" size={14} color={colors.textTertiary} />
+              <Text style={[Typography.footnote, styles.paceText, { color: colors.textSecondary }]}>
+                {t('home.onPace', { time: stats.onPaceFinishTime })}
+              </Text>
+            </View>
+          )}
+
+          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+
+          <View style={styles.statRow}>
+            {statItems.map((stat, i) => (
+              <View key={stat.label} style={styles.statItemRow}>
+                {i > 0 && <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />}
+                <View style={styles.statItem}>
+                  <CountUpText
+                    value={stat.value}
+                    formatter={integerFormatter}
+                    style={[Typography.title2, { color: stat.color }]}
+                  />
+                  <Text style={[Typography.caption2, { color: colors.textSecondary }]}>{stat.label}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {nextStop && (
+          <StopLink
+            job={nextStop}
+            scaleTo={0.98}
+            style={[styles.nextStopCard, { backgroundColor: colors.accent }, getCardShadow(scheme)]}>
+            {/* The tag's punched hole, showing the page through it. */}
+            <View style={[styles.tagHole, { backgroundColor: colors.bg }]} />
+            <View style={styles.nextStopTopRow}>
+              <Text style={[monoStyle(11), styles.nextStopLabel, styles.tagMuted, { color: colors.onAccent }]}>
+                {t('home.nextStop.label')}
+                {nextStopIndex ? ` · ${nextStopIndex}` : ''}
+              </Text>
+              {nextStopDistanceKm !== null && (
+                <Text style={[monoStyle(11), styles.tagMuted, { color: colors.onAccent }]}>
+                  {t('home.nextStop.distanceEta', {
+                    distance: formatDecimal(nextStopDistanceKm),
+                    minutes: nextStopEtaMinutes,
+                  })}
+                </Text>
+              )}
+            </View>
+            <View style={styles.nextStopBody}>
+              <View style={styles.nextStopText}>
+                <Text style={[Typography.title3, { color: colors.onAccent }]} numberOfLines={1}>
+                  {nextStop.customerName}
+                </Text>
+                <Text style={[Typography.subhead, styles.tagMuted, { color: colors.onAccent }]} numberOfLines={1}>
+                  {nextStop.address}
+                </Text>
+              </View>
+              <View style={styles.nextStopIcon}>
+                <PackageCube size={24} />
+              </View>
+            </View>
+            <View style={styles.nextStopBottomRow}>
+              <View style={styles.nextStopCod}>
+                <Text style={[monoStyle(9), styles.nextStopCodLabel, styles.tagMuted, { color: colors.onAccent }]}>
+                  {t('home.nextStop.codLabel')}
+                </Text>
+                <Text
+                  style={[monoStyle(19, 'medium'), { color: colors.onAccent }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}>
+                  {formatCurrency(nextStop.cashToCollect)}
+                </Text>
+              </View>
+              <View style={[styles.goPill, { backgroundColor: colors.warning }]}>
+                <Icon name="navigate" size={12} color={colors.onWarning} />
+                <Text style={[styles.goPillText, { color: colors.onWarning }]}>{t('home.nextStop.go')}</Text>
+              </View>
+            </View>
+          </StopLink>
+        )}
+
+        <View style={styles.compactRow}>
+          {compactActions.map((action) => (
+            <View key={action.key} style={styles.compactWrapper}>
               <AnimatedPressable
                 scaleTo={0.95}
-                disabled={runsheetConfirm.sending}
-                style={[
-                  styles.toConfirmButton,
-                  { backgroundColor: colors.warning, opacity: runsheetConfirm.sending ? 0.5 : 1 },
-                ]}
-                onPress={() => runsheetConfirm.confirmReceipt(runsheet)}>
-                <Text style={[styles.toConfirmButtonText, { color: colors.onWarning }]}>
-                  {runsheetConfirm.sending ? t('common.sending') : runsheetConfirm.shortActionLabel(runsheet)}
+                onPress={() => router.push(action.href)}
+                style={[styles.compactAction, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+                <View style={[styles.compactActionIcon, { backgroundColor: action.soft }]}>
+                  <Icon name={action.icon} size={20} color={action.color} />
+                </View>
+                <Text style={[styles.compactActionLabel, { color: colors.text }]} numberOfLines={1}>
+                  {action.label}
                 </Text>
+                {badgeText(action.badge) && (
+                  <View
+                    style={[styles.compactBadge, { backgroundColor: colors.danger }]}
+                    accessibilityLabel={t('home.a11y.waiting', { count: action.badge })}>
+                    <Text style={styles.compactBadgeText}>{badgeText(action.badge)}</Text>
+                  </View>
+                )}
               </AnimatedPressable>
             </View>
           ))}
         </View>
-      )}
-
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.bgElevated, borderRadius: Radii.card },
-          getCardShadow(scheme),
-        ]}>
-        <Text style={[Typography.cardTitle, { color: colors.text }]}>
-          {t('home.deliveriesCardTitle')}
-        </Text>
-        <SunArcGauge
-          percent={stats.completionPercent}
-          caption={t('home.stopsCaption', { delivered: stats.delivered, total: totalStops })}
-          style={styles.arcGauge}
-          scale={0.78}
-        />
-        {/* Only when there's an honest estimate — the real server gives none. */}
-        {stats.onPaceFinishTime && (
-          <View style={[styles.paceRow, { backgroundColor: colors.bg }]}>
-            <Icon name="time-outline" size={14} color={colors.textTertiary} />
-            <Text style={[Typography.footnote, styles.paceText, { color: colors.textSecondary }]}>
-              {t('home.onPace', { time: stats.onPaceFinishTime })}
-            </Text>
-          </View>
-        )}
-
-        <View style={[styles.divider, { backgroundColor: colors.separator }]} />
-
-        <View style={styles.statRow}>
-          {statItems.map((stat, i) => (
-            <View key={stat.label} style={styles.statItemRow}>
-              {i > 0 && <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />}
-              <View style={styles.statItem}>
-                <CountUpText
-                  value={stat.value}
-                  formatter={integerFormatter}
-                  style={[Typography.title2, { color: stat.color }]}
-                />
-                <Text style={[Typography.caption2, { color: colors.textSecondary }]}>
-                  {stat.label}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {nextStop && (
-        <StopLink
-          job={nextStop}
-          scaleTo={0.98}
-          style={[styles.nextStopCard, { backgroundColor: colors.accent }, getCardShadow(scheme)]}>
-          {/* The tag's punched hole, showing the page through it. */}
-          <View style={[styles.tagHole, { backgroundColor: colors.bg }]} />
-          <View style={styles.nextStopTopRow}>
-            <Text style={[monoStyle(11), styles.nextStopLabel, styles.tagMuted, { color: colors.onAccent }]}>
-              {t('home.nextStop.label')}
-              {nextStopIndex ? ` · ${nextStopIndex}` : ''}
-            </Text>
-            {nextStopDistanceKm !== null && (
-              <Text style={[monoStyle(11), styles.tagMuted, { color: colors.onAccent }]}>
-                {t('home.nextStop.distanceEta', {
-                  distance: formatDecimal(nextStopDistanceKm),
-                  minutes: nextStopEtaMinutes,
-                })}
-              </Text>
-            )}
-          </View>
-          <View style={styles.nextStopBody}>
-            <View style={styles.nextStopText}>
-              <Text style={[Typography.title3, { color: colors.onAccent }]} numberOfLines={1}>
-                {nextStop.customerName}
-              </Text>
-              <Text
-                style={[Typography.subhead, styles.tagMuted, { color: colors.onAccent }]}
-                numberOfLines={1}>
-                {nextStop.address}
-              </Text>
-            </View>
-            <View style={styles.nextStopIcon}>
-              <PackageCube size={24} />
-            </View>
-          </View>
-          <View style={styles.nextStopBottomRow}>
-            <View style={styles.nextStopCod}>
-              <Text
-                style={[monoStyle(9), styles.nextStopCodLabel, styles.tagMuted, { color: colors.onAccent }]}>
-                {t('home.nextStop.codLabel')}
-              </Text>
-              <Text
-                style={[monoStyle(19, 'medium'), { color: colors.onAccent }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}>
-                {formatCurrency(nextStop.cashToCollect)}
-              </Text>
-            </View>
-            <View style={[styles.goPill, { backgroundColor: colors.warning }]}>
-              <Icon name="navigate" size={12} color={colors.onWarning} />
-              <Text style={[styles.goPillText, { color: colors.onWarning }]}>
-                {t('home.nextStop.go')}
-              </Text>
-            </View>
-          </View>
-        </StopLink>
-      )}
-
-      <View style={styles.compactRow}>
-        {compactActions.map((action) => (
-          <View
-            key={action.key}
-            style={styles.compactWrapper}>
-            <AnimatedPressable
-              scaleTo={0.95}
-              onPress={() => router.push(action.href)}
-              style={[
-                styles.compactAction,
-                { backgroundColor: colors.bgElevated },
-                getCardShadow(scheme),
-              ]}>
-              <View style={[styles.compactActionIcon, { backgroundColor: action.soft }]}>
-                <Icon name={action.icon} size={20} color={action.color} />
-              </View>
-              <Text
-                style={[styles.compactActionLabel, { color: colors.text }]}
-                numberOfLines={1}>
-                {action.label}
-              </Text>
-              {badgeText(action.badge) && (
-                <View
-                  style={[styles.compactBadge, { backgroundColor: colors.danger }]}
-                  accessibilityLabel={t('home.a11y.waiting', { count: action.badge })}>
-                  <Text style={styles.compactBadgeText}>{badgeText(action.badge)}</Text>
-                </View>
-              )}
-            </AnimatedPressable>
-          </View>
-        ))}
-      </View>
-
       </ScrollView>
     </View>
   );

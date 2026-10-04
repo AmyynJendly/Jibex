@@ -80,9 +80,11 @@ export async function captureCurrentCoords(): Promise<GeoPoint | null> {
   const fresh = cachedCoords && Date.now() - fetchedAt < MAX_AGE_MS;
   if (fresh) return cachedCoords;
 
-  inFlight = inFlight ?? resolveCoords().finally(() => {
-    inFlight = null;
-  });
+  inFlight =
+    inFlight ??
+    resolveCoords().finally(() => {
+      inFlight = null;
+    });
   return inFlight;
 }
 
@@ -111,7 +113,9 @@ export function useLiveCoords(): GeoPoint | null {
   const [coords, setCoords] = useState<GeoPoint | null>(cachedCoords);
 
   useEffect(() => {
-    // A fix may have come in between the first render and this effect.
+    // A fix may have come in between the first render and this effect: catch
+    // up once, before listening for the next ones.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cachedCoords) setCoords(cachedCoords);
     watchers.add(setCoords);
     return () => {

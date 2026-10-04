@@ -3,13 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useIsPreview, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from '../../../components/Icon';
@@ -87,10 +81,7 @@ export default function JobDetailScreen() {
   const ripple = useSharedValue(0);
 
   useEffect(() => {
-    ripple.value = withRepeat(
-      withTiming(1, { duration: 1800, easing: Easing.out(Easing.ease) }),
-      -1
-    );
+    ripple.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.out(Easing.ease) }), -1);
   }, [ripple]);
 
   const rippleStyle = useAnimatedStyle(() => ({
@@ -134,10 +125,10 @@ export default function JobDetailScreen() {
   // Nothing, only the delivery fee, or the full price (see lib/otpRule).
   const due = cashDueFor(job);
   const etaMinutes = Math.max(1, Math.round((distanceKm / 35) * 60));
-  const etaTime = new Date(now + etaMinutes * 60_000).toLocaleTimeString(
-    localeTag(i18n.language),
-    { hour: '2-digit', minute: '2-digit' }
-  );
+  const etaTime = new Date(now + etaMinutes * 60_000).toLocaleTimeString(localeTag(i18n.language), {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   /** Logged before dialling so the attempt counts even if the dialler never opens — delivery is gated on it. */
   async function handleCall() {
@@ -172,7 +163,10 @@ export default function JobDetailScreen() {
   async function handleDelivered() {
     if (!job || write.sending) return;
     // An exchange isn't delivered until the article to return is in hand.
-    if (deliveryBlocker({ callAttempts: job.callAttempts, exchange: job.exchange, exchangeCollected }) === 'exchange.required') {
+    if (
+      deliveryBlocker({ callAttempts: job.callAttempts, exchange: job.exchange, exchangeCollected }) ===
+      'exchange.required'
+    ) {
       showToast(t('exchange.required'));
       return;
     }
@@ -224,9 +218,7 @@ export default function JobDetailScreen() {
               none by itself) and the system ⋯ menu. */}
           <Stack.Screen
             options={{
-              title: position
-                ? t('jobDetail.stopChip', { index: position.index, total: position.total })
-                : '',
+              title: position ? t('jobDetail.stopChip', { index: position.index, total: position.total }) : '',
             }}
           />
           <Stack.Toolbar placement="left">
@@ -296,9 +288,7 @@ export default function JobDetailScreen() {
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.accentSoft }]} />
           )}
           <View style={styles.pinWrap}>
-            <Animated.View
-              style={[styles.pinRipple, { backgroundColor: colors.accent }, rippleStyle]}
-            />
+            <Animated.View style={[styles.pinRipple, { backgroundColor: colors.accent }, rippleStyle]} />
             <View style={[styles.pin, { backgroundColor: colors.accent }, getAccentGlow(0.35, 12)]}>
               <Icon name="location" size={16} color="#fff" />
             </View>
@@ -318,8 +308,7 @@ export default function JobDetailScreen() {
           )}
         </AnimatedPressable>
 
-        <View
-          style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
+        <View style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
           {/* The id gets its own full-width row: it is the one field the driver
               checks against the label on the box before handing it over. */}
           <View style={styles.idRow}>
@@ -327,17 +316,13 @@ export default function JobDetailScreen() {
             {job.packageInfo.fragile && (
               <View style={[styles.careChip, { backgroundColor: colors.dangerSoft }]}>
                 <Icon name="alert-circle" size={13} color={colors.danger} />
-                <Text style={[styles.careChipText, { color: colors.danger }]}>
-                  {t('jobDetail.fragile')}
-                </Text>
+                <Text style={[styles.careChipText, { color: colors.danger }]}>{t('jobDetail.fragile')}</Text>
               </View>
             )}
           </View>
 
           <View style={styles.customerRow}>
-            <Text style={[Typography.title3, styles.customerName, { color: colors.text }]}>
-              {job.customerName}
-            </Text>
+            <Text style={[Typography.title3, styles.customerName, { color: colors.text }]}>{job.customerName}</Text>
             <View style={styles.iconRow}>
               <AnimatedPressable
                 scaleTo={0.88}
@@ -371,15 +356,8 @@ export default function JobDetailScreen() {
           )}
           <UnreachableButton parcelId={job.id} callAttempts={job.callAttempts} />
           <View style={styles.addressRow}>
-            <Icon
-              name="location-outline"
-              size={16}
-              color={colors.textTertiary}
-              style={styles.addressIcon}
-            />
-            <Text style={[styles.addressText, { color: colors.textSecondary }]}>
-              {job.address}
-            </Text>
+            <Icon name="location-outline" size={16} color={colors.textTertiary} style={styles.addressIcon} />
+            <Text style={[styles.addressText, { color: colors.textSecondary }]}>{job.address}</Text>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.separator }]} />
 
@@ -392,21 +370,16 @@ export default function JobDetailScreen() {
                 {t('jobDetail.parcelCount', { count: job.packageInfo.count })}
                 {/* Every real parcel says 1 kg — the server's default, not a
                     weighing — and 0 means none was given. Neither is shown. */}
-                {hasRealWeight(job.packageInfo.weightKg)
-                  ? ` · ${formatDecimal(job.packageInfo.weightKg)} KG`
-                  : ''}
+                {hasRealWeight(job.packageInfo.weightKg) ? ` · ${formatDecimal(job.packageInfo.weightKg)} KG` : ''}
               </Text>
             </View>
-            <View
-              style={[styles.factChip, { backgroundColor: attempt.last ? colors.warningSoft : colors.bg }]}>
+            <View style={[styles.factChip, { backgroundColor: attempt.last ? colors.warningSoft : colors.bg }]}>
               <Icon
                 name={attempt.last ? 'warning' : 'sync-outline'}
                 size={14}
                 color={attempt.last ? colors.warning : colors.textSecondary}
               />
-              <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>
-                {attemptLabel(t, attempt)}
-              </Text>
+              <Text style={[monoStyle(12, 'medium'), { color: colors.text }]}>{attemptLabel(t, attempt)}</Text>
             </View>
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
               <Icon name="time-outline" size={14} color={colors.textSecondary} />
@@ -450,12 +423,7 @@ export default function JobDetailScreen() {
             </View>
           </View>
         ) : (
-          <View
-            style={[
-              styles.codCard,
-              { backgroundColor: colors.accent },
-              getAccentGlow(0.28, 24),
-            ]}>
+          <View style={[styles.codCard, { backgroundColor: colors.accent }, getAccentGlow(0.28, 24)]}>
             {/* `flex: 1` + `minWidth: 0` is what makes this wrap instead of
                 push the icon out of the card — French labels run longer than
                 English ones, and a row with an unconstrained text sibling
@@ -491,9 +459,7 @@ export default function JobDetailScreen() {
             style={[styles.failedButton, { backgroundColor: colors.dangerSoft }]}
             onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id } })}>
             <Icon name="close-circle-outline" size={18} color={colors.danger} />
-            <Text style={[Typography.footnote, { color: colors.danger }]}>
-              {t('jobDetail.deliveryFailed')}
-            </Text>
+            <Text style={[Typography.footnote, { color: colors.danger }]}>{t('jobDetail.deliveryFailed')}</Text>
           </AnimatedPressable>
           <PrimaryButton
             label={t('jobDetail.markDelivered')}

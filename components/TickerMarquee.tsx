@@ -1,19 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import { StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { monoLabelStyle, useColors } from '../constants';
 
@@ -39,11 +26,7 @@ export function TickerMarquee({ items, height = 30, style }: TickerMarqueeProps)
   useEffect(() => {
     if (!blockWidth) return;
     offset.value = 0;
-    offset.value = withRepeat(
-      withTiming(-blockWidth, { duration: 22000, easing: Easing.linear }),
-      -1,
-      false
-    );
+    offset.value = withRepeat(withTiming(-blockWidth, { duration: 22000, easing: Easing.linear }), -1, false);
   }, [blockWidth, offset]);
 
   const trackStyle = useAnimatedStyle(() => ({
@@ -66,12 +49,7 @@ export function TickerMarquee({ items, height = 30, style }: TickerMarqueeProps)
   );
 
   return (
-    <View
-      style={[
-        styles.wrap,
-        { height, borderColor: colors.separator, backgroundColor: colors.bg },
-        style,
-      ]}>
+    <View style={[styles.wrap, { height, borderColor: colors.separator, backgroundColor: colors.bg }, style]}>
       <Animated.View style={[styles.track, trackStyle]}>
         <View onLayout={handleLayout}>{content}</View>
         {blockWidth > 0 && content}

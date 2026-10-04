@@ -93,9 +93,7 @@ export default function CashCollectedScreen() {
       <View style={styles.content}>
         <InkStampSeal topText="JIBEX · SOUSSE" bottomText={confirmedAt} />
 
-        <Animated.View
-          entering={morphIn(120, 14)}
-          style={styles.textBlock}>
+        <Animated.View entering={morphIn(120, 14)} style={styles.textBlock}>
           <Text style={[styles.title, { color: colors.text }]}>
             {t('cashCollected.title', { index: position ?? '—' })}
           </Text>
@@ -106,11 +104,7 @@ export default function CashCollectedScreen() {
 
         <Animated.View
           entering={morphIn(200, 14)}
-          style={[
-            styles.summaryCard,
-            { backgroundColor: colors.bgElevated },
-            getCardShadow(scheme),
-          ]}>
+          style={[styles.summaryCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
           <View style={styles.summaryColumns}>
             <View style={styles.summaryCol}>
               <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
@@ -147,9 +141,7 @@ export default function CashCollectedScreen() {
         {nextStopId && (
           <PrimaryButton
             label={
-              nextStopName
-                ? t('cashCollected.nextStopWithName', { name: nextStopName })
-                : t('cashCollected.nextStop')
+              nextStopName ? t('cashCollected.nextStopWithName', { name: nextStopName }) : t('cashCollected.nextStop')
             }
             height={56}
             onPress={() => router.replace({ pathname: '/job/[id]', params: { id: nextStopId } })}

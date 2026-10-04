@@ -1,13 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector, type PanGesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -64,11 +56,7 @@ export function DragHandle({ drag }: { drag: DragBinding }) {
     <GestureDetector gesture={drag.gesture}>
       <View
         accessibilityRole="adjustable"
-        style={[
-          handleStyles.target,
-          handleWebStyle,
-          drag.isActive && { backgroundColor: colors.accentSoft },
-        ]}>
+        style={[handleStyles.target, handleWebStyle, drag.isActive && { backgroundColor: colors.accentSoft }]}>
         <View style={handleStyles.dots}>
           {Array.from({ length: 6 }, (_, i) => (
             <View key={i} style={[handleStyles.dot, { backgroundColor: color }]} />
@@ -101,12 +89,7 @@ const handleStyles = StyleSheet.create({
 });
 
 /** Stacked offset of `id`, summing the heights of every row above it. */
-function topOf(
-  slots: Record<string, number>,
-  heights: Record<string, number>,
-  ids: string[],
-  id: string
-) {
+function topOf(slots: Record<string, number>, heights: Record<string, number>, ids: string[], id: string) {
   'worklet';
   const mine = slots[id] ?? 0;
   let top = 0;
@@ -131,18 +114,7 @@ interface RowProps {
   children: ReactNode;
 }
 
-function Row({
-  id,
-  slots,
-  heights,
-  ids,
-  activeId,
-  dragY,
-  positioned,
-  lifted,
-  onMeasure,
-  children,
-}: RowProps) {
+function Row({ id, slots, heights, ids, activeId, dragY, positioned, lifted, onMeasure, children }: RowProps) {
   /** Where this row sits when it isn't the one under the finger. */
   const offset = useSharedValue(0);
   const lift = useSharedValue(0);
@@ -196,11 +168,7 @@ function Row({
   return (
     <Animated.View
       onLayout={handleLayout}
-      style={[
-        positioned ? styles.rowPositioned : styles.rowFlow,
-        lifted && styles.lifted,
-        animatedStyle,
-      ]}>
+      style={[positioned ? styles.rowPositioned : styles.rowFlow, lifted && styles.lifted, animatedStyle]}>
       {children}
     </Animated.View>
   );
@@ -242,13 +210,7 @@ interface DraggableListProps<T> {
  * reported in, the list renders in normal flow, which is already the right
  * layout, so the switch to absolute positioning is invisible.
  */
-export function DraggableList<T>({
-  data,
-  idOf,
-  renderItem,
-  onReorder,
-  onDragStateChange,
-}: DraggableListProps<T>) {
+export function DraggableList<T>({ data, idOf, renderItem, onReorder, onDragStateChange }: DraggableListProps<T>) {
   const ids = useMemo(() => data.map(idOf), [data, idOf]);
   const idKey = ids.join('|');
 
@@ -317,9 +279,7 @@ export function DraggableList<T>({
         return { ...known, [id]: rounded };
       });
       setMeasured((prev) =>
-        prev[id] !== undefined && Math.abs(prev[id] - rounded) < 0.5
-          ? prev
-          : { ...prev, [id]: rounded }
+        prev[id] !== undefined && Math.abs(prev[id] - rounded) < 0.5 ? prev : { ...prev, [id]: rounded }
       );
     },
     [heights]
@@ -371,76 +331,78 @@ export function DraggableList<T>({
   }, [idKey]);
 
   function panFor(id: string) {
-    return Gesture.Pan()
-      // The handle is a dedicated target, so the drag starts on contact
-      // rather than after a hold, and keeps the finger even past the edge.
-      .shouldCancelWhenOutside(false)
-      // A few pixels of vertical intent before this takes the finger, so a
-      // tap that grazes the handle doesn't start a drag.
-      .activeOffsetY([-6, 6])
-      .onStart((event) => {
-        'worklet';
-        const top = topOf(slots.get(), heights.get(), idsSV.get(), id);
-        grantTop.set(top);
-        startOffset.set(event.translationY);
-        dragY.set(top);
-        activeIdSV.set(id);
-        moved.set(false);
-        scheduleOnRN(startDrag, id);
-      })
-      .onUpdate((event) => {
-        'worklet';
-        const draggedTop = grantTop.get() + (event.translationY - startOffset.get());
-        dragY.set(draggedTop);
+    return (
+      Gesture.Pan()
+        // The handle is a dedicated target, so the drag starts on contact
+        // rather than after a hold, and keeps the finger even past the edge.
+        .shouldCancelWhenOutside(false)
+        // A few pixels of vertical intent before this takes the finger, so a
+        // tap that grazes the handle doesn't start a drag.
+        .activeOffsetY([-6, 6])
+        .onStart((event) => {
+          'worklet';
+          const top = topOf(slots.get(), heights.get(), idsSV.get(), id);
+          grantTop.set(top);
+          startOffset.set(event.translationY);
+          dragY.set(top);
+          activeIdSV.set(id);
+          moved.set(false);
+          scheduleOnRN(startDrag, id);
+        })
+        .onUpdate((event) => {
+          'worklet';
+          const draggedTop = grantTop.get() + (event.translationY - startOffset.get());
+          dragY.set(draggedTop);
 
-        // Where this row now belongs among the others. Inserting at slot k
-        // puts its top at the k-th other's stacked offset, so compare the
-        // dragged *top* against their midpoints and take the last slot it
-        // has cleared.
-        const current = slots.get();
-        const ordered = [...idsSV.get()].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
-        const others = ordered.filter((other) => other !== id);
-        let accumulated = 0;
-        let target = 0;
-        for (let i = 0; i < others.length; i += 1) {
-          const height = heights.get()[others[i]] ?? 0;
-          if (draggedTop <= accumulated + height / 2) break;
-          accumulated += height;
-          target += 1;
-        }
+          // Where this row now belongs among the others. Inserting at slot k
+          // puts its top at the k-th other's stacked offset, so compare the
+          // dragged *top* against their midpoints and take the last slot it
+          // has cleared.
+          const current = slots.get();
+          const ordered = [...idsSV.get()].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
+          const others = ordered.filter((other) => other !== id);
+          let accumulated = 0;
+          let target = 0;
+          for (let i = 0; i < others.length; i += 1) {
+            const height = heights.get()[others[i]] ?? 0;
+            if (draggedTop <= accumulated + height / 2) break;
+            accumulated += height;
+            target += 1;
+          }
 
-        if ((current[id] ?? 0) === target) return;
-        const next = [...others];
-        next.splice(target, 0, id);
-        const remapped: Record<string, number> = {};
-        for (let i = 0; i < next.length; i += 1) remapped[next[i]] = i;
-        slots.set(remapped);
-        moved.set(true);
-        // Once per commit, never per frame — the row crossing a neighbour is
-        // the causal moment, and it fires in the same frame as the shuffle.
-        scheduleOnRN(buzz);
-      })
-      .onEnd(() => {
-        'worklet';
-        const current = slots.get();
-        const settled = [...idsSV.get()].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
-        scheduleOnRN(commitOrder, settled, moved.get());
-      })
-      // Always runs — including on cancellation — so the card can't be left
-      // lifted, and always settles into its slot before handing back.
-      .onFinalize(() => {
-        'worklet';
-        const target = topOf(slots.get(), heights.get(), idsSV.get(), id);
-        dragY.set(
-          withSpring(target, DROP_SPRING, (finished) => {
-            'worklet';
-            // Hand back to slot-based positioning only once the card has
-            // arrived, so the handoff never shows as a jump.
-            if (finished) activeIdSV.set(null);
-          })
-        );
-        scheduleOnRN(endDrag);
-      });
+          if ((current[id] ?? 0) === target) return;
+          const next = [...others];
+          next.splice(target, 0, id);
+          const remapped: Record<string, number> = {};
+          for (let i = 0; i < next.length; i += 1) remapped[next[i]] = i;
+          slots.set(remapped);
+          moved.set(true);
+          // Once per commit, never per frame — the row crossing a neighbour is
+          // the causal moment, and it fires in the same frame as the shuffle.
+          scheduleOnRN(buzz);
+        })
+        .onEnd(() => {
+          'worklet';
+          const current = slots.get();
+          const settled = [...idsSV.get()].sort((a, b) => (current[a] ?? 0) - (current[b] ?? 0));
+          scheduleOnRN(commitOrder, settled, moved.get());
+        })
+        // Always runs — including on cancellation — so the card can't be left
+        // lifted, and always settles into its slot before handing back.
+        .onFinalize(() => {
+          'worklet';
+          const target = topOf(slots.get(), heights.get(), idsSV.get(), id);
+          dragY.set(
+            withSpring(target, DROP_SPRING, (finished) => {
+              'worklet';
+              // Hand back to slot-based positioning only once the card has
+              // arrived, so the handoff never shows as a jump.
+              if (finished) activeIdSV.set(null);
+            })
+          );
+          scheduleOnRN(endDrag);
+        })
+    );
   }
 
   const byId = useMemo(() => new Map(data.map((item) => [idOf(item), item] as const)), [data, idOf]);

@@ -26,9 +26,7 @@ export function LoadError({ onRetry, retrying = false }: LoadErrorProps) {
       <View style={[styles.icon, { backgroundColor: colors.dangerSoft }]}>
         <Icon name="cloud-offline-outline" size={22} color={colors.danger} />
       </View>
-      <Text style={[Typography.title3, styles.title, { color: colors.text }]}>
-        {t('common.loadError.title')}
-      </Text>
+      <Text style={[Typography.title3, styles.title, { color: colors.text }]}>{t('common.loadError.title')}</Text>
       <Text style={[Typography.footnote, styles.body, { color: colors.textSecondary }]}>
         {t('common.loadError.body')}
       </Text>

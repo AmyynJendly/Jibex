@@ -6,7 +6,7 @@ Web side: Playwright driving a visible Microsoft Edge window, agency account
 (driver 3), done by hand by the user.
 
 Only this report is in git. Screenshots (`shots/`), `test-log.md`,
-`writes.json`, `blocked.json` and `approvals.json` stay local.
+`writes.json`, `blocked.json` and `approvals.json` stay local, in the gitignored `test-run-4/` folder.
 
 Jihed allowed us to use transfer **TRF-FA75ED72 (id 3)** with the 3 parcels
 of his that are in it.

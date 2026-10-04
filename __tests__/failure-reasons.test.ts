@@ -5,12 +5,7 @@
  */
 import en from '../lib/i18n/en';
 import fr from '../lib/i18n/fr';
-import {
-  FAILURE_REASONS,
-  commonReasonsFor,
-  reasonNeedsNote,
-  reasonsFor,
-} from '../lib/failureReasons';
+import { FAILURE_REASONS, commonReasonsFor, reasonNeedsNote, reasonsFor } from '../lib/failureReasons';
 
 const BACKEND_NAMES = [
   'ABSENT',

@@ -26,7 +26,9 @@ function callTime(iso: string, now: Date): string | null {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  return date.toDateString() === now.toDateString() ? time : `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${time}`;
+  return date.toDateString() === now.toDateString()
+    ? time
+    : `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${time}`;
 }
 
 export function failureProofLine({
@@ -53,9 +55,7 @@ export function failureProofLine({
   if (location) {
     // Five decimals ≈ one metre: enough to show which door, no more. (Not
     // `lng` as a parameter name: i18next reads that as a language.)
-    parts.push(
-      t('failureProof.location', { latitude: location.lat.toFixed(5), longitude: location.lng.toFixed(5) })
-    );
+    parts.push(t('failureProof.location', { latitude: location.lat.toFixed(5), longitude: location.lng.toFixed(5) }));
   }
   return parts.join(' ');
 }

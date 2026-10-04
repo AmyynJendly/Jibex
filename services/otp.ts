@@ -7,7 +7,7 @@
  * `OtpService` interface below.
  *
  * TO CONNECT THE REAL API (Jihed): implement `realOtpService` in this file
- * with the three calls described in OTP.md. Nothing else changes — not the
+ * with the three calls described in docs/OTP.md. Nothing else changes — not the
  * screen, not the rules, not the tests of the rules.
  *
  * Which one is used is the `EXPO_PUBLIC_OTP` switch (see constants/backend):
@@ -49,9 +49,7 @@ export interface OtpStatus {
   testCode?: string;
 }
 
-export type OtpResult =
-  | { success: true; status: OtpStatus }
-  | { success: false; error: string; status?: OtpStatus };
+export type OtpResult = { success: true; status: OtpStatus } | { success: false; error: string; status?: OtpStatus };
 
 export interface OtpService {
   /**
@@ -86,10 +84,7 @@ function statusOf(state: OtpState, view: OtpView, now: number, withCode: boolean
  * The mock: the same rules as the future API, kept in memory on the phone.
  * `now` and `random` can be replaced in tests.
  */
-export function createMockOtpService(
-  now: () => number = Date.now,
-  random: () => number = Math.random
-): OtpService {
+export function createMockOtpService(now: () => number = Date.now, random: () => number = Math.random): OtpService {
   const states = new Map<string, OtpState>();
   const answer = (state: OtpState): OtpStatus => statusOf(state, otpView(state, now()), now(), true);
 
@@ -131,7 +126,7 @@ export function createMockOtpService(
 
 /**
  * The real service. TODO (Jihed): replace the three bodies with the calls in
- * OTP.md. Until then nothing can be sent, so nothing can be verified, and a
+ * docs/OTP.md. Until then nothing can be sent, so nothing can be verified, and a
  * parcel that needs a code cannot be marked delivered in real mode.
  * It must never return a `testCode`.
  */

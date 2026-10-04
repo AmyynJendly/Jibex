@@ -1,0 +1,14 @@
+# Generated, vendored or not part of the app.
+node_modules/
+.expo/
+dist/
+package-lock.json
+expo-env.d.ts
+.claude/
+SynapseDriverApp/
+web-tour/
+explore-2/
+test-run*/
+
+# Documents: their tables are laid out by hand.
+*.md

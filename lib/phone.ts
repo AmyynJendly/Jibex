@@ -2,4 +2,3 @@
 export function telUrl(phone: string): string {
   return `tel:${phone.replace(/[^0-9+]/g, '')}`;
 }
-

@@ -19,14 +19,7 @@ import { ScrollToTopButton, useScrollToTop } from '../components/ScrollToTopButt
 import { SegmentedControl } from '../components/SegmentedControl';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
-import {
-  Fonts,
-  Radii,
-  Spacing,
-  monoLabelStyle,
-  monoStyle,
-  useColors,
-} from '../constants';
+import { Fonts, Radii, Spacing, monoLabelStyle, monoStyle, useColors } from '../constants';
 import { localeTag } from '../lib/date';
 import { matchesDateFilter, type DateFilter } from '../lib/dateFilter';
 import { enumLabel } from '../lib/enumLabel';
@@ -179,12 +172,7 @@ export default function ReturnsScreen() {
           </Text>
         </View>
 
-        <AgencyFlow
-          fromLabel={t('returns.from')}
-          from={item.fromAgency}
-          toLabel={t('returns.to')}
-          to={item.toAgency}
-        />
+        <AgencyFlow fromLabel={t('returns.from')} from={item.fromAgency} toLabel={t('returns.to')} to={item.toAgency} />
 
         <View style={styles.metaRow}>
           <MetaChip
@@ -211,9 +199,7 @@ export default function ReturnsScreen() {
             {/* Loading is confirmed for all of them at once, below — the
                 server has no per-parcel loading step. */}
             {item.stage === 'TO_LOAD' ? (
-              <Text style={[styles.loadHint, { color: colors.textSecondary }]}>
-                {t('returns.loadHint')}
-              </Text>
+              <Text style={[styles.loadHint, { color: colors.textSecondary }]}>{t('returns.loadHint')}</Text>
             ) : (
               <AnimatedPressable
                 scaleTo={0.96}
@@ -245,9 +231,7 @@ export default function ReturnsScreen() {
   }
 
   return (
-    <SafeAreaView
-      edges={['bottom', 'left', 'right']}
-      style={[styles.screen, { backgroundColor: colors.bg }]}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('returns.headerTitle') }} />
 
       {/* The list and its back-to-top arrow share one area, so the arrow
@@ -263,9 +247,7 @@ export default function ReturnsScreen() {
           contentContainerStyle={styles.content}>
           <View style={styles.header}>
             <View>
-              <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>
-                {t('returns.eyebrow')}
-              </Text>
+              <Text style={[monoLabelStyle(11, 0.06), { color: colors.textTertiary }]}>{t('returns.eyebrow')}</Text>
             </View>
             <View style={styles.headerCount}>
               <Text style={[monoStyle(30, 'medium'), { color: colors.text }]}>{pendingParcelTotal}</Text>
@@ -288,9 +270,7 @@ export default function ReturnsScreen() {
           {!isHistory && pending.length > 0 && (
             <View style={[styles.inverseNote, { backgroundColor: colors.warningSoft }]}>
               <Icon name="information-circle-outline" size={16} color={colors.warning} />
-              <Text style={[styles.inverseNoteText, { color: colors.text }]}>
-                {t('returns.inverseNote')}
-              </Text>
+              <Text style={[styles.inverseNoteText, { color: colors.text }]}>{t('returns.inverseNote')}</Text>
             </View>
           )}
 
@@ -303,10 +283,7 @@ export default function ReturnsScreen() {
               <SkeletonRow />
             </>
           ) : displayed.length === 0 ? (
-            <EmptyState
-              icon="arrow-undo-outline"
-              title={isHistory ? t('returns.emptyHistory') : t('returns.empty')}
-            />
+            <EmptyState icon="arrow-undo-outline" title={isHistory ? t('returns.emptyHistory') : t('returns.empty')} />
           ) : isHistory ? (
             processed.map((item) => renderCard(item))
           ) : (
@@ -327,20 +304,13 @@ export default function ReturnsScreen() {
       </View>
 
       {!isHistory && pending.length > 0 && (!staged || toLoad.length > 0) && (
-        <View
-          style={[
-            styles.footer,
-            { backgroundColor: colors.bgElevated, borderTopColor: colors.separator },
-          ]}>
+        <View style={[styles.footer, { backgroundColor: colors.bgElevated, borderTopColor: colors.separator }]}>
           {/* Signing for the lot is the common case, so it leads; scanning
               stays one tap away for when the count has to be proven. */}
           <AnimatedPressable
             scaleTo={0.96}
             disabled={confirming}
-            style={[
-              styles.confirmAllButton,
-              { backgroundColor: colors.success, opacity: confirming ? 0.5 : 1 },
-            ]}
+            style={[styles.confirmAllButton, { backgroundColor: colors.success, opacity: confirming ? 0.5 : 1 }]}
             onPress={() => handleConfirm(staged ? toLoad : pending)}>
             <Icon name="checkmark-done" size={18} color="#fff" />
             <Text style={styles.confirmAllButtonText}>

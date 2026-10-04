@@ -46,10 +46,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback((text: string, action?: ToastAction) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setToast({ message: text, action, key: Date.now() });
-    timeoutRef.current = setTimeout(
-      () => setToast(null),
-      action ? ACTION_DISPLAY_MS : DISPLAY_MS
-    );
+    timeoutRef.current = setTimeout(() => setToast(null), action ? ACTION_DISPLAY_MS : DISPLAY_MS);
   }, []);
 
   const hide = useCallback(() => {
@@ -61,19 +58,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {toast && (
-        <View
-          style={[
-            styles.container,
-            { top: insets.top + 8, pointerEvents: toast.action ? 'box-none' : 'none' },
-          ]}>
+        <View style={[styles.container, { top: insets.top + 8, pointerEvents: toast.action ? 'box-none' : 'none' }]}>
           <Animated.View
             key={toast.key}
             entering={morphInDown(0, 14)}
             exiting={exitUp()}
             style={[styles.pill, toast.action && styles.pillWithAction, { backgroundColor: colors.text }]}>
-            <Text style={[Typography.footnote, styles.text, { color: colors.bg }]}>
-              {toast.message}
-            </Text>
+            <Text style={[Typography.footnote, styles.text, { color: colors.bg }]}>{toast.message}</Text>
             {toast.action && (
               <Pressable
                 accessibilityRole="button"
@@ -82,9 +73,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   toast.action?.onPress();
                   hide();
                 }}>
-                <Text style={[Typography.footnote, styles.actionText, { color: colors.bg }]}>
-                  {toast.action.label}
-                </Text>
+                <Text style={[Typography.footnote, styles.actionText, { color: colors.bg }]}>{toast.action.label}</Text>
               </Pressable>
             )}
           </Animated.View>

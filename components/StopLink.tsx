@@ -53,16 +53,12 @@ export function StopLink({ job, scaleTo, style, children }: StopLinkProps) {
         <Link.MenuAction icon="phone" onPress={() => callCustomer(job)}>
           {t('runsheets.call')}
         </Link.MenuAction>
-        <Link.MenuAction
-          icon="arrow.triangle.turn.up.right.diamond"
-          onPress={() => openInMaps(job)}>
+        <Link.MenuAction icon="arrow.triangle.turn.up.right.diamond" onPress={() => openInMaps(job)}>
           {t('jobDetail.navigate')}
         </Link.MenuAction>
         <Link.MenuAction
           icon="xmark.circle"
-          onPress={() =>
-            router.push({ pathname: '/job/[id]/cant-deliver', params: { id: job.id } })
-          }>
+          onPress={() => router.push({ pathname: '/job/[id]/cant-deliver', params: { id: job.id } })}>
           {t('jobDetail.cantDeliver')}
         </Link.MenuAction>
       </Link.Menu>

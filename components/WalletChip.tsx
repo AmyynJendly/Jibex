@@ -32,11 +32,7 @@ export function WalletChip({ amount, accessibilityLabel, onPress }: WalletChipPr
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={styles.pressable}>
-      <View
-        style={[
-          styles.chip,
-          { backgroundColor: colors.inverseSurface, borderColor: colors.glassBorder },
-        ]}>
+      <View style={[styles.chip, { backgroundColor: colors.inverseSurface, borderColor: colors.glassBorder }]}>
         <View style={styles.wallet}>
           <View style={[styles.note, { backgroundColor: colors.success }]}>
             <View style={styles.noteMark} />
@@ -49,11 +45,7 @@ export function WalletChip({ amount, accessibilityLabel, onPress }: WalletChipPr
           </View>
         </View>
         <View style={styles.amountRow}>
-          <CountUpText
-            value={amount}
-            formatter={formatAmount}
-            style={[styles.amount, { color: colors.inverseText }]}
-          />
+          <CountUpText value={amount} formatter={formatAmount} style={[styles.amount, { color: colors.inverseText }]} />
           <Text style={[styles.currency, { color: colors.inverseTextMuted }]}>TND</Text>
         </View>
       </View>

@@ -56,12 +56,7 @@ export function ProfileSettingsList(props: ProfileSettingsListProps) {
     </Button>
   );
 
-  const toggleRow = (
-    title: string,
-    icon: SFSymbol,
-    isOn: boolean,
-    onChange: (next: boolean) => void
-  ) => (
+  const toggleRow = (title: string, icon: SFSymbol, isOn: boolean, onChange: (next: boolean) => void) => (
     <Toggle
       label={title}
       systemImage={icon}
@@ -73,14 +68,10 @@ export function ProfileSettingsList(props: ProfileSettingsListProps) {
 
   return (
     <Host style={styles.fill}>
-      <Form
-        modifiers={[scrollContentBackground('hidden'), background(colors.bg), tint(colors.accent)]}>
+      <Form modifiers={[scrollContentBackground('hidden'), background(colors.bg), tint(colors.accent)]}>
         {/* The driver card and stats, drawn by React Native, on a clear row. */}
         <Section
-          modifiers={[
-            listRowBackground('transparent'),
-            listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 }),
-          ]}>
+          modifiers={[listRowBackground('transparent'), listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 })]}>
           <RNHostView matchContents>
             <View style={{ width: width - SECTION_MARGIN * 2 }}>{props.header as ReactElement}</View>
           </RNHostView>
@@ -105,12 +96,7 @@ export function ProfileSettingsList(props: ProfileSettingsListProps) {
           {toggleRow(props.labels.biometric, 'faceid', props.biometric, props.onBiometricChange)}
           {toggleRow(props.labels.haptics, 'iphone.radiowaves.left.and.right', props.haptics, props.onHapticsChange)}
           {props.nextStopBar !== null &&
-            toggleRow(
-              props.labels.nextStopBar,
-              'location',
-              props.nextStopBar,
-              props.onNextStopBarChange
-            )}
+            toggleRow(props.labels.nextStopBar, 'location', props.nextStopBar, props.onNextStopBarChange)}
         </Section>
 
         <Section title={props.labels.support}>
@@ -118,10 +104,7 @@ export function ProfileSettingsList(props: ProfileSettingsListProps) {
           <LabeledContent label={props.labels.appVersion} modifiers={[rowBackground]}>
             <Text modifiers={[foregroundStyle(colors.textSecondary)]}>{props.appVersion}</Text>
           </LabeledContent>
-          <Button
-            role="destructive"
-            onPress={props.onLogOut}
-            modifiers={[rowBackground]}>
+          <Button role="destructive" onPress={props.onLogOut} modifiers={[rowBackground]}>
             <Label
               title={props.labels.logOut}
               systemImage="rectangle.portrait.and.arrow.right"

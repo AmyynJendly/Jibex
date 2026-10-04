@@ -7,7 +7,7 @@ sender accounts. Driver side: our iOS app (Expo Go), logged in as mourad
 
 Only this report is in git. Screenshots (`shots/`), `test-log.md`,
 `test-parcels.json`, `blocked.json`, `writes.json` and `failure-reasons.md`
-stay local: they hold private data.
+stay local, in the gitignored `test-run/` folder: they hold private data.
 
 ## Test parcels and runsheet
 

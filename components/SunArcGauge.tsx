@@ -102,9 +102,7 @@ export function SunArcGauge({ percent, caption, style, scale = 1 }: SunArcGaugeP
         />
       </Svg>
       <View style={styles.textStack} pointerEvents="none">
-        <Text style={[monoStyle(40 * scale, 'medium'), { color: colors.text }]}>
-          {formatPercent(clamped)}
-        </Text>
+        <Text style={[monoStyle(40 * scale, 'medium'), { color: colors.text }]}>{formatPercent(clamped)}</Text>
         <Text style={[monoLabelStyle(11 * scale, 0.18), { color: colors.textTertiary }]}>{caption}</Text>
       </View>
     </View>

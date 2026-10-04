@@ -15,7 +15,12 @@ import { parcelRowKey, parcelRowKeys } from '../lib/rowKey';
 import { runsheetJobs } from '../services/real-api';
 import type { Job } from '../types';
 
-const parcel = (id: number, tracking: string) => ({ id, trackingNumber: tracking, status: 'RTN_DEPOT', recipientName: 'Client Test' });
+const parcel = (id: number, tracking: string) => ({
+  id,
+  trackingNumber: tracking,
+  status: 'RTN_DEPOT',
+  recipientName: 'Client Test',
+});
 
 /** The same parcel (id 127) failed on four runs, like P2 in the live test. */
 const RUNS = [70, 71, 72, 73].map((runsheetId, i) => ({
@@ -23,7 +28,13 @@ const RUNS = [70, 71, 72, 73].map((runsheetId, i) => ({
   code: `RS-TEST-000${i + 1}`,
   status: 'COMPLETED',
   items: [
-    { id: 136 + i, sequenceOrder: 1, status: 'FAILED', failureReason: 'ABSENT', parcel: parcel(127, 'TUN-100-78CF079C') },
+    {
+      id: 136 + i,
+      sequenceOrder: 1,
+      status: 'FAILED',
+      failureReason: 'ABSENT',
+      parcel: parcel(127, 'TUN-100-78CF079C'),
+    },
     { id: 236 + i, sequenceOrder: 2, status: 'DELIVERED', parcel: parcel(500 + i, `TUN-100-0000000${i}`) },
   ],
 }));

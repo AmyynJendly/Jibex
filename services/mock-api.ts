@@ -327,7 +327,13 @@ mockJobs.push(
 /** Raw seed shape — `stopCount`/`deliveredCount`/`completionPercent`/`needsConfirmation` are never trusted from here, always recomputed live from `mockJobs` (see `toRunsheet`) so they can't drift out of sync as job statuses change. */
 type RunsheetSeed = Omit<
   Runsheet,
-  'stopCount' | 'deliveredCount' | 'completionPercent' | 'needsConfirmation' | 'confirmedStopCount' | 'newStopIds' | 'newParcelsCount'
+  | 'stopCount'
+  | 'deliveredCount'
+  | 'completionPercent'
+  | 'needsConfirmation'
+  | 'confirmedStopCount'
+  | 'newStopIds'
+  | 'newParcelsCount'
 > & {
   /** Parcel count the driver last attested to. Null until first confirmation; a mismatch against the live count means dispatch added or pulled parcels and the driver must re-confirm. */
   confirmedStopCount: number | null;
@@ -378,16 +384,13 @@ const mockRunsheets: RunsheetSeed[] = [
 
 /** Fills in the live-computed fields a `RunsheetSeed` doesn't store. */
 function toRunsheet(seed: RunsheetSeed): Runsheet {
-  const jobs = seed.stopIds
-    .map((id) => mockJobs.find((j) => j.id === id))
-    .filter((j): j is Job => !!j);
+  const jobs = seed.stopIds.map((id) => mockJobs.find((j) => j.id === id)).filter((j): j is Job => !!j);
   const stopCount = jobs.length;
   const deliveredCount = jobs.filter((j) => j.status === 'DELIVERED').length;
   const completionPercent = stopCount === 0 ? 0 : Math.round((deliveredCount / stopCount) * 100);
   // Never confirmed, or confirmed against a count that has since changed —
   // either way the driver has to attest to what's actually in the van now.
-  const needsConfirmation =
-    seed.status === 'A_CONFIRMER' || seed.confirmedStopCount !== stopCount;
+  const needsConfirmation = seed.status === 'A_CONFIRMER' || seed.confirmedStopCount !== stopCount;
   // What the agency added since the driver accepted the run: the tail of the list.
   const confirmed = seed.status === 'A_CONFIRMER' ? null : seed.confirmedStopCount;
   const newStopIds = confirmed !== null && stopCount > confirmed ? jobs.slice(confirmed).map((j) => j.id) : [];
@@ -407,14 +410,7 @@ function toRunsheet(seed: RunsheetSeed): Runsheet {
 }
 
 /** Recipient names cycled across generated parcels — not tied to any Job, purely mock display data. */
-const PARCEL_CONTACTS = [
-  'Sami Klibi',
-  'Nadia Ferjani',
-  'Hatem Sassi',
-  'Emna Rekik',
-  'Bilel Chtioui',
-  'Rim Abidi',
-];
+const PARCEL_CONTACTS = ['Sami Klibi', 'Nadia Ferjani', 'Hatem Sassi', 'Emna Rekik', 'Bilel Chtioui', 'Rim Abidi'];
 
 function generateParcels(count: number, address: string): PickupParcel[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -524,12 +520,42 @@ const mockTransfers: Transfer[] = [
       extraParcels: 0,
       damagedParcels: 0,
       parcels: [
-        { trackingNumber: 'TRK-51B62DC7', recipientName: 'Sami Klibi', recipientCity: 'Médenine, Ajim', status: 'AU_DEPOT', price: 1520 },
-        { trackingNumber: 'TRK-699F0F1D', recipientName: 'Nadia Ferjani', recipientCity: 'Monastir, Ksibet el-Médiouni', status: 'AU_DEPOT', price: 100 },
-        { trackingNumber: 'TRK-C9166BCA', recipientName: 'Hatem Sassi', recipientCity: 'Médenine, Ben Gardane', status: 'AU_DEPOT', price: 15 },
-        { trackingNumber: 'TRK-6107B96B', recipientName: 'Emna Rekik', recipientCity: 'Sousse, Sousse Médina', status: 'AU_DEPOT_RELAIS', price: 10 },
-        { trackingNumber: 'TRK-561D8F37', recipientName: 'Bilel Chtioui', recipientCity: 'Tataouine, Tataouine Nord', status: 'AU_DEPOT', price: 10 }
-      ]
+        {
+          trackingNumber: 'TRK-51B62DC7',
+          recipientName: 'Sami Klibi',
+          recipientCity: 'Médenine, Ajim',
+          status: 'AU_DEPOT',
+          price: 1520,
+        },
+        {
+          trackingNumber: 'TRK-699F0F1D',
+          recipientName: 'Nadia Ferjani',
+          recipientCity: 'Monastir, Ksibet el-Médiouni',
+          status: 'AU_DEPOT',
+          price: 100,
+        },
+        {
+          trackingNumber: 'TRK-C9166BCA',
+          recipientName: 'Hatem Sassi',
+          recipientCity: 'Médenine, Ben Gardane',
+          status: 'AU_DEPOT',
+          price: 15,
+        },
+        {
+          trackingNumber: 'TRK-6107B96B',
+          recipientName: 'Emna Rekik',
+          recipientCity: 'Sousse, Sousse Médina',
+          status: 'AU_DEPOT_RELAIS',
+          price: 10,
+        },
+        {
+          trackingNumber: 'TRK-561D8F37',
+          recipientName: 'Bilel Chtioui',
+          recipientCity: 'Tataouine, Tataouine Nord',
+          status: 'AU_DEPOT',
+          price: 10,
+        },
+      ],
     },
   },
   {
@@ -709,9 +735,7 @@ let mockDriverStats: DriverStats = {
 };
 
 /** Backing counts for `deliveryRate` — only the derived percentage is exposed. */
-let mockLifetimeAttempts = Math.round(
-  mockDriverStats.lifetimeDeliveries / (mockDriverStats.deliveryRate / 100)
-);
+let mockLifetimeAttempts = Math.round(mockDriverStats.lifetimeDeliveries / (mockDriverStats.deliveryRate / 100));
 
 /** Delivered / attempted, to one decimal — recomputed from the running counts rather than nudged. */
 function recomputeDeliveryRate(lifetimeDeliveries: number): number {
@@ -909,9 +933,7 @@ export async function getActiveParcels(): Promise<Job[]> {
   // A run the agency closed shows no parcel in the active view, whatever
   // state its parcels were left in.
   const ids = new Set(mockRunsheets.filter((r) => r.status !== 'VALIDE').flatMap((r) => r.stopIds));
-  const jobs = mockJobs.filter(
-    (j) => ids.has(j.id) && j.status !== 'DELIVERED' && j.status !== 'FAILED'
-  );
+  const jobs = mockJobs.filter((j) => ids.has(j.id) && j.status !== 'DELIVERED' && j.status !== 'FAILED');
   // Stops on a run the driver hasn't signed for are inert either way, so
   // they sit after the ones actually in play rather than fighting either
   // ordering for a slot among them.
@@ -1158,9 +1180,7 @@ export async function getJobDetail(id: string): Promise<Job> {
 export async function getJobsByIds(ids: string[]): Promise<Job[]> {
   await delay(undefined);
   const wanted = new Set(ids);
-  return mockJobs
-    .filter((j) => wanted.has(j.id))
-    .map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
+  return mockJobs.filter((j) => wanted.has(j.id)).map((j) => ({ ...j, packageInfo: { ...j.packageInfo } }));
 }
 
 /**
@@ -1169,9 +1189,7 @@ export async function getJobsByIds(ids: string[]): Promise<Job[]> {
  * never disagrees with what the list says comes next.
  */
 export async function optimizeRouteOrder(stopIds: string[]): Promise<string[]> {
-  const jobs = stopIds
-    .map((id) => mockJobs.find((j) => j.id === id))
-    .filter((j): j is Job => !!j);
+  const jobs = stopIds.map((id) => mockJobs.find((j) => j.id === id)).filter((j): j is Job => !!j);
 
   const outstanding = jobs.filter((j) => j.status === 'PENDING' || j.status === 'IN_TRANSIT');
   const done = jobs.filter((j) => j.status === 'DELIVERED' || j.status === 'FAILED');
@@ -1205,10 +1223,7 @@ export async function getNextStopId(currentId: string): Promise<string | null> {
  * verified code (see `services/otp`). There is no photo proof: the server
  * has no field for it.
  */
-export async function confirmDelivery(
-  id: string,
-  cashAmount: number
-): Promise<ConfirmDeliveryResult> {
+export async function confirmDelivery(id: string, cashAmount: number): Promise<ConfirmDeliveryResult> {
   await delay(undefined);
 
   const job = mockJobs.find((j) => j.id === id);

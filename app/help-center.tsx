@@ -44,11 +44,7 @@ export default function HelpCenterScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
         <Stack.Screen options={{ title: t('helpCenter.headerTitle') }} />
-        <FaqList
-          header={contactCard}
-          sectionTitle={t('helpCenter.faqSectionLabel')}
-          faqs={faqs}
-        />
+        <FaqList header={contactCard} sectionTitle={t('helpCenter.faqSectionLabel')} faqs={faqs} />
       </View>
     );
   }
@@ -57,9 +53,7 @@ export default function HelpCenterScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ title: t('helpCenter.headerTitle') }} />
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         {contactCard}
 
         <Text style={[Typography.footnote, styles.sectionLabel, { color: colors.textTertiary }]}>
@@ -73,24 +67,12 @@ export default function HelpCenterScreen() {
               <AnimatedPressable
                 key={faq.question}
                 onPress={() => setOpenIndex(open ? null : i)}
-                style={[
-                  styles.faqCard,
-                  { backgroundColor: colors.bgElevated },
-                  getCardShadow(scheme),
-                ]}>
+                style={[styles.faqCard, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
                 <View style={styles.faqQuestionRow}>
                   <Text style={[styles.faqQuestion, { color: colors.text }]}>{faq.question}</Text>
-                  <Icon
-                    name={open ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color={colors.textTertiary}
-                  />
+                  <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
                 </View>
-                {open && (
-                  <Text style={[styles.faqAnswer, { color: colors.textSecondary }]}>
-                    {faq.answer}
-                  </Text>
-                )}
+                {open && <Text style={[styles.faqAnswer, { color: colors.textSecondary }]}>{faq.answer}</Text>}
               </AnimatedPressable>
             );
           })}

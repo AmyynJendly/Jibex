@@ -64,7 +64,5 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     writePersistedLanguage(next);
   }
 
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>{children}</LanguageContext.Provider>
-  );
+  return <LanguageContext.Provider value={{ language, setLanguage }}>{children}</LanguageContext.Provider>;
 }

@@ -33,8 +33,21 @@ const IN_TRANSIT = {
   validatedAt: '2026-10-02T21:12:00',
   confirmedAt: '2026-10-02T21:13:43',
   parcels: [
-    { trackingNumber: 'TUN-100-51B62DC7', recipientName: 'test', recipientCity: 'Médenine, Ajim', status: 'EN_TRANSIT_AGENCE', price: 1520, recipientPhone: '20000000' },
-    { trackingNumber: 'TUN-100-6107B96B', recipientName: 'TEST AMYYN', recipientCity: 'Sousse, Sousse Médina', status: 'AU_DEPOT_RELAIS', price: 10 },
+    {
+      trackingNumber: 'TUN-100-51B62DC7',
+      recipientName: 'test',
+      recipientCity: 'Médenine, Ajim',
+      status: 'EN_TRANSIT_AGENCE',
+      price: 1520,
+      recipientPhone: '20000000',
+    },
+    {
+      trackingNumber: 'TUN-100-6107B96B',
+      recipientName: 'TEST AMYYN',
+      recipientCity: 'Sousse, Sousse Médina',
+      status: 'AU_DEPOT_RELAIS',
+      price: 10,
+    },
   ],
 };
 
@@ -55,8 +68,20 @@ describe('what the detail screen shows', () => {
 
   it('lists every parcel with its own status and cash', () => {
     expect(detail.parcels).toEqual([
-      { trackingNumber: 'TUN-100-51B62DC7', recipientName: 'test', recipientCity: 'Médenine, Ajim', status: 'EN_TRANSIT_AGENCE', price: 1520 },
-      { trackingNumber: 'TUN-100-6107B96B', recipientName: 'TEST AMYYN', recipientCity: 'Sousse, Sousse Médina', status: 'AU_DEPOT_RELAIS', price: 10 },
+      {
+        trackingNumber: 'TUN-100-51B62DC7',
+        recipientName: 'test',
+        recipientCity: 'Médenine, Ajim',
+        status: 'EN_TRANSIT_AGENCE',
+        price: 1520,
+      },
+      {
+        trackingNumber: 'TUN-100-6107B96B',
+        recipientName: 'TEST AMYYN',
+        recipientCity: 'Sousse, Sousse Médina',
+        status: 'AU_DEPOT_RELAIS',
+        price: 10,
+      },
     ]);
     expect(parcelStatusLabel(t, 'AU_DEPOT_RELAIS')).toBe('Au dépôt relais');
     expect(parcelStatusLabel(t, 'EN_TRANSIT_AGENCE')).toBe('En transit (transfert)');
@@ -97,7 +122,12 @@ describe('the transfer history (timeline)', () => {
   });
 
   it('uses the old fields of transfers made before the new workflow', () => {
-    const legacy = toTransfer({ ...IN_TRANSIT, confirmedAt: null, shippedAt: '2026-07-01T09:00:00', status: 'SHIPPED' })!;
+    const legacy = toTransfer({
+      ...IN_TRANSIT,
+      confirmedAt: null,
+      shippedAt: '2026-07-01T09:00:00',
+      status: 'SHIPPED',
+    })!;
     expect(legacy.detail?.takenAt).toBe('2026-07-01T09:00:00');
   });
 

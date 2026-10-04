@@ -89,7 +89,12 @@ const en = {
   },
 
   home: {
-    a11y: { search: 'Search a tracking number', scan: 'Scan a package', waiting_one: '{{count}} waiting', waiting_other: '{{count}} waiting' },
+    a11y: {
+      search: 'Search a tracking number',
+      scan: 'Scan a package',
+      waiting_one: '{{count}} waiting',
+      waiting_other: '{{count}} waiting',
+    },
     greeting: {
       morning: 'Good Morning',
       afternoon: 'Good Afternoon',
@@ -184,8 +189,7 @@ const en = {
       newBody: 'By confirming, you accept this run and become responsible for it.',
       confirm: 'Confirm the run',
       confirmDialogTitle: 'Confirm run {{code}}?',
-      confirmDialogMessage_one:
-        '{{count}} parcel. By confirming, you accept this run and become responsible for it.',
+      confirmDialogMessage_one: '{{count}} parcel. By confirming, you accept this run and become responsible for it.',
       confirmDialogMessage_other:
         '{{count}} parcels. By confirming, you accept this run and become responsible for it.',
       // The agency changed the run after the driver accepted it.
@@ -275,10 +279,10 @@ const en = {
   },
 
   jobDetail: {
-      markDelivered: 'Delivered',
-      parcelCount: '{{count}} parcel',
-      parcelCount_other: '{{count}} parcels',
-      callDetail: 'Called {{count}}x · last at {{time}}',
+    markDelivered: 'Delivered',
+    parcelCount: '{{count}} parcel',
+    parcelCount_other: '{{count}} parcels',
+    callDetail: 'Called {{count}}x · last at {{time}}',
     a11yMore: 'More options',
     stopChip: 'STOP {{index}} / {{total}}',
     etaLabel: 'ETA {{time}}',
