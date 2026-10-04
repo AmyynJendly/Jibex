@@ -19,18 +19,49 @@ The app runs in **Expo Go** on an iPhone. There is no native build and no `ios/`
 
 ## Install and run
 
-You need Node.js 20.19 or newer, and the Expo Go app on an iPhone.
+You need:
+
+- Node.js 20.19 or newer on the computer
+- the **Expo Go** app on an iPhone
+- the iPhone and the computer on the same Wi-Fi
+
+Then:
+
+1. Extract the zip and open a terminal in the `Jibex-iOS` folder.
+2. Install the packages (only the first time):
+   ```
+   npm install
+   ```
+3. Start the app:
+   ```
+   npx expo start
+   ```
+4. Scan the QR code with the iPhone camera. The app opens in Expo Go.
+5. Sign in with a driver account.
+
+### What the delivered folder is set to
+
+The settings are in the file `.env.local`, already filled in:
 
 ```
-npm install
-cp .env.example .env.local
-npx expo start
+EXPO_PUBLIC_API_MODE=real
+EXPO_PUBLIC_API_WRITES=on
 ```
 
-Then scan the QR code with the iPhone camera. On Windows, copy the file with `copy .env.example .env.local`.
+So the app talks to the **live server** (https://jibex.cloud) and **really changes data**:
+confirming a run, delivered, failed, pickups, transfers and returns are all sent.
+Use test parcels.
 
-With the default `.env.local`, the app runs on built-in sample data and needs no server.
-In that mode, sign in with `amine.jendli` / `password123`.
+### To try the app without the server (sample data)
+
+1. In `.env.local`, change the first line to `EXPO_PUBLIC_API_MODE=mock`.
+2. Restart with `npx expo start --clear`.
+3. Sign in with `amine.jendli` / `password123`.
+
+In this mode nothing is sent anywhere. To go back, set the line to `real` and restart the same way.
+
+`.env.local` is not in git. If you get the project from GitHub instead of the zip, copy `.env.example`
+to `.env.local` first.
 
 | Command | What it does |
 |---|---|
@@ -42,8 +73,8 @@ In that mode, sign in with `amine.jendli` / `password123`.
 
 ## The three switches
 
-They are set in `.env.local`, which is not in git. `.env.example` lists every variable.
-After changing one, restart with `npx expo start --clear`.
+They are set in `.env.local`. After changing one, restart with `npx expo start --clear`.
+"Default" below is what the app uses when the line is missing.
 
 | Variable | Values | Default | What it does |
 |---|---|---|---|
