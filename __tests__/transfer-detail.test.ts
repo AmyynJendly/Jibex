@@ -1,9 +1,7 @@
 /**
- * The transfer detail screen. The Android app opens a transfer and shows its
- * itinerary, driver, dated history, every parcel with its status and cash,
- * and the notes. We had one card, and after the driver confirmed, not even
- * the parcel list — while the parcels' statuses differ ("Dépôt relais" next
- * to "En transit").
+ * The transfer detail screen, like the Android app's: itinerary, driver,
+ * dated history, every parcel with its status and cash, and the notes. The
+ * parcels' statuses can differ ("Dépôt relais" next to "En transit").
  */
 jest.mock('expo-secure-store', () => ({
   setItemAsync: async () => {},

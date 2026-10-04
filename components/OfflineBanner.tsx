@@ -8,10 +8,9 @@ import { Icon } from './Icon';
 import { Fonts, Spacing, exitUp, morphInDown, useColors } from '../constants';
 
 /**
- * A persistent (not auto-dismissing, unlike Toast) banner shown whenever the
- * device has no network — the mock backend always "succeeds," so this is
- * purely a heads-up for the driver; nothing here queues/retries yet since
- * there's no real API to fail against until the real backend lands.
+ * A persistent banner (it does not auto-dismiss, unlike Toast), shown
+ * whenever the device has no network. It is only a heads-up: nothing is
+ * queued, and actions are refused while offline (see `lib/useOnlineGuard`).
  */
 export function OfflineBanner() {
   const colors = useColors();

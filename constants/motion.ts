@@ -8,17 +8,13 @@ import {
 } from 'react-native-reanimated';
 
 /**
- * Motion tokens.
- *
- * Every entrance in the app used to pick its own duration and damping inline,
- * so a toast, a dialog and a list row all arrived with slightly different
- * personalities. These are the shared curves, and the builders below are the
- * shared entrances — screens should reach for one of them rather than
- * hand-tuning `FadeInUp.duration(217)` at the call site.
+ * Motion tokens: the shared curves, and below them the shared entrances.
+ * Screens use these rather than hand-tuning a duration at the call site, so
+ * a toast, a dialog and a list row all move the same way.
  */
 
 /** Easing curves. Never `ease-in` on UI — it delays the exact moment the user is watching. */
-export const Ease = {
+const Ease = {
   /** Entrances and exits. Stronger than `Easing.out(Easing.ease)`. */
   out: Easing.bezier(0.23, 1, 0.32, 1),
   /** Something moving or morphing while already on screen. */

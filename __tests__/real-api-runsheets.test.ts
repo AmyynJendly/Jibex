@@ -148,8 +148,6 @@ async function signedIn(): Promise<RealApi> {
 }
 
 beforeEach(() => {
-  // The development-only [cash] log is for the Metro terminal, not test output.
-  jest.spyOn(console, 'log').mockImplementation(() => {});
   mockKeychain.clear();
   (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
   fetchMock = jest.fn();

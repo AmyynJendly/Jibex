@@ -20,8 +20,8 @@ export interface DriverStats {
   /** Share of attempted parcels actually delivered (vs. failed), 0–100 — "taux de livraison". */
   deliveryRate: number;
   /**
-   * Cash collected so far this week. Absent — and not shown — on the real
-   * server while the cash field itself is unconfirmed.
+   * Cash collected so far this week. Absent on the real server, which keeps
+   * no weekly total; then it is not shown.
    */
   weeklyCashCollected?: number;
 }

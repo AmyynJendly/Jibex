@@ -62,10 +62,9 @@ export default function RootLayout() {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
-  // The navigator paints its own layer behind every screen. Left on the
-  // library default it was plain white, which showed around the edges while
-  // a screen zoomed or slid in — glaring in dark mode. It now uses the app's
-  // own light/dark colours.
+  // The navigator paints its own layer behind every screen. The library
+  // default is plain white, which shows around the edges while a screen zooms
+  // or slides in — glaring in dark mode. So it uses the app's own colours.
   const colors = useColors();
   const baseTheme = useColorScheme() === 'dark' ? DarkTheme : DefaultTheme;
   const navigationTheme = {

@@ -1,12 +1,10 @@
 import { Platform, type ViewStyle } from 'react-native';
 
 /**
- * RN can't express the design's multi-layer CSS box-shadow (e.g.
- * `0 2px 3px rgba(46,52,57,0.04), 0 14px 30px rgba(100,110,120,0.1)`), so
- * this approximates it with the more prominent second layer — a soft,
- * warm-gray card shadow (`#646E78`, the design's own literal shadow color)
- * instead of the previous flat black. Dark mode still relies more on
- * `bgElevated` contrast than shadow, same reasoning as before.
+ * RN can't express the design's multi-layer CSS box-shadow, so this keeps
+ * its more prominent layer: a soft, warm-gray card shadow (`#646E78`, the
+ * design's own shadow color). Dark mode relies on `bgElevated` contrast
+ * more than on shadow.
  */
 const CARD_SHADOWS: Record<'light' | 'dark', ViewStyle> =
   Platform.OS === 'android'
@@ -37,10 +35,8 @@ export function getCardShadow(scheme: 'light' | 'dark'): ViewStyle {
 
 /**
  * The glow under primary pill buttons and the login logo badge. The design
- * hardcodes this as a literal `rgba(150,104,63,*)` (the dark end of the
- * primary button's brown gradient) in every screen that uses it — it does
- * not swap for the dark-mode accent color, so this intentionally does not
- * take a theme-dependent color as input, same as before.
+ * uses one literal color for it (the dark end of the primary button's brown
+ * gradient) in both themes, so this takes no theme color.
  */
 export function getAccentGlow(opacity = 0.3, radius = 24): ViewStyle {
   if (Platform.OS === 'android') {

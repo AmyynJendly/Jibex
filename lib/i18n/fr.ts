@@ -103,7 +103,7 @@ const fr: TranslationResource = {
       late: 'Service de nuit',
     },
     deliveriesCardTitle: 'Colis à livrer',
-    // The gauge is today's rate (the open runs), not the all-time one on Profile.
+    // The gauge is today's rate, not the all-time one on Profile.
     stopsCaption: 'AUJOURD’HUI · {{delivered}} / {{total}} ARRÊTS',
     onPace: 'En bonne voie pour terminer à {{time}}',
     stats: {
@@ -227,7 +227,6 @@ const fr: TranslationResource = {
     },
   },
 
-  // Which delivery attempt a parcel is on (the agency allows three).
   // What the driver collects at the door (see lib/otpRule).
   cash: {
     nothing: 'Rien à encaisser',

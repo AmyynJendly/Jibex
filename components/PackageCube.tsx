@@ -5,11 +5,9 @@ interface PackageCubeProps {
 }
 
 /**
- * Static isometric parcel-box icon for the login logo — no animation, no
- * `perspective`/`rotateX`/`rotateY`. An earlier spinning-3D version of this
- * used those transforms and carried a known risk (they previously broke
- * native `GlassView`/`BlurView` backdrop sampling nearby on iOS); this is
- * deliberately just a flat, motionless illustration instead.
+ * Static isometric parcel-box icon for the login logo. Deliberately flat and
+ * motionless: 3D transforms (`perspective`/`rotateX`/`rotateY`) break native
+ * `GlassView`/`BlurView` backdrop sampling nearby on iOS.
  */
 export function PackageCube({ size = 88 }: PackageCubeProps) {
   return (

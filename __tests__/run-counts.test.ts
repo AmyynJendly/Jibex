@@ -1,7 +1,6 @@
 /**
- * The run in numbers. The Android run header shows Livrés / Échoués /
- * Restants, and its dashboard names the run being delivered; ours showed
- * neither.
+ * The run in numbers: Livrés / Échoués / Restants, like the Android run
+ * header, and the run being delivered named on Home.
  */
 jest.mock('expo-secure-store', () => ({
   setItemAsync: async () => {},

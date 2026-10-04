@@ -22,12 +22,6 @@ export function addDays(date: Date, count: number): Date {
   return d;
 }
 
-export function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 /** "02/10" — the local day and month of a date-time, or nothing when it isn't one. */
 export function formatDayMonth(value: string | undefined | null): string | undefined {
   if (!value) return undefined;

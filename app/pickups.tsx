@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Linking, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { FlatList, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -50,7 +50,6 @@ import type { Pickup, PickupStatus } from '../types';
 interface PickupCardProps {
   pickup: Pickup;
   colors: ColorPalette;
-  scheme: 'light' | 'dark';
   expanded: boolean;
   /** Completed pickups are a record, not a worklist — no actions on them. */
   readOnly?: boolean;
@@ -82,7 +81,6 @@ interface PickupCardProps {
 function PickupCard({
   pickup,
   colors,
-  scheme,
   expanded,
   readOnly = false,
   highlighted = false,
@@ -340,7 +338,6 @@ function PickupCard({
 export default function PickupsScreen() {
   const colors = useColors();
   const { t } = useTranslation();
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const requireOnline = useOnlineGuard();
@@ -382,7 +379,7 @@ export default function PickupsScreen() {
    * "Terminer le pickup": the driver has scanned or ticked every parcel on
    * the card (the button is disabled until then). A pickup the server sent
    * with no parcel list can't be checked, so it asks for a confirmation
-   * instead. Either way the same call as before is sent — nothing new.
+   * instead. Either way the server receives the same single call.
    */
   async function handleFinish(pickup: Pickup) {
     if (finishingId || finishingAll) return;
@@ -548,7 +545,6 @@ export default function PickupsScreen() {
                 <PickupCard
                   pickup={pickup}
                   colors={colors}
-                  scheme={scheme}
                   readOnly
                   expanded={expandedIds.has(pickup.id)}
                   highlighted={pickup.id === highlightedId}
@@ -601,7 +597,6 @@ export default function PickupsScreen() {
                   <PickupCard
                     pickup={pickup}
                     colors={colors}
-                    scheme={scheme}
                     expanded={expandedIds.has(pickup.id)}
                     highlighted={pickup.id === highlightedId}
                     drag={drag}

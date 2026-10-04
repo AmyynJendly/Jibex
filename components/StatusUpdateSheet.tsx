@@ -110,8 +110,9 @@ export function StatusUpdateSheet({ job: requestedJob, onClose, onDone }: Status
   }
 
   /**
-   * Records the delivery straight away — no code to type — and lands on the
-   * same cash receipt the stop screen's Delivered button ends on.
+   * Records the delivery and lands on the same cash receipt the stop screen's
+   * Delivered button ends on. A parcel that needs the customer's code goes to
+   * the code screen first.
    */
   async function handleDelivered() {
     if (!job) return;

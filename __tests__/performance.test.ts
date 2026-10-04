@@ -78,7 +78,6 @@ beforeEach(() => {
   urls = [];
   mockKeychain.clear();
   (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
-  jest.spyOn(console, 'log').mockImplementation(() => {});
 });
 
 const report = (line: string) => process.stdout.write('[perf] ' + line + '\n');

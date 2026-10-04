@@ -3,8 +3,7 @@
  * the words shown for it.
  *
  * The list is the agency web app's full status list plus IN_WAREHOUSE (sent
- * only by its Dépôt page). Before this, DELAYED and IN_WAREHOUSE mapped to
- * nothing, and a parcel sent to after-sales (A_VERIFIER) had no label.
+ * only by its Dépôt page). Every code must map to a state and have a label.
  */
 jest.mock('expo-secure-store', () => ({
   setItemAsync: async () => {},

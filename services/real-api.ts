@@ -3,7 +3,7 @@
  * names and result shapes as `mock-api.ts`, so screens don't care which one
  * answers. `services/api.ts` picks per function.
  *
- * Connected so far (read-only apart from login):
+ * Reads:
  *   - login, and the signed-in driver's details that come with it
  *   - GET /api/runsheets/driver/{driverId}/active  → the driver's runsheets
  *   - GET /api/runsheets?driverId={driverId}       → every runsheet, for history and totals
@@ -241,7 +241,7 @@ function initialsOf(name: string): string {
  * the driver record's id stands in as one ("DRV-12"): it's the number the
  * agency sees for this driver.
  */
-export function toUser(apiUser: ApiLoginUser): User {
+function toUser(apiUser: ApiLoginUser): User {
   const driverId = idString(apiUser.driverId) ?? idString(apiUser.id) ?? '';
   const username = apiUser.username?.trim() ?? '';
   const name = apiUser.fullName?.trim() || username;
@@ -256,7 +256,7 @@ export function toUser(apiUser: ApiLoginUser): User {
 }
 
 /** Everything the app keeps about the signed-in driver. */
-export function toSession(apiUser: ApiLoginUser): Session {
+function toSession(apiUser: ApiLoginUser): Session {
   const user = toUser(apiUser);
   return {
     mode: 'real',
@@ -360,7 +360,7 @@ function point(lat: number | null | undefined, lng: number | null | undefined): 
 /**
  * A parcel onto our `Job`. The tracking number is the id, as on mock data —
  * it's what's printed on the box and what the stop screen's route carries;
- * the server's numeric ids ride along in `server` for the write-back phase.
+ * the server's numeric ids ride along in `server`, for the writes.
  *
  * Cash: the driver collects `price` at the door — confirmed by the backend
  * team, and what the Android app shows. `amountToCollect` (price minus the
@@ -764,7 +764,7 @@ export function toTransfer(apiTransfer: ApiTransfer): Transfer | null {
  * parcels to take back to their sender, not agency batches, so each becomes
  * a return of one parcel: from the agency holding it, to the merchant.
  */
-export function toReturn(parcel: ApiParcel & { senderAddress?: string | null; updatedAt?: string | null }): Return {
+function toReturn(parcel: ApiParcel & { senderAddress?: string | null; updatedAt?: string | null }): Return {
   const tracking = text(parcel.trackingNumber) ?? `P-${idString(parcel.id) ?? '?'}`;
   const raw = text(parcel.status);
   return {
@@ -813,10 +813,10 @@ function targetOf(
 
 /**
  * A server notification. Its title and message are shown as the server
- * wrote them (one language for now); the raw type and reference are kept so
- * the app can write its own bilingual text later.
+ * wrote them, in one language; the raw type and reference are kept so the
+ * app could write its own bilingual text.
  */
-export function toNotification(
+function toNotification(
   apiNotification: ApiNotification,
   parcelTarget: (parcelId: string) => string | undefined = () => undefined
 ): Notification {
@@ -838,12 +838,11 @@ export function toNotification(
 // ═══════════════════════════════════════════════════════════════════════════
 // 3. Enum mapper
 // ═══════════════════════════════════════════════════════════════════════════
-// The server's values, from its source code. Only the role check is in use
-// yet; the rest is ready for the endpoints that come next. Anything the
-// server sends that isn't listed maps to null (or undefined) rather than
-// guessing, so an unexpected value shows up as missing, not as wrong.
+// The server's values, from its source code. Anything the server sends that
+// isn't listed maps to null (or undefined) rather than guessing, so an
+// unexpected value shows up as missing, not as wrong.
 
-export function isDriverRole(role: string | null | undefined): boolean {
+function isDriverRole(role: string | null | undefined): boolean {
   return role?.toUpperCase() === 'DRIVER';
 }
 
@@ -896,12 +895,6 @@ export function toJobStatusFromParcel(status: string | null | undefined): JobSta
   return jobStatusOfParcel(status);
 }
 
-/** The other way, for `PUT /api/runsheets/items/{id}/status`. */
-export function fromJobStatus(status: JobStatus): 'PENDING' | 'DELIVERED' | 'FAILED' {
-  if (status === 'DELIVERED' || status === 'FAILED') return status;
-  return 'PENDING';
-}
-
 const FAILURE_REASONS: readonly DeliveryFailureReason[] = [
   'ABSENT',
   'REFUSED',
@@ -931,12 +924,12 @@ export function toFailureReason(reason: string | null | undefined): DeliveryFail
   return FAILURE_REASONS.find((known) => known === reason);
 }
 
-export function fromFailureReason(reason: DeliveryFailureReason): string {
+function fromFailureReason(reason: DeliveryFailureReason): string {
   return reason;
 }
 
 /** Pickups: anything not yet collected is still to do. CANCELLED isn't shown. */
-export function toPickupStatus(status: string | null | undefined): PickupStatus | null {
+function toPickupStatus(status: string | null | undefined): PickupStatus | null {
   switch (status) {
     case 'PENDING':
     case 'SCHEDULED':
@@ -951,7 +944,7 @@ export function toPickupStatus(status: string | null | undefined): PickupStatus 
 
 const TRANSFER_TYPES: readonly TransferType[] = ['INTER_AGENCY', 'HUB_RELAY', 'RETURN', 'RETURN_TO_SENDER'];
 
-export function toTransferType(type: string | null | undefined): TransferType | undefined {
+function toTransferType(type: string | null | undefined): TransferType | undefined {
   return TRANSFER_TYPES.find((known) => known === type);
 }
 
@@ -959,7 +952,7 @@ export function toTransferType(type: string | null | undefined): TransferType | 
  * A returned parcel's status. Only the ones still with the driver are open;
  * anything else (handed back, or a status we don't know) is read-only.
  */
-export function toReturnStatus(status: string | null | undefined): ReturnStatus {
+function toReturnStatus(status: string | null | undefined): ReturnStatus {
   return status === 'RETOUR_A_CHARGER' || status === 'EN_TRANSIT_RETOUR' ? 'PENDING_PICKUP' : 'PROCESSED';
 }
 
@@ -968,7 +961,7 @@ export function toReturnStatus(status: string | null | undefined): ReturnStatus 
  * that isn't about the driver's work (complaints, system alerts, plain info)
  * or that we don't know becomes INFO.
  */
-export function toNotificationType(
+function toNotificationType(
   type: string | null | undefined,
   referenceType?: string | null
 ): NotificationType {
@@ -1231,8 +1224,8 @@ function loadPastRunsheets(): Promise<ApiRunsheet[]> {
 
 /**
  * The runs the agency closed today. The active endpoint stops listing a run
- * the moment it is closed, so without this the Current tab would only say
- * "nothing left to deliver" — it now says the run was closed, and by whom.
+ * the moment it is closed; with these, the Current tab shows the closed run
+ * instead of only "nothing left to deliver".
  * Same request as History (shared, kept a minute). A failure here is not
  * worth an error screen: the tab simply has no closed run to show.
  */
@@ -1321,11 +1314,6 @@ export async function getDriverStats(): Promise<DriverStats> {
 }
 
 /**
- * The plate dispatch put on the driver's runs: the current run's if it has
- * one, otherwise the most recent closed run's. Null — and not shown — when
- * no run has one.
- */
-/**
  * The driver's agency contact, from data already loaded: the agency on the
  * driver's current runsheets, then on their closed ones, then the agency
  * their transfers leave from (their own; the receiving agency is someone
@@ -1367,6 +1355,11 @@ export async function getDispatchContact(): Promise<DispatchContact> {
   return contact;
 }
 
+/**
+ * The plate dispatch put on the driver's runs: the current run's if it has
+ * one, otherwise the most recent closed run's. Null — and not shown — when
+ * no run has one.
+ */
 export async function getVehicle(): Promise<Vehicle | null> {
   const { raw } = await loadDriverData();
   const fromCurrent = raw.map((runsheet) => text(runsheet.vehiclePlate)).find(Boolean);
@@ -1545,7 +1538,7 @@ export async function deleteAllNotifications(): Promise<WriteResult> {
 const WRITES_OFF: WriteResult = { success: false, error: 'common.writesOff' };
 
 /** A failed request as a result a screen can show. Never throws. */
-export function writeFailure(error: unknown, { notAvailableOn404 = false } = {}): WriteResult {
+function writeFailure(error: unknown, { notAvailableOn404 = false } = {}): WriteResult {
   if (error instanceof ApiError) {
     if (error.status === 0) {
       return { success: false, error: error.message === 'timeout' ? 'common.slowConnection' : 'common.networkError' };

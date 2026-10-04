@@ -355,7 +355,6 @@ describe('the real OTP service', () => {
       }
       return json(200, {});
     }) as unknown as typeof fetch;
-    jest.spyOn(console, 'log').mockImplementation(() => {});
     try {
       await api.login('driver', 'secret');
       await api.logCallAttempt('TUN-100-00000001');

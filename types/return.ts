@@ -9,11 +9,9 @@ export type ReturnStatus = 'PENDING_PICKUP' | 'PROCESSED';
 export interface Return {
   id: string;
   status: ReturnStatus;
-  /** Agency sending the undelivered parcels back. */
   fromAgency: string;
   /** Agency they are returning to — whoever originally shipped them. */
   toAgency: string;
-  /** How many parcels are coming back. */
   parcelCount: number;
   /** The outbound transfer these parcels failed to clear, when known. */
   relatedTransferId?: string;

@@ -28,9 +28,9 @@ interface InkStampSealProps {
 }
 
 /**
- * Delivery-confirmed "ink stamp" seal — two engraved rings with curved
- * text and a hand-drawn checkmark that draws itself in. Replaces the
- * previous plain ripple-ring animation on the Cash Collected screen.
+ * Delivery-confirmed "ink stamp" seal on the Cash Collected screen — two
+ * engraved rings with curved text and a hand-drawn checkmark that draws
+ * itself in.
  */
 export function InkStampSeal({ topText, bottomText }: InkStampSealProps) {
   const colors = useColors();

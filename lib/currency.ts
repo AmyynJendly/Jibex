@@ -15,8 +15,8 @@
  * app's language.
  */
 export const CURRENCY_DECIMALS = 3;
-export const MEASURE_DECIMALS = 3;
-export const PERCENT_DECIMALS = 2;
+const MEASURE_DECIMALS = 3;
+const PERCENT_DECIMALS = 2;
 
 /** e.g. 4.6 -> "4.600". For distances and weights. Money and percentages have their own function below. */
 export function formatDecimal(value: number, places: number = MEASURE_DECIMALS): string {

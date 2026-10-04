@@ -5,11 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  *
  * The backend has no endpoint for any of it — a driver's own stop order, the
  * calls they placed, whether they sort by nearest-first — so it lives here,
- * and it has to survive the app being closed: a driver who spent five
- * minutes arranging their route, or who called a customer before the app was
- * swiped away, can't lose that on the next launch. It stays on the phone
- * once the real API is wired in, too; that layer reads from here the same
- * way the mock does.
+ * and it survives the app being closed: a driver who spent five minutes
+ * arranging their route, or who called a customer before the app was swiped
+ * away, can't lose that on the next launch. The mock and the real API both
+ * read from here.
  *
  * Everything is loaded into memory once (`hydrateDeviceStore`) and written
  * through on every change, so reads are synchronous and each change is on

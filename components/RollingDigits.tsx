@@ -37,18 +37,16 @@ function DigitColumn({
     progress.set(withDelay(delay, withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) })));
   }, [changed, delay, progress]);
 
-  // Declared before the early return below, not after it. This used to sit
-  // under the `from === to` branch, which meant the hook ran for changed
-  // columns and not for unchanged ones — a different hook count depending on
-  // the data, which React only tolerates until a digit changes mid-render.
+  // Declared before the early return below, not after it: a hook under the
+  // `from === to` branch would run for changed columns only — a different
+  // hook count depending on the data.
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -progress.get() * lineHeight }],
   }));
 
   // Unchanged columns carry the same explicit line box as the rolling ones.
-  // Without it they fell back to the font's own metrics while their rolling
-  // neighbours were pinned to `lineHeight`, so a total that changed only its
-  // last digit rendered with that digit visibly out of line with the rest.
+  // On the font's own metrics, a total that changes only its last digit
+  // renders with that digit visibly out of line with the rest.
   if (!changed) {
     return <Text style={[style, styles.cell, { height: lineHeight, lineHeight }]}>{to}</Text>;
   }

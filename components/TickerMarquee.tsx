@@ -25,12 +25,9 @@ interface TickerMarqueeProps {
 }
 
 /**
- * Scrolling status ticker — purely decorative chrome from the Sunlit
- * design's Login screen ("HUB SOUSSE OUVERT · 14 TOURNÉES · CIEL DÉGAGÉ
- * 31°C"). There's no real hub-status or weather data behind it in the mock
- * backend, so `items` are static/translated strings, not live data — same
- * "stub the visual, don't invent the backend" treatment as other
- * not-yet-built features in this app.
+ * Scrolling status ticker on the Login screen — purely decorative ("HUB
+ * SOUSSE OUVERT · 14 TOURNÉES · CIEL DÉGAGÉ 31°C"). No hub-status or weather
+ * data exists behind it: `items` are static, translated strings.
  */
 export function TickerMarquee({ items, height = 30, style }: TickerMarqueeProps) {
   const colors = useColors();

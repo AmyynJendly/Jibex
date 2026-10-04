@@ -65,11 +65,9 @@ interface AnimatedPressableProps extends PressableProps {
   /**
    * Tactile feedback on press-in. @default 'light'
    *
-   * Defaults on because this component *is* the app's interactive wrapper —
-   * anything wrapped in it is a deliberate control, and the app previously
-   * had no touch feedback at all outside three terminal moments (scan
-   * success, wrong OTP, shutter). That absence is most of what made it feel
-   * inert next to apps the driver uses all day.
+   * On by default because this component *is* the app's interactive wrapper:
+   * anything wrapped in it is a deliberate control, and an app with no touch
+   * feedback feels inert.
    *
    * Fires on press-in, not on the tap completing: press-in is the causal
    * moment, and a haptic that waits for the gesture to finish reads as lag.
@@ -90,12 +88,11 @@ interface AnimatedPressableProps extends PressableProps {
  * it's built on `Animated.createAnimatedComponent`, so the same instance can
  * carry a list-entrance animation.
  *
- * Deliberately 2D-only (scale/translateY, no `perspective`/`rotateX`) — a 3D
- * transform here previously broke native `BlurView`/`GlassView` backdrop
- * sampling on iOS (rendered solid black) for every button built on
- * `GlassSurface`, which is most of them. Don't reintroduce a 3D matrix
- * transform on this component without confirming it's safe on a real
- * glass-surfaced button, not just a plain one.
+ * Deliberately 2D-only (scale/translateY, no `perspective`/`rotateX`): a 3D
+ * transform here breaks native `BlurView`/`GlassView` backdrop sampling on
+ * iOS (it renders solid black) for every button built on `GlassSurface`,
+ * which is most of them. Don't add a 3D matrix transform to this component
+ * without checking it on a real glass-surfaced button, not just a plain one.
  */
 export const AnimatedPressable = forwardRef<ComponentRef<typeof Pressable>, AnimatedPressableProps>(
   ({ scaleTo = 0.96, haptic = 'light', style, onPressIn, onPressOut, ...props }, ref) => {

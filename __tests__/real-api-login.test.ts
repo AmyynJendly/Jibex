@@ -137,14 +137,13 @@ describe('an expired token', () => {
 });
 
 describe('the enum mapper', () => {
-  it('maps the server’s statuses onto ours and back', () => {
+  it('maps the server’s statuses onto ours', () => {
     const { api } = load();
     expect(api.toRunsheetStatus('VALIDATED')).toBe('A_CONFIRMER');
     expect(api.toRunsheetStatus('DRIVER_CONFIRMED')).toBe('EN_COURS');
     expect(api.toRunsheetStatus('COMPLETED')).toBe('VALIDE');
     expect(api.toRunsheetStatus('CANCELLED')).toBeNull();
     expect(api.toJobStatus('PENDING_DRIVER_CONFIRMATION')).toBe('PENDING');
-    expect(api.fromJobStatus('IN_TRANSIT')).toBe('PENDING');
     expect(api.toTransferStatus('SHIPPED')).toBe('IN_PROGRESS');
     expect(api.toFailureReason('FORCE_MAJEURE')).toBe('FORCE_MAJEURE');
     expect(api.toFailureReason('SOMETHING_NEW')).toBeUndefined();

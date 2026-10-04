@@ -14,7 +14,7 @@ import type { TFunction } from 'i18next';
  * attempt they are holding before they knock: a third attempt deserves one
  * more call.
  */
-export const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 3;
 
 export interface AttemptInfo {
   /** The attempt this delivery is: 1 for a parcel that has never failed. */

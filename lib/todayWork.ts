@@ -4,11 +4,10 @@ import type { Runsheet } from '../types';
 /**
  * Today's work, for Home's gauge and counters.
  *
- * Home used to count only the runs still open. The server stops listing a
- * run as active the moment the agency closes it, so after a full day's work
- * every number dropped to zero. Today's work is every parcel of today's
- * runs, whatever the run's status: the runs still open, plus the ones the
- * agency closed today.
+ * The server stops listing a run as active the moment the agency closes it.
+ * Counting only the open runs would drop every number to zero after a full
+ * day's work, so today's work is every parcel of today's runs, whatever the
+ * run's status: the runs still open, plus the ones the agency closed today.
  *
  * The rate is delivered ÷ (delivered + failed): of the parcels the driver
  * attempted, how many were delivered. Parcels still to do don't lower it.

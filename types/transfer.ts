@@ -10,9 +10,7 @@ export type TransferStatus = 'IN_PROGRESS' | 'COMPLETED';
 export interface Transfer {
   id: string;
   status: TransferStatus;
-  /** Agency sending the batch. */
   originAgency: string;
-  /** Agency receiving it. */
   destinationAgency: string;
   parcelCount: number;
   /**

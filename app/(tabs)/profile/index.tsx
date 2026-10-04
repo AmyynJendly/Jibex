@@ -120,8 +120,8 @@ export default function ProfileScreen() {
             {t('profile.stats.deliveryRate')}
           </Text>
         </View>
-        {/* Only with an honest figure: on the real server the cash field
-            itself is still unconfirmed, so the weekly total isn't shown. */}
+        {/* Only with an honest figure: the real server keeps no weekly total,
+            so there it isn't shown. */}
         {stats.weeklyCashCollected !== undefined && (
           <>
             <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />

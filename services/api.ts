@@ -20,13 +20,7 @@ import * as real from './real-api';
 // Nothing is passed through from the mock wholesale: every function a
 // screen can call is named below, so a new mock write can't slip into real
 // mode unnoticed.
-export type {
-  ConfirmDeliveryResult,
-  FailDeliveryResult,
-  LoginResult,
-  RunsheetWriteResult,
-  ScanResult,
-} from './mock-api';
+export type { ScanResult } from './mock-api';
 
 // Phone-only settings. The mock versions already keep these in
 // lib/deviceStore, which is the same store in both modes.

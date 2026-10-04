@@ -38,7 +38,7 @@ const KEYPAD_ROWS = [
  * deliver from here without it: the only other exit is the failure screen.
  *
  * The screen knows nothing about how a code is sent or checked: it talks to
- * `otpService` (services/otp), today a mock, later the real API.
+ * `otpService` (services/otp) — the mock or the real API, by the OTP switch.
  */
 export default function OtpScreen() {
   const colors = useColors();

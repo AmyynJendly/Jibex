@@ -200,9 +200,7 @@ const styles = StyleSheet.create({
     gap: Spacing.smd,
     paddingBottom: Spacing.xxl,
   },
-  // Sized to the logo now. It used to be a 220pt square because that was the
-  // glow's footprint, which left the mark floating in a lot of dead space
-  // once the glow came out.
+  // Sized to the logo, so the mark doesn't float in dead space.
   logoStage: {
     alignItems: 'center',
     justifyContent: 'center',

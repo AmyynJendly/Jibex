@@ -1,11 +1,11 @@
 /**
  * The rules that protect money and proof-of-delivery.
  *
- * These live in `mock-api` today and will move behind a real backend later,
- * but the rules themselves are the product: a delivery needs a call attempt
- * first, undoing one has to give the cash back, and a run isn't finished
- * until its last parcel is. Nothing here touches a screen — it's the logic
- * that a UI change must not be able to break silently.
+ * Checked here on the mock API; the rules themselves are the product: a
+ * delivery needs a call attempt first, undoing one has to give the cash
+ * back, and a run isn't finished until its last parcel is. Nothing here
+ * touches a screen — it's the logic that a UI change must not be able to
+ * break silently.
  *
  * `mock-api` holds its state at module scope, so every test re-imports it
  * fresh rather than inheriting whatever the previous test left behind.

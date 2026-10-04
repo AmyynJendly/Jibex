@@ -98,7 +98,7 @@ const en = {
       late: 'Late Shift',
     },
     deliveriesCardTitle: "Today's Deliveries",
-    // The gauge is today's rate (the open runs), not the all-time one on Profile.
+    // The gauge is today's rate, not the all-time one on Profile.
     stopsCaption: 'TODAY · {{delivered}} / {{total}} STOPS',
     onPace: 'On pace to finish by {{time}}',
     stats: {
@@ -227,7 +227,6 @@ const en = {
     },
   },
 
-  // Which delivery attempt a parcel is on (the agency allows three).
   // What the driver collects at the door (see lib/otpRule).
   cash: {
     nothing: 'Nothing to collect',

@@ -46,7 +46,6 @@ function withEnv<T>(env: Record<string, string | undefined>, load: () => T): T {
 
 beforeEach(() => {
   (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
-  jest.spyOn(console, 'log').mockImplementation(() => {});
 });
 
 describe('which mode is in force', () => {

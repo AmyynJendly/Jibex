@@ -29,9 +29,8 @@ import type {
 
 /**
  * In-memory stand-in for the real backend. Every exported function has the
- * same name, signature, and return shape it will have once it calls a real
- * `fetch()` — swapping the body out for a real request shouldn't require
- * touching any screen that imports from here.
+ * same name, signature and return shape as its counterpart in `real-api.ts`,
+ * so `services/api.ts` can pick either without touching a screen.
  */
 
 // ---------------------------------------------------------------------------
@@ -39,19 +38,10 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
- * Resolves on the microtask queue — no artificial latency.
- *
- * This used to sleep 300-600ms per call to imitate a network, which is a fine
- * way to check your skeletons and a terrible way to use the app: a single
- * screen makes several calls, so the fake latency stacked into seconds of
- * staring at placeholders. Kept as a function (rather than deleted from ~40
- * call sites) so these stay `async` for the day they hit a real API.
- */
-/**
  * Every call waits for the phone's own saved state (stop order, call log) to
  * load once, so nothing is answered from defaults and then contradicted a
- * moment later — the first list after a restart already has the driver's
- * order and their calls in it.
+ * moment later. There is no artificial latency: `delay` only keeps these
+ * functions `async`, like their real counterparts.
  */
 let deviceReady: Promise<void> | null = null;
 
@@ -767,7 +757,7 @@ let mockUser: User = {
   driverCode: 'DRV-2841',
 };
 
-/** Dev-only mock credentials — irrelevant once login() calls a real API. */
+/** For mock mode only: the real server checks its own accounts. */
 const mockPassword = 'password123';
 
 let mockVehicle: Vehicle = {
@@ -792,7 +782,7 @@ export interface ConfirmDeliveryResult extends WriteResult {
   job?: Job;
 }
 
-/** Accepts either the provisioned username or the driver's work email, case-insensitively — same as the real backend will. */
+/** Accepts either the provisioned username or the driver's work email, case-insensitively. */
 export async function login(username: string, password: string): Promise<LoginResult> {
   await delay(undefined);
 
@@ -853,12 +843,6 @@ export async function getClosedRunsheetsToday(): Promise<Runsheet[]> {
   return delay([]);
 }
 
-/**
- * Driver attests to having physically received every parcel on this
- * runsheet — flips `A_CONFIRMER` to `EN_COURS`, which is what unblocks its
- * parcels' status updates below. No-op (but still returns the current
- * state) if it's already past `A_CONFIRMER`.
- */
 export interface RunsheetWriteResult extends WriteResult {
   runsheet?: Runsheet;
   /**
@@ -894,6 +878,11 @@ export async function rejectNewParcels(id: string, reason: string): Promise<Writ
   return { success: true };
 }
 
+/**
+ * The driver accepts the run: `A_CONFIRMER` becomes `EN_COURS`, which
+ * unblocks its parcels' status updates. On a run already accepted, it
+ * accepts the parcels the agency added since.
+ */
 export async function confirmRunsheetReceipt(id: string): Promise<RunsheetWriteResult> {
   await delay(undefined);
   const seed = mockRunsheets.find((r) => r.id === id);
@@ -1162,12 +1151,6 @@ export async function getJobDetail(id: string): Promise<Job> {
 }
 
 /**
- * Reorders a runsheet's stops by nearest-neighbor distance from the depot
- * instead of handing back whatever order they were assigned in — this is
- * what keeps the driver from zig-zagging across town. Already-delivered/
- * failed stops are left at the end since they don't need routing.
- */
-/**
  * Several jobs in one call. Home needs every stop across every runsheet to
  * compute the day's totals; asking for them one id at a time meant a promise
  * per parcel on every focus.
@@ -1215,13 +1198,12 @@ export async function getNextStopId(currentId: string): Promise<string | null> {
 }
 
 /**
- * Delivery confirmed by the driver on the doorstep, with no code and no photo.
+ * Delivery confirmed by the driver on the doorstep.
  *
- * The same gates still apply — the run has to be signed for and the customer
- * has to have been called — but there is no proof artefact attached, so a
- * dispute over this one comes down to the driver's word. That is a deliberate
- * product decision. (The OTP and photo routes were removed: the server has no
- * field for either.)
+ * The gates: the run has to be signed for, the customer has to have been
+ * called, and a parcel with nothing of value to collect needs the customer's
+ * verified code (see `services/otp`). There is no photo proof: the server
+ * has no field for it.
  */
 export async function confirmDelivery(
   id: string,

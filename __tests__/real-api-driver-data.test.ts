@@ -121,7 +121,6 @@ async function signedIn(): Promise<RealApi> {
 }
 
 beforeEach(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
   mockKeychain.clear();
   (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
   fetchMock = jest.fn();
@@ -249,7 +248,7 @@ describe('real scanner: a local lookup, never the tracking endpoint', () => {
     expect(await api.confirmScan('TRK-00000071')).toMatchObject({ success: true, kind: 'pickup', id: '1', label: 'Client A' });
     expect(await api.confirmScan('TRK-00000082')).toMatchObject({ success: true, kind: 'transfer', id: 'TRF-7093829A' });
     expect(await api.confirmScan('TRF-7093829A')).toMatchObject({ success: true, kind: 'transfer', id: 'TRF-7093829A' });
-    // The old handover QR is gone: its payload is just an unknown code now.
+    // A transfer handover QR payload is not a tracking number: it is an unknown code.
     expect(await api.confirmScan('JIBEX-TRANSFER:TRF-7093829A')).toMatchObject({ success: false });
     expect(await api.confirmScan('TRK-00000091')).toMatchObject({ success: true, kind: 'return', id: 'TRK-00000091' });
     expect(urls.some((url) => url.includes('/api/parcels/tracking/'))).toBe(false);

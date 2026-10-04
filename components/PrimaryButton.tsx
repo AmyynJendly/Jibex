@@ -30,9 +30,8 @@ interface PrimaryButtonProps {
  * The main action pill used across the app (Log In, Confirm, Show QR, ...).
  *
  * Solid kraft with a soft shine along the top edge and the accent glow
- * underneath. It used to be tinted glass, which read as a faded clay button
- * — on iOS 26 the glass let the page through, and elsewhere the tint was a
- * light wash — so the one thing a driver has to tap never stood out.
+ * underneath. Solid rather than tinted glass, which reads as a faded button:
+ * the one thing a driver has to tap must stand out.
  */
 export function PrimaryButton({
   label,

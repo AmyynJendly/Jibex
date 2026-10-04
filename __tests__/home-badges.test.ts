@@ -1,7 +1,6 @@
 /**
- * The counts on Home's four buttons. The Android dashboard shows a badge on
- * each (the screenshot has "1" on Transferts); ours had none, so the driver
- * had to open each screen to know if something was waiting.
+ * The counts on Home's four buttons, like the badges on the Android
+ * dashboard: the driver sees what is waiting without opening each screen.
  */
 import { badgeText, homeBadges } from '../lib/homeBadges';
 import type { Pickup, Return, Runsheet, Transfer } from '../types';

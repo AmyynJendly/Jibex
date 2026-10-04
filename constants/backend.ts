@@ -1,15 +1,13 @@
 /**
- * Which backend the app talks to — the one switch for the whole app.
+ * The first switch: which backend the app talks to.
  *
- * Set `EXPO_PUBLIC_API_MODE=real` in `.env.local` (gitignored) and restart
- * with `npx expo start --clear` to use the real server; anything else, or
- * nothing, means the built-in mock data. Expo bakes `EXPO_PUBLIC_*` values
- * into the bundle, and Metro keeps its cached copy of this file unless
- * `--clear` is passed — a plain restart can keep the old mode.
+ * `EXPO_PUBLIC_API_MODE=real` in `.env.local` (gitignored) uses the real
+ * server; anything else, or nothing, uses the built-in mock data. Expo bakes
+ * `EXPO_PUBLIC_*` values into the bundle and Metro caches this file, so
+ * restart with `npx expo start --clear` after changing any switch — a plain
+ * restart can keep the old value.
  *
- * While the backend is being connected piece by piece, "real" only covers
- * what `services/real-api.ts` implements; everything else still answers from
- * the mock (see `services/api.ts`).
+ * `services/api.ts` picks the mock or the real version of each function.
  */
 export type ApiMode = 'mock' | 'real';
 

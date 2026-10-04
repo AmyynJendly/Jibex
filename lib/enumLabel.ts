@@ -8,10 +8,9 @@ function humanize(value: string): string {
 
 /**
  * Resolves a raw backend enum value (e.g. "REFUSED") to its translated
- * label via `enums.<namespace>.<value>`. If the backend ships a value we
- * don't have a translation for, this falls back to a humanized version of
- * the raw value instead of leaking the raw enum string or crashing — see
- * Part A, requirement 4.
+ * label via `enums.<namespace>.<value>`. A value with no translation falls
+ * back to a humanized version of itself, so a raw enum string is never
+ * shown and nothing crashes when the backend adds one.
  */
 export function enumLabel(t: TFunction, namespace: string, value: string): string {
   return t(`enums.${namespace}.${value}` as never, { defaultValue: humanize(value) });

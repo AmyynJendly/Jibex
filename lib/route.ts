@@ -35,7 +35,7 @@ export function nearestNeighborOrder<T extends Pick<Job, 'location'>>(jobs: T[],
 }
 
 /** A stop's governorate: the one the server named, else one found in its address. */
-export function governorateOfJob(job: Pick<Job, 'governorate' | 'address'>): Governorate | undefined {
+function governorateOfJob(job: Pick<Job, 'governorate' | 'address'>): Governorate | undefined {
   return governorateIn(job.governorate) ?? governorateIn(job.address);
 }
 

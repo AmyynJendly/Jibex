@@ -123,7 +123,6 @@ describe('real server: a slow answer is not "no connection"', () => {
     calls = [];
     mockKeychain.clear();
     (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
   });
   afterEach(() => {
     jest.useRealTimers();

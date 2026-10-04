@@ -38,9 +38,8 @@ type Method = 'face' | 'fingerprint' | 'passcode';
 /**
  * Startup gate.
  *
- * The app used to redirect to the login form unconditionally, so a driver
- * signed in every single morning even though their session was sitting in the
- * Keychain the whole time. Now the stored session decides where they land.
+ * The stored session decides where the driver lands: a session sitting in
+ * the Keychain means no login form every morning.
  *
  * A session that survives app restarts is also a session someone else can
  * walk into, and this screen shows cash totals and customer addresses — so

@@ -22,12 +22,10 @@ interface CardProps {
 /**
  * The card every list in this app is built from.
  *
- * Runsheets, Pickups, Transfers and Returns had each grown their own copy of
- * the same block — same radius, same shadow, same 4pt status rail, same
- * `overflow: hidden` to clip it — which meant four places to edit for one
- * visual change, and four chances for them to drift apart. The rail in
- * particular has to be clipped by the card's own corner radius, which is easy
- * to get subtly wrong when it's rewritten per screen.
+ * Runsheets, Pickups, Transfers and Returns share one block — same radius,
+ * same shadow, same 4pt status rail — so a visual change is made in one
+ * place. The rail has to be clipped by the card's own corner radius, which
+ * is easy to get subtly wrong when it's rewritten per screen.
  */
 export function Card({
   children,

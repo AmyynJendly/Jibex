@@ -18,16 +18,11 @@ interface EmptyStateProps {
 /**
  * Shown in place of a list that has nothing in it.
  *
- * This used to be an icon bobbing up and down forever on top of a large gold
- * radial glow. Both had to go: the halo read as a stray light leak rather
- * than as design, and a permanent loop in an empty list keeps drawing the
- * eye to the one part of the screen with nothing to say — an empty runsheet
- * is usually good news, and it shouldn't pulse for attention.
- *
- * What replaces it is a framed tile: bordered, grounded, and still. It reads
- * as a deliberate placeholder — the shape of the thing that will be here —
- * instead of a floating object. The only motion left is the one-shot
- * entrance, so it settles once and then stays put.
+ * A framed tile: bordered, grounded, and still. It reads as a deliberate
+ * placeholder — the shape of the thing that will be here. The only motion is
+ * the one-shot entrance: an empty runsheet is usually good news, and a
+ * looping animation would keep drawing the eye to the one part of the screen
+ * with nothing to say.
  */
 export function EmptyState({ icon, illustration, title, subtitle }: EmptyStateProps) {
   const colors = useColors();

@@ -50,11 +50,9 @@ import { confirmDelivery, getDriverStats, getRunsheets } from '../../../services
 import { otpNeeded } from '../../../services/otp';
 
 /**
- * No-key static map image — shows the job's real location instead of a
- * placeholder. Yandex's static maps API is used because it needs no API key
- * (Google's Static Maps API does, and none is configured yet — see the
- * "real backend later" note on `openInMaps` in lib/stopActions). Swap this for Google's
- * Static Maps API once a key is available, for full parity with `openInMaps`.
+ * A static map image of the job's location. Yandex's static maps API is used
+ * because it needs no API key; Google's Static Maps API needs one, and none
+ * is configured.
  */
 function staticMapUrl({ lat, lng }: { lat: number; lng: number }) {
   return `https://static-maps.yandex.ru/1.x/?ll=${lng},${lat}&z=15&l=map&size=640,300&pt=${lng},${lat},pm2rdl`;
@@ -163,11 +161,10 @@ export default function JobDetailScreen() {
   /**
    * Marks the parcel delivered from the doorstep.
    *
-   * This replaces a button that only opened the scanner flow, so the driver
-   * had to go two screens deep to record the ordinary outcome. The gates the
-   * other delivery routes enforce still apply — the run has to be signed for,
-   * and the customer has to have been called — and the reason surfaces as a
-   * toast rather than the press silently doing nothing.
+   * The ordinary outcome is one tap from the stop screen. The gates the other
+   * delivery routes enforce still apply — the run has to be signed for, and
+   * the customer has to have been called — and the reason surfaces as a toast
+   * rather than the press silently doing nothing.
    *
    * It then lands on the same cash receipt the other two routes end on, so
    * the money is confirmed the same way however the delivery was recorded.
@@ -323,10 +320,8 @@ export default function JobDetailScreen() {
 
         <View
           style={[styles.card, { backgroundColor: colors.bgElevated }, getCardShadow(scheme)]}>
-          {/* The id gets its own full-width row. It was previously squeezed
-              into a third of the meta strip, where it was literally clipped
-              mid-code — and this is the one field the driver checks against
-              the label on the box before handing it over. */}
+          {/* The id gets its own full-width row: it is the one field the driver
+              checks against the label on the box before handing it over. */}
           <View style={styles.idRow}>
             <TrackingId value={job.id} />
             {job.packageInfo.fragile && (
@@ -388,10 +383,8 @@ export default function JobDetailScreen() {
           </View>
           <View style={[styles.divider, { backgroundColor: colors.separator }]} />
 
-          {/* Facts as chips rather than three columns split by hairlines. The
-              columns forced every value into a third of the width whether it
-              needed it or not, which is what clipped the id and left the
-              other two swimming in space. */}
+          {/* Facts as chips rather than three equal columns: a column forces every
+              value into a third of the width whether it needs it or not. */}
           <View style={styles.factRow}>
             <View style={[styles.factChip, { backgroundColor: colors.bg }]}>
               <Icon name="cube-outline" size={14} color={colors.textSecondary} />
@@ -432,9 +425,8 @@ export default function JobDetailScreen() {
             </View>
           )}
 
-          {/* Promoted out of a grey italic footnote. It is an instruction from
-              the customer about how to complete the drop — the driver needs to
-              read it before knocking, not discover it afterwards. */}
+          {/* An instruction from the customer about how to complete the drop: the
+              driver needs to read it before knocking, so it is shown prominently. */}
           {job.packageInfo.note && (
             <View style={[styles.noteCallout, { backgroundColor: colors.warningSoft }]}>
               <Icon name="information-circle" size={16} color={colors.warning} />
@@ -488,10 +480,9 @@ export default function JobDetailScreen() {
         )}
       </ScrollView>
 
-      {/* The two outcomes of standing at the door, side by side: it went
-          wrong on the left, it went right on the left-to-right reading order's
-          end. Delivered is the wider of the two because it is the one pressed
-          on almost every stop. */}
+      {/* The two outcomes of standing at the door, side by side: failed on the
+          left, delivered on the right. Delivered is the wider of the two because
+          it is the one pressed on almost every stop. */}
       {!isPreview && (
         <View style={styles.footer}>
           <AnimatedPressable
@@ -540,9 +531,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.mlg,
     paddingBottom: Spacing.xxl,
     gap: Spacing.mlg,
-    // Grow to fill the screen so the map can take up the slack. This stop has
-    // little text, and pinning the actions to the bottom used to leave a tall
-    // band of empty background in the middle of the screen.
+    // Grow to fill the screen so the map can take up the slack: a stop with
+    // little text would otherwise leave a tall band of empty background above
+    // the actions pinned to the bottom.
     flexGrow: 1,
   },
   mapCard: {

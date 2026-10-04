@@ -39,7 +39,7 @@ export type CashDue =
   | { kind: 'nothing'; amount: 0 }
   /** Only the delivery fee, in cash. */
   | { kind: 'feeOnly'; amount: number }
-  /** The full price, as before. */
+  /** The full price. */
   | { kind: 'price'; amount: number };
 
 export function cashDue(parcel: { price?: number | null; deliveryFee?: number | null }): CashDue {
@@ -64,13 +64,13 @@ export function cashDueLine(t: TFunction, due: CashDue): string {
 /**
  * The cash corner of a list card.
  *
- * A parcel that needs the customer's code no longer says "Payé": it carries
- * a "CODE CLIENT" badge, so the driver knows before opening it, and when
- * there is a delivery fee to collect it says so: "Frais de livraison :
- * 10.000 TND". Every other parcel is unchanged — the price, or "Payé".
+ * A parcel that needs the customer's code carries a "CODE CLIENT" badge
+ * instead of "Payé", so the driver knows before opening it. When there is a
+ * delivery fee to collect it also says "Frais de livraison : 10.000 TND".
+ * Every other parcel shows its price, or "Payé".
  *
- * @param needsCode the rule AND the OTP switch (`otpNeeded` in services/otp):
- *   with OTP off the card is exactly as before.
+ * @param needsCode the rule AND the OTP switch (`otpNeeded` in services/otp).
+ *   With OTP off, no card shows the badge.
  */
 export function cardCash(
   t: TFunction,

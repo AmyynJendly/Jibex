@@ -43,11 +43,8 @@ export interface ColorPalette {
  * shipping-label white on kraft paper; dark mode is a warehouse at night,
  * with dark-cardboard cards and the same tape and stamp colors, lifted so
  * they hold their contrast.
- *
- * Token names are unchanged from the earlier palette so every screen picks
- * the new colors up without edits; `purple` (Pickups) is now manifest blue.
  */
-export const palette: { light: ColorPalette; dark: ColorPalette } = {
+const palette: { light: ColorPalette; dark: ColorPalette } = {
   light: {
     bg: '#F3E9DA',
     bgElevated: '#FFFDF8',

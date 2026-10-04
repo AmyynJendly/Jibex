@@ -8,7 +8,6 @@ export interface PackageInfo {
   note?: string;
 }
 
-/** Why a delivery attempt failed — drives the Can't Deliver reason picker. Matches the real backend's uppercase enum strings. */
 /**
  * The backend's failure reasons, by their exact enum names — stored and sent
  * as-is. Labels, grouping and which ones the driver may pick live in
@@ -124,14 +123,14 @@ export interface Job {
 }
 
 /**
- * The real server's facts about a parcel, mapped but not (yet) all shown.
- * Kept so later screens — and the write-back endpoints, which need the
- * server's own ids — have them without another request.
+ * The real server's facts about a parcel. Not all of them are shown: they
+ * are kept because the writes need the server's own ids, and so no screen
+ * needs another request for them.
  */
 export interface ParcelServerInfo {
   /** The parcel's own id on the server. */
   parcelId: string;
-  /** The runsheet line this parcel sits on — what status updates will be sent against. */
+  /** The runsheet line this parcel sits on — what status updates are sent against. */
   itemId?: string;
   runsheetId?: string;
   /**

@@ -18,7 +18,7 @@ export interface Runsheet {
    * nothing behind it.
    */
   zone: string;
-  /** Depot/branch this runsheet is dispatched from. Single-agency for now — no filtering/grouping by it yet. */
+  /** Depot/branch this runsheet is dispatched from. */
   agency: string;
   status: RunsheetStatus;
   stopCount: number;

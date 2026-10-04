@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 /** Major iOS version (e.g. 18), or 0 when not on iOS. */
-export const iosMajorVersion =
+const iosMajorVersion =
   Platform.OS === 'ios' ? parseInt(String(Platform.Version), 10) || 0 : 0;
 
 /**

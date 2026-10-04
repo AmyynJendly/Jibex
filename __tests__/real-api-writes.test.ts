@@ -71,7 +71,6 @@ async function realApp({ writes }: { writes: boolean }): Promise<Api> {
 const writesSent = () => calls.filter((call) => call.method !== 'GET');
 
 beforeEach(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
   mockKeychain.clear();
   (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
   fetchMock = jest.fn();

@@ -17,8 +17,6 @@ export interface WriteResult {
  * "3 of 4 done" rather than pretending all or nothing happened.
  */
 export interface BatchWriteResult extends WriteResult {
-  /** Ids that went through. */
   succeeded: string[];
-  /** Ids that didn't. */
   failed: string[];
 }

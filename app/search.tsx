@@ -25,7 +25,7 @@ import {
 /**
  * iOS gets Apple's own search bar, built into the navigation bar: it
  * focuses once the screen has finished sliding in (so the keyboard and the
- * push no longer fight), its keyboard always matches light/dark mode, and
+ * push don't fight), its keyboard always matches light/dark mode, and
  * Cancel works the way it does everywhere else on the phone. Android and
  * web keep the in-page field.
  */

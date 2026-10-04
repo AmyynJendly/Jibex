@@ -11,7 +11,7 @@ import { enumLabel } from './enumLabel';
  * The codes are the server's own. The list is the web app's full status list
  * plus IN_WAREHOUSE, which only its Dépôt page sends.
  */
-export const PARCEL_STATUS: Readonly<Record<string, JobStatus>> = {
+const PARCEL_STATUS: Readonly<Record<string, JobStatus>> = {
   // Not yet with the delivery company, or just arrived.
   CREATED: 'PENDING',
   PENDING: 'PENDING',

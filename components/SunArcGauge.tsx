@@ -34,11 +34,8 @@ interface SunArcGaugeProps {
 
 /**
  * Semicircular "sun arc" delivery-progress gauge — the Home screen's
- * signature piece from the Sunlit design, replacing the previous flat
- * linear progress bar. The arc sweeps left→right through the top, with a
- * small glowing dot riding its leading edge (same trig the design's own
- * static mockup implies, generalized here to any `percent` instead of a
- * hardcoded 70%).
+ * signature piece. The arc sweeps left→right through the top, with a small
+ * glowing dot riding its leading edge, for any `percent`.
  */
 export function SunArcGauge({ percent, caption, style, scale = 1 }: SunArcGaugeProps) {
   const colors = useColors();

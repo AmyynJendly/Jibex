@@ -102,9 +102,8 @@ export async function locateDriver(): Promise<DriverPosition> {
  *
  * The GPS is used for two things only: sorting the stops nearest-first
  * (`locateDriver`) and stamping a failed delivery (`captureCurrentCoords`).
- * Home and the parcel screen used to take a reading of their own every time
- * they opened — many readings a day the driver never asked for. They now
- * show the last one of those two, and update when a new one comes in.
+ * Screens show the last of those two readings and update when a new one
+ * comes in, rather than taking a reading each time they open.
  * `null` until there has been one: callers fall back (the run's zone, no
  * distance) rather than waiting.
  */

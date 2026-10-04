@@ -71,10 +71,9 @@ interface HomeData {
 /**
  * Which greeting fits the time on the driver's phone.
  *
- * This used to be a single split at 18:00, so a driver starting a 6am round
- * and one finishing at 5pm were both told "Good Morning". Drivers work long
- * enough days to notice. The late band runs past midnight, hence the `||`
- * rather than a range.
+ * Three bands, not one split at 18:00: a driver starting a 6am round and one
+ * finishing at 5pm should not both be told "Good Morning". The late band
+ * runs past midnight, hence the `||` rather than a range.
  */
 function getGreetingKey() {
   const hour = new Date().getHours();
@@ -125,10 +124,6 @@ export default function HomeScreen() {
     return runsheets.filter((r) => !blocked.has(r.id));
   }, [runsheets, unconfirmedRunsheets]);
 
-  // "Today's Deliveries" reflects every stop across every runsheet the driver
-  // holds — including still-blocked ones, since those parcels are genuinely
-  // assigned even if not yet workable — so it moves the moment a stop in
-  // Runsheets is delivered or failed.
   // Runs the agency closed today: their parcels are still today's work.
   const closedTodayQuery = useClosedRunsheetsToday();
   const { nextStop, index: nextStopIndex } = useNextStop();
@@ -449,7 +444,7 @@ export default function HomeScreen() {
           <Text style={[monoStyle(11), styles.toConfirmTitle, { color: colors.warning }]}>
             {t('home.toConfirmTitle', { count: unconfirmedRunsheets.length })}
           </Text>
-          {unconfirmedRunsheets.map((runsheet, i) => (
+          {unconfirmedRunsheets.map((runsheet) => (
             <View
               key={runsheet.id}
               style={[
@@ -593,7 +588,7 @@ export default function HomeScreen() {
       )}
 
       <View style={styles.compactRow}>
-        {compactActions.map((action, i) => (
+        {compactActions.map((action) => (
           <View
             key={action.key}
             style={styles.compactWrapper}>

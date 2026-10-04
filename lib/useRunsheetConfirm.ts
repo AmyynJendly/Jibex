@@ -18,7 +18,7 @@ import { safely } from './writeResult';
  */
 export type ConfirmStep = 'first' | 'recount' | 'start';
 
-export function confirmStepOf(runsheet: Runsheet): ConfirmStep {
+function confirmStepOf(runsheet: Runsheet): ConfirmStep {
   if (runsheet.needsStart) return 'start';
   return runsheet.status === 'A_CONFIRMER' ? 'first' : 'recount';
 }

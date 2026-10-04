@@ -11,7 +11,7 @@ import { Icon } from './Icon';
 import { useHapticsEnabled } from '../lib/haptics';
 
 /** Width of the red action while the row rests half-open. */
-export const DELETE_ACTION_WIDTH = 68;
+const DELETE_ACTION_WIDTH = 68;
 
 /** How far across the screen a swipe has to travel to delete on release. */
 const FULL_SWIPE_FRACTION = 0.5;

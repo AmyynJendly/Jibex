@@ -84,7 +84,6 @@ function stateColor(status: JobStatus, colors: ColorPalette) {
 interface ParcelCardProps {
   job: Job;
   colors: ColorPalette;
-  scheme: 'light' | 'dark';
   /** Position in the driver's own order — blank in history, where order is meaningless. */
   stopNumber?: number;
   /** History cards drop the phone number, the call button and the drill-down. */
@@ -117,7 +116,6 @@ interface ParcelCardProps {
 function ParcelCard({
   job,
   colors,
-  scheme,
   stopNumber,
   readOnly = false,
   locked = false,
@@ -546,7 +544,6 @@ export default function RunsheetsScreen() {
               <ParcelCard
                 job={job}
                 colors={colors}
-                scheme={scheme}
                 highlighted={job.id === highlightedId}
                 readOnly
                 recordLine={historyRecordLine(job, t('attempts.plain', { number: attemptOf.get(job) ?? 1 }))}
@@ -708,7 +705,6 @@ export default function RunsheetsScreen() {
                 <ParcelCard
                   job={job}
                   colors={colors}
-                  scheme={scheme}
                   highlighted={job.id === highlightedId}
                   stopNumber={index + 1}
                   drag={drag}
@@ -736,7 +732,6 @@ export default function RunsheetsScreen() {
                 <ParcelCard
                   job={job}
                   colors={colors}
-                  scheme={scheme}
                   highlighted={job.id === highlightedId}
                   stopNumber={workable.length + i + 1}
                   locked

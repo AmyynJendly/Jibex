@@ -13,10 +13,9 @@ interface LoadErrorProps {
 /**
  * What a screen shows when its data didn't arrive.
  *
- * Every screen used to sit on skeletons forever in this case — no message, no
- * way out, which is what made a dropped connection feel like the app had
- * frozen. The wording stays deliberately non-technical: the driver can't act
- * on a status code, only on "try again".
+ * Without it a dropped connection leaves the screen on skeletons forever,
+ * which feels like the app has frozen. The wording stays deliberately
+ * non-technical: the driver can't act on a status code, only on "try again".
  */
 export function LoadError({ onRetry, retrying = false }: LoadErrorProps) {
   const colors = useColors();

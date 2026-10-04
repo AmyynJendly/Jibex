@@ -6,10 +6,9 @@ import type { Job } from '../types';
 /**
  * One parcel, loaded for a screen — with a way out when it doesn't arrive.
  *
- * The stop screens used to call `getJobDetail(id).then(setJob)` and nothing
- * else: with no connection the promise rejected unhandled, and the screen sat
- * on "Loading…" forever. This reports the failure so the screen can show
- * "Connexion impossible" with a retry button.
+ * With no connection the load fails; this reports the failure, so the
+ * screen shows "Connexion impossible" with a retry button instead of
+ * sitting on "Loading…" forever.
  */
 export function useLoadedJob(id: string) {
   const [job, setJob] = useState<Job | null>(null);

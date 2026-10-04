@@ -26,9 +26,8 @@ interface TransferPickupCheckProps {
  * batch ("4/5 colis") and only then can confirm they have taken it.
  *
  * On the server one call puts the whole batch "in transit", with no scan and
- * no count. In the live test that was one tap for five parcels, three of
- * them not even the driver's own test parcels. The scan is done on the phone
- * (see lib/checklist); the call sent afterwards is the same as before.
+ * no count: one tap for five parcels, whoever they belong to. So the scan is
+ * done on the phone (see lib/checklist), and only then is that call sent.
  *
  * Scanning is the rule here — no ticking by hand, unlike a pickup — because
  * a transfer is the moment custody passes between two agencies. A label that

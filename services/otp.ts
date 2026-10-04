@@ -22,8 +22,6 @@
 import { OTP_MODE, type OtpMode } from '../constants/backend';
 import { otpRequiredFor } from '../lib/otpRule';
 import {
-  OTP_MAX_RESENDS,
-  OTP_MAX_WRONG,
   checkOtp,
   generateOtp,
   otpView,
@@ -186,5 +184,3 @@ export function testBannerCode(mode: OtpMode, status: OtpStatus | null | undefin
   if (mode !== 'mock') return null;
   return status?.testCode ?? null;
 }
-
-export { OTP_MAX_RESENDS, OTP_MAX_WRONG };

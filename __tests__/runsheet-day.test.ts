@@ -154,7 +154,6 @@ describe('real server: the run the agency closed today', () => {
   }
 
   beforeEach(() => {
-    jest.spyOn(console, 'log').mockImplementation(() => {});
     mockKeychain.clear();
     (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
     urls = [];
@@ -316,7 +315,6 @@ describe('confirming the run', () => {
     }) as unknown as typeof fetch;
     mockKeychain.clear();
     (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
     await api.login('driver', 'secret');
 
     const [runsheet] = await api.getRunsheets();
@@ -395,7 +393,6 @@ describe('a closed run shows no parcel in the active view', () => {
     }) as unknown as typeof fetch;
     mockKeychain.clear();
     (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
     await api.login('driver', 'secret');
 
     // Nothing to deliver, no open run: only the closed card is left.

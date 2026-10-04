@@ -415,12 +415,9 @@ export default function AlertsScreen() {
 
   /**
    * One row for every notification, whether it arrived a minute ago or
-   * yesterday. This used to single out the most recent unread alert into
-   * its own "Now" section with its own gold styling — which meant reading
-   * it (the read flag flips the instant you tap, before the navigation even
-   * lands) made the card vanish from the screen outright, mid-tap. Unread is
-   * a property of the card now, not a place it lives: it stays in Today or
-   * Earlier exactly where it was, and only its color changes when it's read.
+   * yesterday. Unread is a property of the card, not a place it lives: a card
+   * stays in Today or Earlier exactly where it was, and only its color changes
+   * when it's read — so reading an alert never makes it jump or vanish mid-tap.
    */
   function renderCard(notification: Notification, order: number, dimmed: boolean) {
     const style = typeStyle(notification.type, colors);

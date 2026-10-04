@@ -16,17 +16,12 @@ interface TrackingIdProps {
 /**
  * A package / batch / transfer id, rendered the same way everywhere.
  *
- * These were previously styled at each call site and had drifted: 15pt on a
- * runsheet card, 13pt on the job detail, 12pt in muted tertiary grey on the
- * OTP screen. The 12pt grey one was the giveaway — that id is what the driver
- * matches against the label on a physical box, often one-handed, in a van, in
- * daylight. It has to be the most legible thing on the row, not the faintest.
- *
- * So: full-contrast text (never a muted grey), a contrasting chip behind it so
- * it reads as a code rather than as prose, and mono at a size that survives
- * arm's length. DM Mono ships only Regular and Medium in this project, so
- * Medium is as heavy as the typeface goes — the size, the contrast and the
- * chip do the rest of the work that bold would have done.
+ * This id is what the driver matches against the label on a physical box,
+ * often one-handed, in a van, in daylight. It has to be the most legible
+ * thing on the row: full-contrast text (never a muted grey), a contrasting
+ * chip behind it so it reads as a code rather than as prose, and mono at a
+ * size that survives arm's length. DM Mono ships only Regular and Medium in
+ * this project, so Medium is as heavy as the typeface goes.
  */
 export function TrackingId({ value, size = 'lead', style }: TrackingIdProps) {
   const colors = useColors();

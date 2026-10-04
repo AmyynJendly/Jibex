@@ -81,9 +81,9 @@ export default function TransfersScreen() {
 
   /**
    * "Confirmer la prise en charge": the batch leaves "ready" and goes in
-   * transit — once the server agrees. Same call as before
-   * (confirm-pickup); what changed is that the button is only reachable
-   * with every parcel scanned, or through "Confirmer sans scan" below.
+   * transit — once the server agrees (confirm-pickup). The button is only
+   * reachable with every parcel scanned, or through "Confirmer sans scan"
+   * below.
    */
   async function confirmPickup(transfer: Transfer) {
     if (!write.begin()) return;

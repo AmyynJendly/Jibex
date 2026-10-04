@@ -7,11 +7,9 @@ import { useToast } from '../components/Toast';
 /**
  * Refuses an action that would be lost offline, and says why.
  *
- * A driver working a dead zone can otherwise mark a delivery, watch it appear
- * to succeed against the local mock, and lose it the moment this talks to a
- * real backend. Until there's a queue that can hold work and send it later,
- * the honest behaviour is to stop and explain rather than accept something we
- * can't keep.
+ * There is no queue that can hold work and send it later, so the honest
+ * behaviour in a dead zone is to stop and explain rather than accept
+ * something the app can't keep.
  *
  * Reads only — opening a screen, refreshing a list — are deliberately not
  * gated: showing whatever was last cached is better than a wall.

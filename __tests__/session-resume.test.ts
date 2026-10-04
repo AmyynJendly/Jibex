@@ -1,10 +1,9 @@
 /**
  * Session expiry (the token lasts 24 hours and can't be renewed).
  *
- * Before: a 401 replaced the current screen with login, and signing in
- * always landed on Home. The driver lost the screen he was on and whatever
- * he had typed. Now login opens on top, and the same driver comes back to
- * the same screen.
+ * A 401 opens login on top of the current screen, and the same driver comes
+ * back to the same screen with what he had typed. Another driver lands on
+ * Home.
  */
 const mockKeychain = new Map<string, string>();
 jest.mock('expo-secure-store', () => ({
@@ -53,7 +52,6 @@ describe('the expiry event', () => {
   beforeEach(async () => {
     mockKeychain.clear();
     (globalThis as unknown as { resetDeviceStorage: () => void }).resetDeviceStorage();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
     status = 200;
     jest.isolateModules(() => {
       session = require('../lib/session');

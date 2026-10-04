@@ -7,13 +7,10 @@
  * it is unmounted, not just hidden.
  */
 export function cameraOn(state: {
-  /** The driver allowed the camera. */
   granted: boolean;
   /** Everything expected was scanned: the screen shows its "all done" state. */
   done: boolean;
-  /** The scanner is the focused screen. */
   focused: boolean;
-  /** The app is in the foreground. */
   appActive: boolean;
 }): boolean {
   return state.granted && !state.done && state.focused && state.appActive;

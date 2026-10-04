@@ -21,11 +21,9 @@ import {
 } from '../services/api';
 
 /**
- * Screens used to call the API directly from a `useFocusEffect`, which meant
- * every tab switch refetched everything and showed placeholders again — and a
- * failure left the screen on those placeholders forever, with nothing to
- * retry. This gives all of them one cache, one refetch policy, and a real
- * error state.
+ * One cache, one refetch policy and one error state for every screen.
+ * Switching tabs shows the cached data instead of refetching and showing
+ * placeholders again, and a failed load can be retried.
  */
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,7 +44,7 @@ const queryClient = new QueryClient({
 
 /**
  * Fresh data when the driver comes back to the app, not just to a tab.
- * Only what is on screen reloads now; every other list is marked out of date
+ * Only what is on screen reloads; every other list is marked out of date
  * and reloads when its screen is opened — not a burst of requests for
  * screens nobody is looking at.
  */
@@ -84,7 +82,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
 const JOIN = { cancelRefetch: false } as const;
 
 /** One place to name a cache entry, so invalidation can't drift from fetching. */
-export const keys = {
+const keys = {
   user: ['user'] as const,
   vehicle: ['vehicle'] as const,
   stats: ['stats'] as const,
@@ -102,16 +100,16 @@ export const keys = {
   returns: ['returns'] as const,
 };
 
-/**
- * Anything the driver just changed — parcel states, run confirmations, the
- * numbers derived from them. Called after a mutation so every screen holding
- * that data updates, not only the one that made the change.
- */
 /** Forgets every cached answer — on sign-out, so the next driver starts clean. */
 export function clearQueryCache() {
   queryClient.clear();
 }
 
+/**
+ * Anything the driver just changed — parcel states, run confirmations, the
+ * numbers derived from them. Called after a write so every screen holding
+ * that data updates, not only the one that made the change.
+ */
 export function invalidateDeliveryData() {
   return queryClient.invalidateQueries({
     predicate: ({ queryKey }) =>
