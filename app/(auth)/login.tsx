@@ -11,7 +11,6 @@ import { AnimatedPressable } from '../../components/AnimatedPressable';
 import { FormField } from '../../components/FormField';
 import { LanguageToggle } from '../../components/LanguageToggle';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { TickerMarquee } from '../../components/TickerMarquee';
 import { Fonts, Radii, Spacing, Typography, monoLabelStyle, morphIn, useColors } from '../../constants';
 import { useDispatchContact } from '../../lib/dispatchContact';
 import { telUrl } from '../../lib/phone';
@@ -164,10 +163,9 @@ export default function LoginScreen() {
           </View>
 
           {/* No self-signup: agencies provision driver accounts. */}
-          <TickerMarquee
-            items={t('auth.login.ticker', { returnObjects: true, phone: dispatchPhone }) as string[]}
-            style={styles.ticker}
-          />
+          <View style={[styles.footer, { borderColor: colors.separator }]}>
+            <Text style={[monoLabelStyle(10), { color: colors.textSecondary }]}>{t('auth.login.footer')}</Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -236,9 +234,15 @@ const styles = StyleSheet.create({
   languageToggle: {
     marginBottom: Spacing.xl,
   },
-  ticker: {
+  // A full-width band under the form: it reaches past the content padding.
+  footer: {
     marginTop: Spacing.xxl,
     marginHorizontal: -Spacing.xxxl,
+    height: 30,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

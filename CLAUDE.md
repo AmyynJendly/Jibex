@@ -98,6 +98,6 @@ Explain things simply, in short sentences.
 - `npm run lint` — ESLint, on the whole project.
 - `npm run typecheck` — type check (`tsc --noEmit`).
 - `npm run format` — Prettier, on the whole project (`npm run format:check` only checks).
-- `npm run probe:login | probe:runsheets | probe:driver-data | probe:history`
+- `npm run probe:login | probe:driver-data | probe:history`
   — read-only checks against the live server with the `JIBEX_TEST_*` account.
   They mask personal data and never print the token.

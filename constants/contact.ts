@@ -9,7 +9,7 @@
  * nothing. Put a real fallback here — this is the only place either appears.
  */
 
-/** PLACEHOLDER. Called from login ("Forgot password? Call Dispatch") and shown in the login ticker. */
+/** PLACEHOLDER. Called from login ("Forgot password? Call Dispatch"). */
 export const DISPATCH_PHONE = '+216 71 200 300';
 
 /** PLACEHOLDER. Opened from Help Center → Contact Support. */

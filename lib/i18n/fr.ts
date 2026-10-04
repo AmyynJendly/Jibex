@@ -78,7 +78,7 @@ const fr: TranslationResource = {
       hide: 'Masquer le mot de passe',
       logIn: 'Connexion',
       forgotPassword: 'Mot de passe oublié ? Appeler le dispatch',
-      ticker: ['Assistance dispatch : {{phone}}', "Conditions d'utilisation", 'Politique de confidentialité'],
+      footer: 'JIBEX · PORTAIL CHAUFFEUR',
       errors: {
         invalidCredentials: "Nom d'utilisateur ou mot de passe incorrect.",
         notDriver: "Ce compte n'est pas un compte chauffeur. Connectez-vous avec le compte fourni par votre agence.",

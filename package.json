@@ -13,7 +13,6 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "probe:login": "node --env-file-if-exists=.env.local scripts/probe-login.mjs",
-    "probe:runsheets": "node --env-file-if-exists=.env.local scripts/probe-runsheets.mjs",
     "probe:driver-data": "node --env-file-if-exists=.env.local scripts/probe-driver-data.mjs",
     "probe:history": "node --env-file-if-exists=.env.local scripts/probe-history.mjs"
   },

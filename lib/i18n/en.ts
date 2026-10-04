@@ -77,7 +77,7 @@ const en = {
       hide: 'Hide password',
       logIn: 'Login',
       forgotPassword: 'Forgot password? Call Dispatch',
-      ticker: ['Dispatch Support: {{phone}}', 'Terms of Service', 'Privacy Policy'],
+      footer: 'JIBEX · DRIVER PORTAL',
       errors: {
         invalidCredentials: 'Incorrect username or password.',
         notDriver: 'This account isn’t a driver account. Sign in with the account your agency gave you.',
