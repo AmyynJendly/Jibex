@@ -87,8 +87,9 @@ Explain things simply, in short sentences.
 - `docs/web-app-exploration.md` — the second read-only exploration of the web app.
 - `docs/web-app-findings.md` — what the agency and sender web app showed (accounts, data, gaps).
 - `docs/web-app-tour.md` — page-by-page tour of the web app and its bugs.
-- `web-tour/`, `explore-2/`, `test-run*/` — gitignored: screenshots and logs (private data)
-  and the scripts of the tours and live tests.
+- `web-tour/`, `explore-2/`, `test-run*/` — not in the project any more: screenshots, logs
+  (private data) and the scripts of the tours and live tests. They live in
+  `DocumentsJibex-tests` on the developer's PC. Their `.gitignore` lines are kept.
 - `SynapseDriverApp/` — gitignored reference clone of the backend and Android app. Read only.
 
 ## Commands

@@ -6,7 +6,7 @@ agency accounts. Driver side: our iOS app (Expo Go) as mourad (driver 3),
 done by hand by the user.
 
 Only this report is in git. Screenshots (`shots/`, `app-shots/`),
-`test-log.md`, `writes.json`, `blocked.json` and `approvals.json` stay local, in the gitignored `test-run-2/` folder.
+`test-log.md`, `writes.json`, `blocked.json` and `approvals.json` stay with the developer, outside the repository (folder `test-run-2/`).
 The shared parcel list is `test-run/test-parcels.json`.
 
 **Result:** Parts A and B done. Part C stopped at C2 (rule 5): the server put

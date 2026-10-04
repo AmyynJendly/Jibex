@@ -136,7 +136,7 @@ With no run at all, the tab says "Aucune tournée pour le moment".
 
 ### 10. Failure reasons
 
-The labels are the web's exact French ones (`test-run/failure-reasons.md`, a local file that is not in git).
+The labels are the web's exact French ones (`test-run/failure-reasons.md`, a file kept by the developer outside the repository).
 
 Follow-up, now like Android:
 

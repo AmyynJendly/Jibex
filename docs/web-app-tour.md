@@ -9,10 +9,10 @@ Read-only tour of https://jibex.cloud on 2026-09-29. Driver view skipped.
   detail views, and took 74 screenshots.
 - **Write lock:** the browser aborted every request that wasn't a read,
   except the login. Result: 0 write attempts in the whole tour. Nothing changed.
-- Screenshots are **local only**, in `web-tour/` (gitignored), because they
-  show real customer names, phones and addresses. The tour scripts are in
-  `web-tour/_scripts/`. To re-run: `npm i playwright` there, then
-  `node --env-file=../../.env.local tour.mjs agency ..` (or `sender`, or `details.mjs`).
+- Screenshots are **not in the repository**: they show real customer names,
+  phones and addresses. They are kept by the developer in a `web-tour/` folder
+  outside the project, with the tour scripts (`web-tour/_scripts/`: `tour.mjs`
+  and `details.mjs`, run with Playwright and the accounts in `.env.local`).
 
 ## What each role sees
 

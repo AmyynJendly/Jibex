@@ -6,7 +6,7 @@ agency-head accounts. Robot browser: Playwright driving Microsoft Edge.
 **Nothing on the server changed.** Every request that wasn't a read was
 aborted, except the login. No write was even attempted (see part 5).
 
-Files (all in the gitignored `explore-2/` folder; private data is kept local, only this report is in git):
+Files (all in the `explore-2/` folder, kept by the developer outside the repository because of private data; only this report is in git):
 
 - `sender/*.png`, `agency/*.png` — screenshots, numbered.
 - `api-calls.json` — every GET call per screen: URL, status, sample
